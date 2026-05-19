@@ -60,6 +60,20 @@ export function renderGrid(container, handlers) {
     if (a) anchors.set(key(a[0], a[1]), room);
   }
 
+  // Row/col X-ray: for every cell, decide if it's in a row or column
+  // currently occupied by a placed suspect. Track conflicts so cells in a
+  // doubly-occupied row/col can be flagged red.
+  const placements = state.mode === 'play' ? lvl.playerPlacement : lvl.solution;
+  const rowsOccupied = new Map(); // y → [charIds]
+  const colsOccupied = new Map(); // x → [charIds]
+  if (state.showRowColMarks) {
+    for (const k of Object.keys(placements)) {
+      const [px, py] = k.split(',').map(Number);
+      rowsOccupied.set(py, (rowsOccupied.get(py) || []).concat(placements[k]));
+      colsOccupied.set(px, (colsOccupied.get(px) || []).concat(placements[k]));
+    }
+  }
+
   for (let y = 0; y < GRID; y++) {
     for (let x = 0; x < GRID; x++) {
       const cell = document.createElement('div');
@@ -150,6 +164,25 @@ export function renderGrid(container, handlers) {
           e.className = `edge-pick ${side}`;
           e.dataset.side = side;
           cell.appendChild(e);
+        }
+      }
+
+      // Row/col X-ray marker. Only shown when the toggle is on, and only
+      // on cells where the row or column is occupied by some other
+      // placement. Cells with collisions (two suspects sharing the row
+      // OR the column) get a red X.
+      if (state.showRowColMarks) {
+        const rowList = rowsOccupied.get(y) || [];
+        const colList = colsOccupied.get(x) || [];
+        const inRow = rowList.length > 0;
+        const inCol = colList.length > 0;
+        const rowConflict = rowList.length > 1;
+        const colConflict = colList.length > 1;
+        if (inRow || inCol) {
+          const mark = document.createElement('div');
+          mark.className = 'rowcol-x' + (rowConflict || colConflict ? ' conflict' : '');
+          mark.textContent = '✕';
+          cell.appendChild(mark);
         }
       }
 

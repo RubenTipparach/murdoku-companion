@@ -666,6 +666,15 @@ async function boot() {
     document.body.classList.toggle('guests-transparent', state.transparentGuests);
   });
 
+  // Row/col X-ray — overlays an X on every cell in the row or column of
+  // each placed suspect. Cells where two suspects share a row or column
+  // get a red X (rule violation).
+  $('#btn-toggle-rowcol').addEventListener('click', () => {
+    state.showRowColMarks = !state.showRowColMarks;
+    $('#btn-toggle-rowcol').classList.toggle('active', state.showRowColMarks);
+    rerender();
+  });
+
   // Topbar Clone (also exposed on the in-grid sample banner).
   const cloneCurrent = () => {
     const cloned = cloneActiveLevel();

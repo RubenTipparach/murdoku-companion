@@ -66,6 +66,7 @@ export const state = {
   selectedCharacterId: null,
   showRoomNames: true,
   transparentGuests: false,
+  showRowColMarks: false,
   // Sample keys (e.g. 'lvl_sample_lighthouse') the user has solved at
   // least once. Hydrated from localStorage at boot.
   completedSamples: new Set(),

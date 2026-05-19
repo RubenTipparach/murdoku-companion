@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Murdoku</title>
-    <link rel="stylesheet" href="./css/style.css?v=19" />
+    <link rel="stylesheet" href="./css/style.css?v=20" />
     <link
       rel="icon"
       type="image/svg+xml"
@@ -58,6 +58,7 @@
         <div class="view-toggles" role="toolbar" aria-label="View toggles">
           <button id="btn-toggle-names" class="active" title="Show or hide room names on the grid">🚪 Room names</button>
           <button id="btn-toggle-guests" title="Fade placed suspect portraits so the floor is visible underneath">👤 Fade</button>
+          <button id="btn-toggle-rowcol" title="Mark every cell in the row + column of each placed suspect. Cells where two suspects collide are flagged red — no two suspects can share a row or column.">✕ Rows + cols</button>
         </div>
         <div id="grid" class="grid" aria-label="9 by 9 grid"></div>
         <div id="status" class="status">Edit mode · paint a room to begin</div>
@@ -203,6 +204,6 @@
       <button data-close="toast">OK</button>
     </div>
 
-    <script type="module" src="./js/main.js?v=19"></script>
+    <script type="module" src="./js/main.js?v=20"></script>
   </body>
 </html>

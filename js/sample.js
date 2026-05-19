@@ -1,9 +1,11 @@
 // The shipped sample mysteries. Each is data only — read-only by default
-// (cloned for editing). All four follow these rules:
-//   • Every suspect (including the victim 🪦) stands on a UNIQUE row and
-//     a UNIQUE column. Nobody shares a row or column with anybody.
-//   • The killer 🔪 is in the same room as the victim — alone with them.
-//     All other suspects are in different rooms.
+// (cloned for editing).
+//
+// CLUE AUTHORING RULES (see CLAUDE.md):
+//   • Never name a room in a clue. Use furniture and relative positions.
+//   • Every victim's clue ends with "alone in the room with the killer".
+//   • The killer's clue never says "same room as the victim" — deduction
+//     happens via furniture proximity, not direct reveal.
 
 const CONSERVATORY = {
   id: 'lvl_sample_conservatory',
@@ -13,18 +15,17 @@ const CONSERVATORY = {
     'house tonight — each one swears they were elsewhere.\n\n' +
     'HOW TO PLAY\n' +
     'Drag each suspect into the cell where they actually stood at the ' +
-    'moment of the murder, then mark one of them 🔪 as the killer. The ' +
+    'moment of the murder, then mark one of them as the killer. The ' +
     'Check button unlocks once every suspect is placed and a killer is ' +
     'named.\n\n' +
     'THE PUZZLE RULES\n' +
     '• No two suspects share a row or a column. Everyone is in a unique ' +
     'row and a unique column.\n' +
-    '• The killer was alone in the room with the victim 🪦. Every other ' +
+    '• The victim was alone in a room with the killer. Every other ' +
     'suspect was in a different room.\n' +
-    '• Clues use relative language — "at the orchid table", "in the same ' +
-    'room as Yew", "to the left of the piano". Figure out where each ' +
-    'person stood, then identify the one in the room with Lady ' +
-    'Wraithmoor: that\'s your killer.',
+    '• Clues use furniture and relative position only — never room names. ' +
+    'Work out where each suspect stood, then whoever ends up in the ' +
+    'victim\'s room is the killer.',
   rooms: [
     { id: 'r1', name: 'Greenhouse', description: 'Glass walls, humid, smells of orchids.',
       color: '#7bc48f', tilePattern: 'square',
@@ -46,29 +47,39 @@ const CONSERVATORY = {
   victim: 'char-01',
   killerSolution: 'char-10',
   solution: {
-    '3,1': 'char-01', // Eveline (victim) — at the orchid table in the greenhouse
-    '2,2': 'char-10', // Crowe (killer) — chair in the greenhouse with the victim
-    '1,3': 'char-03', // Marisol — armchair in the library
-    '7,4': 'char-06', // Glover — at the dining table
-    '4,5': 'char-15', // Yew — on the hallway rug
-    '5,8': 'char-04', // Penn — at the piano in the parlour
+    '3,1': 'char-01', // Eveline (victim) — orchid table in the greenhouse
+    '2,2': 'char-10', // Crowe (killer) — chair near the orchid table
+    '1,3': 'char-03', // Marisol — armchair surrounded by bookshelves
+    '7,4': 'char-06', // Glover — long dinner table flanked by chairs
+    '4,5': 'char-15', // Yew — rug in the narrow corridor
+    '5,8': 'char-04', // Penn — at the piano
   },
   decorations: {
     '2,0': 'plant', '5,0': 'plant',
-    '3,1': 'table',           // Eveline's orchid table
-    '2,2': 'chair',           // Crowe's chair
-    '1,3': 'armchair',        // Marisol's armchair
-    '4,5': 'rug',             // Yew on the hallway rug
-    '5,3': 'painting', '6,4': 'chair', '7,4': 'table', '8,4': 'chair', // Dining
+    '3,1': 'table',
+    '2,2': 'chair',
+    '1,3': 'armchair', '0,3': 'bookshelf', '0,5': 'bookshelf',
+    '4,5': 'rug',
+    '5,3': 'painting', '6,4': 'chair', '7,4': 'table', '8,4': 'chair',
     '2,6': 'sofa', '6,6': 'painting', '3,8': 'lamp', '5,8': 'piano', '6,8': 'plant',
   },
   clues: {
-    'char-01': 'Lady Wraithmoor was found slumped at a table among potted orchids.',
-    'char-03': 'Dr. Quint was in the armchair in the library.',
-    'char-04': 'The reverend was at the keys of a piano.',
-    'char-06': 'The butler stood at the dining table — flanked left and right by chairs.',
-    'char-10': 'Professor Crowe was at a chair in the same room as Lady Wraithmoor.',
-    'char-15': 'The gardener stood on the rug in the narrow corridor between rooms.',
+    'char-01':
+      'Lady Wraithmoor was found slumped at a table surrounded by potted ' +
+      'orchids. She was alone in the room with the killer.',
+    'char-03':
+      'Dr. Quint was reading in an armchair, flanked by tall bookshelves.',
+    'char-04':
+      'The reverend was at the keys of the only piano in the house.',
+    'char-06':
+      'The butler stood at a long table, flanked immediately left and ' +
+      'right by tall chairs.',
+    'char-10':
+      'Professor Crowe was at a chair, two cells directly below a potted ' +
+      'plant — and one row below the orchid table.',
+    'char-15':
+      'The gardener stood on a rug in a narrow corridor between two ' +
+      'larger rooms.',
   },
 };
 
@@ -76,17 +87,16 @@ const LIGHTHOUSE = {
   id: 'lvl_sample_lighthouse',
   name: 'Midnight at the Lighthouse',
   description:
-    'The keeper of Black Cape Light is dead — found at the lantern. ' +
-    'Three others were on the rock tonight. Place each one and mark the ' +
-    'killer (the one who was alone in the room with the captain).',
+    'The keeper of Black Cape Light is dead. Three others were on the ' +
+    'rock tonight. Place each one and name the killer.',
   rooms: [
-    { id: 'r1', name: 'Lantern Room', description: 'Wind, sea, and one enormous bulb.',
+    { id: 'r1', name: 'Top of the Tower', description: 'Wind, sea, and one enormous bulb.',
       color: '#c4a87b', tilePattern: 'dots',
       cells: [[3,0],[4,0],[5,0],[3,1],[4,1],[5,1],[3,2],[4,2],[5,2]] },
     { id: 'r2', name: 'Stairwell', description: 'A spiral of iron treads with a single landing.',
       color: '#a87bc4', tilePattern: 'diamond',
       cells: [[3,3],[4,3],[3,4],[4,4],[3,5],[4,5]] },
-    { id: 'r3', name: 'Kitchen', description: 'A small galley with a kettle still on the stove.',
+    { id: 'r3', name: 'Galley', description: 'A small kettle on the stove and a kitchen table.',
       color: '#c47b7b', tilePattern: 'check',
       cells: [[1,6],[2,6],[3,6],[1,7],[2,7],[3,7],[1,8],[2,8],[3,8]] },
     { id: 'r4', name: 'Quarters', description: 'A single bunk and a chest of drawers.',
@@ -98,22 +108,28 @@ const LIGHTHOUSE = {
   killerSolution: 'char-19',
   solution: {
     '4,1': 'char-08', // Captain (victim) — at the lantern
-    '3,2': 'char-19', // Imogen (killer) — in the same room as the captain, at a plant
+    '3,2': 'char-19', // Imogen (killer) — at a plant near the lantern
     '1,7': 'char-13', // Ottilie — kitchen table
     '5,8': 'char-17', // Genevieve — the only bed
   },
   decorations: {
-    '4,1': 'lamp',                // Captain at the lantern
-    '3,2': 'plant',               // Imogen at a plant
-    '4,4': 'rug',                 // empty stairwell
+    '4,1': 'lamp',
+    '3,2': 'plant',
+    '4,4': 'rug',
     '1,7': 'table', '2,6': 'chair', '3,8': 'plant',
     '5,8': 'bed', '6,7': 'dresser', '4,6': 'lamp',
   },
   clues: {
-    'char-08': 'The captain was at the lantern itself.',
-    'char-13': 'Drinking tea at the kitchen table — the only table on the rock.',
-    'char-17': 'Found asleep in the only bed in the building.',
-    'char-19': 'Photographing a potted plant — in the same room as the captain.',
+    'char-08':
+      'The captain was at the lantern itself, the bulb still warm. ' +
+      'He was alone in the room with the killer.',
+    'char-13':
+      'Ottilie was at a small table — the only table on the rock.',
+    'char-17':
+      'Genevieve was found in the only bed in the building.',
+    'char-19':
+      'Imogen was beside a potted plant, two cells to the left of and ' +
+      'one row below the lantern.',
   },
 };
 
@@ -138,19 +154,24 @@ const TEA_AND_TREACHERY = {
   victim: 'char-05',
   killerSolution: 'char-09',
   solution: {
-    '2,4': 'char-05', // Sable (victim) — sofa in the parlour
-    '3,2': 'char-09', // Vivienne (killer) — same room (parlour), at a lamp
-    '6,3': 'char-20', // Felix — at the piano in the drawing room
+    '2,4': 'char-05', // Sable (victim) — on the sofa
+    '3,2': 'char-09', // Vivienne (killer) — beside a painting + lamp
+    '6,3': 'char-20', // Felix — at the piano
   },
   decorations: {
-    '2,4': 'sofa', '3,2': 'lamp', '1,3': 'painting',
+    '2,4': 'sofa', '3,2': 'painting', '1,3': 'lamp', '2,2': 'lamp',
     '6,3': 'piano', '7,4': 'armchair', '5,2': 'painting',
     '2,5': 'plant', '4,7': 'plant', '6,7': 'plant', '3,6': 'rug',
   },
   clues: {
-    'char-05': 'Madame Sable was on the sofa where she had been pouring tea.',
-    'char-09': 'Vivienne was at a lamp — in the same room as the medium.',
-    'char-20': 'Felix was at the keys of the only piano in the house.',
+    'char-05':
+      'Madame Sable was on the sofa where she had been pouring tea. ' +
+      'She was alone in the room with the killer.',
+    'char-09':
+      'Vivienne was directly beneath a hanging painting, two cells above ' +
+      'the sofa where Madame Sable sat.',
+    'char-20':
+      'Felix was at the keys of the only piano in the house.',
   },
 };
 
@@ -181,11 +202,11 @@ const BOOKSELLERS_LOFT = {
   victim: 'char-02',
   killerSolution: 'char-16',
   solution: {
-    '1,7': 'char-02', // Brand (victim) — in the bed
-    '2,6': 'char-16', // Silas (killer) — same room (loft), on a chair
-    '3,4': 'char-14', // Mortimer — armchair on the shop floor
-    '7,2': 'char-18', // Knox — at the desk in the office
-    '8,5': 'char-12', // Hask — dresser in the stockroom
+    '1,7': 'char-02', // Brand (victim) — the bed
+    '2,6': 'char-16', // Silas (killer) — chair next to the dresser by the bed
+    '3,4': 'char-14', // Mortimer — armchair flanked by bookshelves
+    '7,2': 'char-18', // Knox — at the desk
+    '8,5': 'char-12', // Hask — beside a dresser in the storage area
   },
   decorations: {
     '1,7': 'bed', '0,6': 'dresser', '2,6': 'chair',
@@ -195,11 +216,20 @@ const BOOKSELLERS_LOFT = {
     '4,7': 'table', '5,6': 'chair', '6,7': 'plant',
   },
   clues: {
-    'char-02': 'The bookseller was found in the only bed in the building.',
-    'char-12': 'Hask was beside a dresser in the storage area — not the one in the bedroom.',
-    'char-14': 'Mortimer was in the armchair on the shop floor, surrounded by bookshelves.',
-    'char-16': 'Silas was on a chair in the same room as the victim.',
-    'char-18': 'Knox sat at the only desk in the building.',
+    'char-02':
+      'The bookseller was found in the only bed in the building. He was ' +
+      'alone in the room with the killer.',
+    'char-12':
+      'Hask was beside a dresser — the one surrounded by storage crates, ' +
+      'not the one beside the bed.',
+    'char-14':
+      'Mortimer was in the armchair, flanked left, right and behind by ' +
+      'tall bookshelves.',
+    'char-16':
+      'Silas was on a chair directly to the right of a dresser — the one ' +
+      'beside the only bed.',
+    'char-18':
+      'Knox sat at the only desk in the building.',
   },
 };
 
