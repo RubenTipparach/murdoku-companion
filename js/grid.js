@@ -141,13 +141,16 @@ export function renderGrid(container, handlers) {
         }
       }
 
-      // Room label, at the anchor cell only.
-      const anchorRoom = anchors.get(k);
-      if (anchorRoom && anchorRoom.name && anchorRoom.name.trim() !== '') {
-        const label = document.createElement('div');
-        label.className = 'room-label';
-        label.textContent = anchorRoom.name;
-        cell.appendChild(label);
+      // Room label, at the anchor cell only. Suppressed entirely when the
+      // global "show room names" toggle is off.
+      if (state.showRoomNames) {
+        const anchorRoom = anchors.get(k);
+        if (anchorRoom && anchorRoom.name && anchorRoom.name.trim() !== '') {
+          const label = document.createElement('div');
+          label.className = 'room-label';
+          label.textContent = anchorRoom.name;
+          cell.appendChild(label);
+        }
       }
 
       container.appendChild(cell);

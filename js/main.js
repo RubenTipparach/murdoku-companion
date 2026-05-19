@@ -594,6 +594,13 @@ async function boot() {
     rerender();
   });
 
+  // Topbar room-name toggle. Pure view setting — does not modify the level.
+  $('#btn-toggle-names').addEventListener('click', () => {
+    state.showRoomNames = !state.showRoomNames;
+    $('#btn-toggle-names').classList.toggle('active', state.showRoomNames);
+    rerender();
+  });
+
   // Topbar Clone (also exposed on the in-grid sample banner).
   const cloneCurrent = () => {
     const cloned = cloneActiveLevel();

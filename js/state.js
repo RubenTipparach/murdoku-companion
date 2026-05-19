@@ -58,6 +58,7 @@ export const state = {
   tool: 'paint',      // 'paint' | 'erase' | 'doorway' | 'solution'
   selectedRoomId: null,
   selectedCharacterId: null,
+  showRoomNames: true,
   // Cache of cell → roomId for O(1) lookup. Rebuilt on render.
   cellRoomCache: new Map(),
 };
