@@ -7,17 +7,6 @@ import { createHash } from 'node:crypto';
 import { db, nowMs } from './db.js';
 
 const PORT = Number(process.env.PORT) || 8080;
-// SERVER_SALT is what makes stored token hashes useless if the sqlite
-// file leaks. We fall back to a known default so the server still
-// boots in unconfigured environments (local dev, first Fly deploy),
-// but anything public-facing should set a real one via
-// `fly secrets set SERVER_SALT=...`. Setting it later invalidates
-// every token minted under the default, which is fine pre-launch.
-const SERVER_SALT = process.env.SERVER_SALT || 'murdoku-dev-salt';
-
-if (!process.env.SERVER_SALT) {
-  console.warn('SERVER_SALT not set, using insecure default. Set it via `fly secrets set SERVER_SALT=...` before going public.');
-}
 
 // ----- Config / constants -----
 
@@ -25,8 +14,11 @@ const RESERVED_NAMES = new Set(['admin', 'system', 'anonymous', 'guest', 'murdok
 const PROFILE_NAME_RE = /^[A-Za-z0-9_-]{3,20}$/;
 const TOKEN_RE = /^[A-Za-z0-9_-]{43}$/; // base64url, 32 bytes => 43 chars w/o padding
 
+// Tokens are 32 random bytes generated client-side. We store only the
+// hash so a sqlite leak cannot be replayed as a bearer credential.
+// No salt: with a 2^256 search space there's nothing to harden against.
 function hashToken(token) {
-  return createHash('sha256').update(token + SERVER_SALT).digest('hex');
+  return createHash('sha256').update(token).digest('hex');
 }
 
 function isValidName(name) {
@@ -92,9 +84,9 @@ app.get('/healthz', (_req, res) => {
 });
 
 // Create or re-claim a profile. The client generates the token and
-// retains it; the server stores sha256(token + salt). If the name is
-// taken under a different token, return 409 so the client can prompt
-// the user to rename. If the same name + token comes back, it's an
+// retains it; the server stores sha256(token). If the name is taken
+// under a different token, return 409 so the client can prompt the
+// user to rename. If the same name + token comes back, it's an
 // idempotent re-claim (returns 200).
 app.post('/profiles', (req, res) => {
   const { name, token } = req.body || {};

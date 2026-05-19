@@ -34,19 +34,13 @@ a local API during development, change that meta value.
 
 ## One-time Fly bootstrap
 
-`fly.toml` covers app config. For an unconfigured environment the
-server boots with an insecure default salt and warns on startup; this
-is fine pre-launch since no real users exist yet. Before going public,
-set a real salt once:
+`fly.toml` covers app config. The app and its volume need to exist
+before the first deploy; no secrets to configure.
 
 ```
 fly apps create murdoku-companion
 fly volumes create murdoku_data --size 1 --region ams
-fly secrets set SERVER_SALT="$(openssl rand -hex 32)"
 ```
-
-Rotating `SERVER_SALT` invalidates every existing client token, so
-only change it deliberately.
 
 ## Continuous deploy
 
@@ -56,8 +50,9 @@ as the GitHub Pages frontend deploy and runs in parallel.
 
 ## Schema notes
 
-The `profiles` table stores `sha256(token + SERVER_SALT)`, never the
-raw token. Tokens are 32 random bytes generated client-side and
-persisted in the player's `localStorage` so they can sign back in to
-their profile after signing out. Rotating `SERVER_SALT` orphans every
-client; do not change it unless you intend to wipe the database.
+The `profiles` table stores `sha256(token)`, never the raw token.
+Tokens are 32 random bytes generated client-side and persisted in
+the player's `localStorage` so they can sign back in to their profile
+after signing out. With a 2^256 token space, an unsalted hash is
+already infeasible to attack; if the sqlite file leaks the hashes are
+not directly replayable as bearer credentials.
