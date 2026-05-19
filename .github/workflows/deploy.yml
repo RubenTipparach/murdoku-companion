@@ -1,0 +1,57 @@
+name: Deploy Murdoku to GitHub Pages
+
+# Deploy on every push to every branch (and on manual dispatch).
+# Each run overwrites the previously deployed Pages site, so the most-recent
+# commit on any branch is what ends up live. This matches the project's
+# requirement to "deploy on all commits regardless of branch."
+on:
+  push:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Allow at most one Pages deploy at a time; cancel any in-flight run if a new
+# commit lands first.
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      # The portrait PNGs are committed, but we regenerate them on every
+      # deploy so that updates to the generator script propagate without a
+      # separate "regenerate art" commit.
+      - name: Regenerate portraits
+        run: node scripts/generate-portraits.js
+
+      - name: Configure Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: .
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

@@ -1,0 +1,122 @@
+[
+  {
+    "id": "char-01",
+    "name": "Lady Eveline Wraithmoor",
+    "description": "Heiress to the Wraithmoor estate; allergic to chrysanthemums.",
+    "portrait": "assets/portraits/char-01.png"
+  },
+  {
+    "id": "char-02",
+    "name": "Inspector Cassius Brand",
+    "description": "A retired detective who insists he came for the hors d'oeuvres.",
+    "portrait": "assets/portraits/char-02.png"
+  },
+  {
+    "id": "char-03",
+    "name": "Dr. Marisol Quint",
+    "description": "The household physician — knows whose pills are whose.",
+    "portrait": "assets/portraits/char-03.png"
+  },
+  {
+    "id": "char-04",
+    "name": "Reverend Aldous Penn",
+    "description": "A travelling preacher whose sermons keep mentioning the host.",
+    "portrait": "assets/portraits/char-04.png"
+  },
+  {
+    "id": "char-05",
+    "name": "Madame Octavia Sable",
+    "description": "A medium claiming the victim consulted her last Tuesday.",
+    "portrait": "assets/portraits/char-05.png"
+  },
+  {
+    "id": "char-06",
+    "name": "Mr. Thaddeus Glover",
+    "description": "The butler. Yes, really. Don't make it weird.",
+    "portrait": "assets/portraits/char-06.png"
+  },
+  {
+    "id": "char-07",
+    "name": "Beatrice Halloran",
+    "description": "Cook, gossip, and the only one who saw the kitchen at midnight.",
+    "portrait": "assets/portraits/char-07.png"
+  },
+  {
+    "id": "char-08",
+    "name": "Captain Rhys Ardent",
+    "description": "Old navy friend of the victim, recently returned from sea.",
+    "portrait": "assets/portraits/char-08.png"
+  },
+  {
+    "id": "char-09",
+    "name": "Vivienne Marchand",
+    "description": "A perfumer; her scents linger in rooms she swears she never entered.",
+    "portrait": "assets/portraits/char-09.png"
+  },
+  {
+    "id": "char-10",
+    "name": "Professor Edmund Crowe",
+    "description": "Lecturer in entomology. Carries a jar. Of something.",
+    "portrait": "assets/portraits/char-10.png"
+  },
+  {
+    "id": "char-11",
+    "name": "Sister Adelheid Voss",
+    "description": "A novice nun on retreat — quieter than the wallpaper.",
+    "portrait": "assets/portraits/char-11.png"
+  },
+  {
+    "id": "char-12",
+    "name": "Colonel Percival Hask",
+    "description": "Distinguished veteran whose pension does not match his shoes.",
+    "portrait": "assets/portraits/char-12.png"
+  },
+  {
+    "id": "char-13",
+    "name": "Ottilie Bramwell",
+    "description": "A clockmaker. Knows exactly when the lights went out.",
+    "portrait": "assets/portraits/char-13.png"
+  },
+  {
+    "id": "char-14",
+    "name": "Mortimer Finch",
+    "description": "Estate solicitor, holding three wills and one secret.",
+    "portrait": "assets/portraits/char-14.png"
+  },
+  {
+    "id": "char-15",
+    "name": "Constance Yew",
+    "description": "The gardener. Knows what soil the rose bed has been disturbed with.",
+    "portrait": "assets/portraits/char-15.png"
+  },
+  {
+    "id": "char-16",
+    "name": "Silas Roe",
+    "description": "A jazz pianist booked for the evening's entertainment.",
+    "portrait": "assets/portraits/char-16.png"
+  },
+  {
+    "id": "char-17",
+    "name": "Dame Genevieve Pell",
+    "description": "Patroness of the arts and the victim's longtime rival.",
+    "portrait": "assets/portraits/char-17.png"
+  },
+  {
+    "id": "char-18",
+    "name": "Bartholomew Knox",
+    "description": "A locksmith hired the morning of the party. Why?",
+    "portrait": "assets/portraits/char-18.png"
+  },
+  {
+    "id": "char-19",
+    "name": "Imogen Sarsfield",
+    "description": "Photographer covering the soirée — every flash is alibi or evidence.",
+    "portrait": "assets/portraits/char-19.png"
+  },
+  {
+    "id": "char-20",
+    "name": "Felix Drummond",
+    "description": "A childhood friend of the victim. Or so the cards say.",
+    "portrait": "assets/portraits/char-20.png"
+  }
+]
