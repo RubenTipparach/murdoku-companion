@@ -351,23 +351,23 @@ input:focus, textarea:focus { outline: 2px solid var(--accent); outline-offset: 
 .cell .edge-pick.right  { top: 30%; bottom: 30%; right: 0; width: 30%; }
 .cell .edge-pick:hover { background: rgba(240, 171, 252, 0.5); }
 
-/* Room name label, anchored to one cell at the bottom of the room. Allowed
-   to wrap to multiple lines so long names render in full instead of being
-   truncated with an ellipsis. */
+/* Room name label, anchored to the room's bottom-row anchor cell. The label
+   extends one full cell to each side (2x the cell width) so longer names
+   read without wrapping and without being cropped by the cell border. */
 .cell .room-label {
   position: absolute;
   bottom: 2px;
-  left: 0;
-  right: 0;
-  font-size: 10px;
+  left: -50%;
+  right: -50%;
+  font-size: 11px;
   text-align: center;
-  background: rgba(12, 10, 22, 0.7);
+  background: rgba(12, 10, 22, 0.78);
   color: #fff;
   border-radius: 3px;
-  padding: 2px 3px;
+  padding: 2px 4px;
   pointer-events: none;
-  z-index: 1;
-  text-shadow: 0 1px 1px rgba(0,0,0,0.8);
+  z-index: 3;
+  text-shadow: 0 1px 1px rgba(0,0,0,0.85);
   line-height: 1.15;
   white-space: normal;
   word-break: break-word;
@@ -705,7 +705,13 @@ input:focus, textarea:focus { outline: 2px solid var(--accent); outline-offset: 
    stacking-context surprises (sticky topbar, etc.) from showing. */
 body.menu-active > .topbar,
 body.menu-active > .layout {
-  display: none;
+  display: none !important;
+}
+/* :has() fallback so the menu still covers everything if some JS path
+   forgets to flip body.menu-active. */
+body:has(> #start-modal.start-screen:not(.hidden)) > .topbar,
+body:has(> #start-modal.start-screen:not(.hidden)) > .layout {
+  display: none !important;
 }
 
 /* Start menu section heading */
