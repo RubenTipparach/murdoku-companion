@@ -4,14 +4,14 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Murdoku</title>
-    <link rel="stylesheet" href="./css/style.css?v=10" />
+    <link rel="stylesheet" href="./css/style.css?v=11" />
     <link
       rel="icon"
       type="image/svg+xml"
       href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' fill='%23583c87'/%3E%3Ctext x='8' y='12' font-size='12' text-anchor='middle' fill='white' font-family='monospace'%3EM%3C/text%3E%3C/svg%3E"
     />
   </head>
-  <body>
+  <body class="menu-active">
     <header class="topbar">
       <div class="topbar-row primary">
         <h1>Murdoku</h1>
@@ -107,11 +107,10 @@
 
     <!-- Start screen — the entry point of the app. Not a modal; replaces
          the game UI entirely until the user picks a level. -->
-    <div id="start-modal" class="start-screen hidden" role="dialog">
+    <div id="start-modal" class="start-screen" role="dialog">
       <div class="start-inner">
         <header>
           <h2>Murdoku</h2>
-          <button class="close" data-close="start" id="start-close" hidden>×</button>
         </header>
         <div class="modal-body">
           <p class="start-tagline">A murder-mystery puzzle in nine by nine.</p>
@@ -155,6 +154,6 @@
       <button data-close="toast">OK</button>
     </div>
 
-    <script type="module" src="./js/main.js?v=10"></script>
+    <script type="module" src="./js/main.js?v=11"></script>
   </body>
 </html>

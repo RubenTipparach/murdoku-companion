@@ -512,31 +512,17 @@ function closeLevels() { levelsModal.classList.add('hidden'); }
 
 // ---------- Start menu ----------
 
-function openStartMenu({ closable } = { closable: true }) {
-  // Refresh dynamic cards (the Continue card depends on the active level,
-  // which can change between opens via Levels modal etc.).
+function openStartMenu() {
+  // The menu is the page when it's up. There is no X — the user picks
+  // one of the cards to leave. Refresh the dynamic cards every time so
+  // the Continue card matches current state.
   renderStartSamples();
-  const closeBtn = $('#start-close');
-  if (closeBtn) closeBtn.hidden = !closable;
   startModal.classList.remove('hidden');
-  // Hide the game chrome entirely while the menu is up — the menu is the
-  // page now, not a popup over the game. Belt-and-suspenders: do this
-  // both via a body class (CSS does the hiding) and directly via inline
-  // style, so a stale stylesheet can't accidentally leave the chrome
-  // visible behind the menu.
   document.body.classList.add('menu-active');
-  const topbar = document.querySelector('.topbar');
-  const layout = document.querySelector('.layout');
-  if (topbar) topbar.style.display = 'none';
-  if (layout) layout.style.display = 'none';
 }
 function closeStartMenu() {
   startModal.classList.add('hidden');
   document.body.classList.remove('menu-active');
-  const topbar = document.querySelector('.topbar');
-  const layout = document.querySelector('.layout');
-  if (topbar) topbar.style.display = '';
-  if (layout) layout.style.display = '';
 }
 
 function handleStartAction(action, opts = {}) {
@@ -641,15 +627,9 @@ async function boot() {
     if (e.target === levelsModal) closeLevels();
   });
 
-  // Start menu wiring.
-  $('#btn-menu').addEventListener('click', () => openStartMenu({ closable: true }));
-  for (const c of document.querySelectorAll('[data-close="start"]')) c.addEventListener('click', closeStartMenu);
-  startModal.addEventListener('click', (e) => {
-    // Backdrop click closes only when the X is visible (i.e. not on first
-    // visit, where we want the user to make a real choice).
-    if (e.target === startModal && !$('#start-close').hidden) closeStartMenu();
-  });
-  // Dynamic sample cards + the static "edit mode" card.
+  // Start menu wiring. There is no close affordance — the user picks a
+  // card to leave. The topbar Menu button reopens the menu mid-session.
+  $('#btn-menu').addEventListener('click', () => openStartMenu());
   renderStartSamples();
   startModal.addEventListener('click', (e) => {
     const card = e.target.closest('.start-card');
@@ -799,11 +779,9 @@ async function boot() {
     }
   }, 4000);
 
-  // The start menu is the entry point on every boot. It's closable only
-  // when there's a saved level to fall back to — first-time users must
-  // pick something before the editor is reachable.
-  setMode('edit'); // baseline so the rest of the chrome paints once
-  openStartMenu({ closable: hasLevels });
+  // The start menu is the entire UI on boot. We deliberately do NOT
+  // render the game yet — the user must pick a level first.
+  openStartMenu();
 
   // Mobile browsers aggressively restore the page from the back-forward
   // cache (bfcache) when the user returns to the tab. boot() does NOT run
@@ -812,7 +790,7 @@ async function boot() {
   // the menu really is the first thing every visit.
   window.addEventListener('pageshow', (ev) => {
     if (ev.persisted) {
-      openStartMenu({ closable: state.levels.length > 0 });
+      openStartMenu();
     }
   });
 }
