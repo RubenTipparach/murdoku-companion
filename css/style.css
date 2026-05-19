@@ -1488,3 +1488,37 @@ body:has(> #start-modal.start-screen:not(.hidden)) > .layout {
   font-size: 12px;
   color: var(--ink-dim);
 }
+
+/* Top-of-menu Players + Leaderboards actions, sit in the start
+   modal's header alongside the Murdoku title. */
+.start-top-actions {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.start-top-btn {
+  background: var(--panel-2);
+  border: 1px solid var(--accent);
+  color: var(--accent-2);
+  font-size: 12px;
+  padding: 5px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+.start-top-btn:hover {
+  background: var(--accent);
+  color: #1c1330;
+  border-color: var(--accent-2);
+}
+
+.lb-hint {
+  font-size: 12px;
+  color: var(--ink-dim);
+  margin: 0 0 10px;
+}
+.player-row code {
+  background: #1f1b2e;
+  padding: 1px 5px;
+  border-radius: 3px;
+  font-size: 10px;
+}

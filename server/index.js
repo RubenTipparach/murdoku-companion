@@ -151,6 +151,27 @@ app.get('/profiles/me', requireProfile, (req, res) => {
 
 // ----- Shared levels -----
 
+// Shipped sample puzzles. These ship inside the static client; the
+// server only needs to know the codes and display names so it can
+// validate completions and label leaderboards. Codes mN are short
+// and never collide with the 8-char custom codes generated below.
+// IMPORTANT: keep this list in sync with js/sample.js. If a new sample
+// ships, add an entry here so its leaderboard works.
+const SAMPLE_NAMES = {
+  m1: 'The Crimson Conservatory',
+  m2: 'Midnight at the Lighthouse',
+  m3: 'Tea and Treachery',
+  m4: "The Bookseller's Loft",
+  m5: "The Magistrate's Study",
+  m6: 'Ferns and Felonies',
+  m7: 'The Atelier',
+  m8: 'The Coastal Hotel',
+  m9: 'The Speakeasy',
+};
+function isSampleCode(code) {
+  return Object.prototype.hasOwnProperty.call(SAMPLE_NAMES, code);
+}
+
 // 8 base32 chars; ~40 bits of entropy is plenty for a shareable
 // puzzle code. Crockford alphabet drops I/L/O/U to stay copy-friendly.
 const CODE_ALPHABET = '0123456789abcdefghjkmnpqrstvwxyz';
@@ -165,7 +186,7 @@ function generateLevelCode() {
 // side via the same module the client uses, so a tampered request
 // can't smuggle in an invalid level. Returns the generated code +
 // public URL for the share modal.
-app.post('/levels', requireProfile, (req, res) => {
+app.post('/custom', requireProfile, (req, res) => {
   const level = req.body && req.body.level;
   if (!level || typeof level !== 'object') {
     return res.status(400).json({ error: 'missing_level' });
@@ -203,7 +224,7 @@ app.post('/levels', requireProfile, (req, res) => {
 // Fetch a shared puzzle. Public: anyone can pull a level by code.
 // The owner's display name is denormalized in so the client can show
 // "Authored by @X" without a second lookup.
-app.get('/levels/:code', (req, res) => {
+app.get('/custom/:code', (req, res) => {
   const code = String(req.params.code || '').toLowerCase();
   const row = db
     .prepare(
@@ -235,7 +256,7 @@ app.get('/levels/:code', (req, res) => {
 // Bump the plays counter. Called once when a player opens a shared
 // puzzle for the first time (idempotency is on the client, the
 // server just increments). Anonymous; no auth gate.
-app.post('/levels/:code/plays', (req, res) => {
+app.post('/custom/:code/plays', (req, res) => {
   const code = String(req.params.code || '').toLowerCase();
   const info = db
     .prepare('UPDATE levels SET plays_count = plays_count + 1 WHERE code = ?')
@@ -247,7 +268,7 @@ app.post('/levels/:code/plays', (req, res) => {
 // Owner-only update. Used when the author edits their own shared
 // puzzle and re-publishes. We re-validate, then overwrite payload
 // and bump updated_at. Non-owners get 403.
-app.put('/levels/:code', requireProfile, (req, res) => {
+app.put('/custom/:code', requireProfile, (req, res) => {
   const code = String(req.params.code || '').toLowerCase();
   const owner = db
     .prepare('SELECT owner_id FROM levels WHERE code = ?')
@@ -274,73 +295,140 @@ app.put('/levels/:code', requireProfile, (req, res) => {
 
 // ----- Completions + leaderboard -----
 
-// Record a win on a shared puzzle. duration_ms must be positive,
-// mistakes must be a non-negative integer. We do not de-duplicate
-// per (profile, level): the player can post multiple completions
-// across multiple sessions and the leaderboard reports their best.
-app.post('/completions', requireProfile, (req, res) => {
-  const body = req.body || {};
-  const code = String(body.code || '').toLowerCase();
-  const durationMs = Number(body.durationMs);
-  const mistakes = Number.isFinite(body.mistakes) ? Math.max(0, Math.floor(body.mistakes)) : 0;
-  if (!code || !Number.isFinite(durationMs) || durationMs <= 0) {
-    return res.status(400).json({ error: 'bad_payload' });
-  }
-  const lvl = db.prepare('SELECT 1 FROM levels WHERE code = ?').get(code);
-  if (!lvl) return res.status(404).json({ error: 'not_found' });
-  db.prepare(
-    `INSERT INTO completions (profile_id, level_code, duration_ms, mistakes, completed_at)
-     VALUES (?, ?, ?, ?, ?)`
-  ).run(req.profile.id, code, Math.floor(durationMs), mistakes, nowMs());
-  res.status(201).json({ ok: true });
-});
+// Common implementation: record a completion. `code` is taken from
+// the URL, validated against either the SAMPLE_NAMES whitelist or
+// the levels table depending on the namespace flag, then a single
+// row is inserted. duration_ms must be positive, mistakes must be a
+// non-negative integer. We do not de-duplicate per (profile, level):
+// the player can post multiple completions across multiple sessions
+// and the leaderboard reports their best.
+function recordCompletionHandler(namespace) {
+  return (req, res) => {
+    const code = String(req.params.code || '').toLowerCase();
+    const body = req.body || {};
+    const durationMs = Number(body.durationMs);
+    const mistakes = Number.isFinite(body.mistakes) ? Math.max(0, Math.floor(body.mistakes)) : 0;
+    if (!Number.isFinite(durationMs) || durationMs <= 0) {
+      return res.status(400).json({ error: 'bad_payload' });
+    }
+    if (namespace === 'sample') {
+      if (!isSampleCode(code)) return res.status(404).json({ error: 'not_found' });
+    } else {
+      const lvl = db.prepare('SELECT 1 FROM levels WHERE code = ?').get(code);
+      if (!lvl) return res.status(404).json({ error: 'not_found' });
+    }
+    db.prepare(
+      `INSERT INTO completions (profile_id, level_code, duration_ms, mistakes, completed_at)
+       VALUES (?, ?, ?, ?, ?)`
+    ).run(req.profile.id, code, Math.floor(durationMs), mistakes, nowMs());
+    res.status(201).json({ ok: true });
+  };
+}
 
-// Public leaderboard for a shared puzzle. Best time per profile,
-// fastest first, top 50. completed_at on the winning row breaks
-// ties so a player who matched the time later doesn't displace
-// the earlier finisher.
-app.get('/levels/:code/leaderboard', (req, res) => {
-  const code = String(req.params.code || '').toLowerCase();
+// Best time per profile, fastest first, top 50. completed_at on the
+// winning row breaks ties so a player who matched the time later
+// doesn't displace the earlier finisher.
+function leaderboardHandler(namespace) {
+  return (req, res) => {
+    const code = String(req.params.code || '').toLowerCase();
+    if (namespace === 'sample' && !isSampleCode(code)) {
+      return res.status(404).json({ error: 'not_found' });
+    }
+    if (namespace === 'custom') {
+      const lvl = db.prepare('SELECT 1 FROM levels WHERE code = ?').get(code);
+      if (!lvl) return res.status(404).json({ error: 'not_found' });
+    }
+    const rows = db
+      .prepare(
+        `SELECT p.name AS profile_name,
+                MIN(c.duration_ms) AS best_ms,
+                MIN(c.mistakes)    AS best_mistakes,
+                MIN(c.completed_at) AS first_at
+         FROM completions c
+         JOIN profiles p ON p.id = c.profile_id
+         WHERE c.level_code = ?
+         GROUP BY c.profile_id
+         ORDER BY best_ms ASC, first_at ASC
+         LIMIT 50`
+      )
+      .all(code);
+    res.json({ code, entries: rows });
+  };
+}
+
+// Full solver list, one row per completion (a player who solves the
+// same puzzle twice shows up twice), newest first. Used by the
+// "Players completed" tab next to the leaderboard.
+function completionsListHandler(namespace) {
+  return (req, res) => {
+    const code = String(req.params.code || '').toLowerCase();
+    let levelName;
+    if (namespace === 'sample') {
+      if (!isSampleCode(code)) return res.status(404).json({ error: 'not_found' });
+      levelName = SAMPLE_NAMES[code];
+    } else {
+      const lvl = db.prepare('SELECT name FROM levels WHERE code = ?').get(code);
+      if (!lvl) return res.status(404).json({ error: 'not_found' });
+      levelName = lvl.name;
+    }
+    const rows = db
+      .prepare(
+        `SELECT p.name AS profile_name,
+                c.duration_ms,
+                c.mistakes,
+                c.completed_at
+         FROM completions c
+         JOIN profiles p ON p.id = c.profile_id
+         WHERE c.level_code = ?
+         ORDER BY c.completed_at DESC
+         LIMIT 200`
+      )
+      .all(code);
+    res.json({ code, levelName, entries: rows });
+  };
+}
+
+// Sample namespace: /levels/:code is read-only (no CRUD, samples ship
+// in the client) but accepts completions and exposes leaderboards.
+app.post('/levels/:code/completions', requireProfile, recordCompletionHandler('sample'));
+app.get('/levels/:code/leaderboard', leaderboardHandler('sample'));
+app.get('/levels/:code/completions', completionsListHandler('sample'));
+
+// Custom namespace: full CRUD + completions + leaderboard.
+app.post('/custom/:code/completions', requireProfile, recordCompletionHandler('custom'));
+app.get('/custom/:code/leaderboard', leaderboardHandler('custom'));
+app.get('/custom/:code/completions', completionsListHandler('custom'));
+
+// ----- Cross-namespace directory -----
+
+// Combined list of every puzzle that has at least one completion,
+// across both namespaces. Used by the global Leaderboards button in
+// the start menu so the player can pick a puzzle to inspect without
+// having to remember a share code. Newest activity first.
+app.get('/puzzles', (_req, res) => {
   const rows = db
     .prepare(
-      `SELECT p.name AS profile_name,
-              MIN(c.duration_ms) AS best_ms,
-              MIN(c.mistakes)    AS best_mistakes,
-              MIN(c.completed_at) AS first_at
+      `SELECT c.level_code AS code,
+              COUNT(*)              AS completion_count,
+              MAX(c.completed_at)   AS last_completed_at
        FROM completions c
-       JOIN profiles p ON p.id = c.profile_id
-       WHERE c.level_code = ?
-       GROUP BY c.profile_id
-       ORDER BY best_ms ASC, first_at ASC
-       LIMIT 50`
-    )
-    .all(code);
-  res.json({ code, entries: rows });
-});
-
-// Full solver list for a shared puzzle. One row per completion (a
-// player who solves the same puzzle twice shows up twice), newest
-// first. Used by the "Who has finished" tab next to the leaderboard.
-// Public and uncapped on retries; the LIMIT 200 ceiling stops a
-// pathological puzzle from streaming a megabyte of solves.
-app.get('/levels/:code/completions', (req, res) => {
-  const code = String(req.params.code || '').toLowerCase();
-  const lvl = db.prepare('SELECT name FROM levels WHERE code = ?').get(code);
-  if (!lvl) return res.status(404).json({ error: 'not_found' });
-  const rows = db
-    .prepare(
-      `SELECT p.name AS profile_name,
-              c.duration_ms,
-              c.mistakes,
-              c.completed_at
-       FROM completions c
-       JOIN profiles p ON p.id = c.profile_id
-       WHERE c.level_code = ?
-       ORDER BY c.completed_at DESC
+       GROUP BY c.level_code
+       ORDER BY last_completed_at DESC
        LIMIT 200`
     )
-    .all(code);
-  res.json({ code, levelName: lvl.name, entries: rows });
+    .all();
+  const entries = rows.map((r) => {
+    if (isSampleCode(r.code)) {
+      return { ...r, namespace: 'sample', name: SAMPLE_NAMES[r.code] };
+    }
+    const lvl = db.prepare('SELECT name FROM levels WHERE code = ?').get(r.code);
+    return {
+      ...r,
+      namespace: 'custom',
+      name: lvl ? lvl.name : `(deleted) ${r.code}`,
+    };
+  });
+  res.json({ entries });
 });
 
 // ----- Public player directory -----
@@ -392,6 +480,13 @@ app.get('/players/:name', (req, res) => {
        LIMIT 200`
     )
     .all(prof.id);
+  // Fold the sample-name registry in so a /players/:name view shows
+  // a friendly title for sample completions instead of "m1".
+  for (const c of completions) {
+    if (!c.level_name && isSampleCode(c.level_code)) {
+      c.level_name = SAMPLE_NAMES[c.level_code];
+    }
+  }
   const authoredCount = db
     .prepare('SELECT COUNT(*) AS n FROM levels WHERE owner_id = ?')
     .get(prof.id).n;
@@ -468,7 +563,7 @@ app.get('/admin', (_req, res) => {
   // that profile's best time. Used as a "fastest solves" board.
   const leaderboard = db
     .prepare(
-      `SELECT l.code, l.name AS level_name,
+      `SELECT c.level_code AS code, l.name AS level_name,
               p.name AS profile_name,
               MIN(c.duration_ms) AS best_ms,
               MIN(c.mistakes)    AS best_mistakes
@@ -480,6 +575,15 @@ app.get('/admin', (_req, res) => {
        LIMIT 50`
     )
     .all();
+
+  // Fold sample names in so the admin dashboard reads as a human-
+  // friendly title for sample rows instead of "m1".
+  for (const r of completions) {
+    if (!r.level_name && isSampleCode(r.level_code)) r.level_name = SAMPLE_NAMES[r.level_code];
+  }
+  for (const r of leaderboard) {
+    if (!r.level_name && isSampleCode(r.code)) r.level_name = SAMPLE_NAMES[r.code];
+  }
 
   const profileRows = profiles
     .map((r) => `<tr><td>${escapeHtml(r.name)}</td><td>${escapeHtml(r.created)}</td><td>${escapeHtml(r.seen)}</td><td class="num">${r.authored}</td><td class="num">${r.plays}</td></tr>`)

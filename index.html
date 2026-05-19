@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Murdoku</title>
-    <link rel="stylesheet" href="./css/style.css?v=31" />
+    <link rel="stylesheet" href="./css/style.css?v=32" />
     <!-- API base URL for the Murdoku companion server. Empty = local-
          only mode (no claims, no leaderboards). The deploy.yml workflow
          can substitute this from a build-time env var if needed. -->
@@ -130,6 +130,10 @@
       <div class="start-inner">
         <header>
           <h2>Murdoku</h2>
+          <div class="start-top-actions">
+            <button id="btn-leaderboards-global" class="start-top-btn" title="Browse leaderboards for every puzzle on the server">🏆 Leaderboards</button>
+            <button id="btn-players" class="start-top-btn" title="Browse every player on the server">👥 Players</button>
+          </div>
         </header>
         <div class="modal-body">
           <p class="start-tagline">A murder-mystery puzzle in nine by nine.</p>
@@ -163,7 +167,6 @@
 
           <div class="start-footer">
             <button id="btn-help" class="start-footer-btn">❓ How to play</button>
-            <button id="btn-players" class="start-footer-btn">👥 Players</button>
             <button id="btn-reset-all" class="start-footer-btn danger">⚠ Reset all data</button>
           </div>
         </div>
@@ -270,6 +273,24 @@
       </div>
     </div>
 
+    <!-- Cross-namespace puzzles directory. Opened by the top-of-menu
+         Leaderboards button; click a row to open the per-puzzle
+         leaderboard modal for it. -->
+    <div id="puzzles-modal" class="modal hidden" role="dialog">
+      <div class="modal-inner">
+        <header>
+          <h2>Leaderboards</h2>
+          <button class="close" data-close="puzzles">×</button>
+        </header>
+        <div class="modal-body">
+          <div id="puzzles-loading" class="lb-loading hidden">Loading...</div>
+          <div id="puzzles-error" class="lb-error hidden">Could not load the puzzle list.</div>
+          <p class="lb-hint">Every puzzle that has at least one recorded solve. Pick one to see its leaderboard.</p>
+          <div id="puzzles-list"></div>
+        </div>
+      </div>
+    </div>
+
     <!-- Players directory modal. Browse every profile on the server,
          click in for a per-player completion list. -->
     <div id="players-modal" class="modal hidden" role="dialog">
@@ -309,6 +330,6 @@
       </div>
     </div>
 
-    <script type="module" src="./js/main.js?v=31"></script>
+    <script type="module" src="./js/main.js?v=32"></script>
   </body>
 </html>

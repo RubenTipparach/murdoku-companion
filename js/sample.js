@@ -9,6 +9,7 @@
 
 const CONSERVATORY = {
   id: 'lvl_sample_conservatory',
+  code: 'm1',
   name: 'The Crimson Conservatory',
   difficulty: 'tutorial',
   description:
@@ -72,6 +73,7 @@ const CONSERVATORY = {
 
 const LIGHTHOUSE = {
   id: 'lvl_sample_lighthouse',
+  code: 'm2',
   name: 'Midnight at the Lighthouse',
   difficulty: 'gentle',
   description:
@@ -122,6 +124,7 @@ const LIGHTHOUSE = {
 
 const TEA_AND_TREACHERY = {
   id: 'lvl_sample_tea',
+  code: 'm3',
   name: 'Tea and Treachery',
   difficulty: 'gentle',
   description:
@@ -164,6 +167,7 @@ const TEA_AND_TREACHERY = {
 
 const BOOKSELLERS_LOFT = {
   id: 'lvl_sample_loft',
+  code: 'm4',
   name: "The Bookseller's Loft",
   difficulty: 'standard',
   description:
@@ -222,6 +226,7 @@ const BOOKSELLERS_LOFT = {
 
 const MAGISTRATES_STUDY = {
   id: 'lvl_sample_magistrate',
+  code: 'm5',
   name: "The Magistrate's Study",
   difficulty: 'standard',
   description:
@@ -292,6 +297,7 @@ const MAGISTRATES_STUDY = {
 
 const FERNS_AND_FELONIES = {
   id: 'lvl_sample_ferns',
+  code: 'm6',
   name: 'Ferns and Felonies',
   difficulty: 'gentle',
   description:
@@ -352,6 +358,7 @@ const FERNS_AND_FELONIES = {
 
 const ATELIER = {
   id: 'lvl_sample_atelier',
+  code: 'm7',
   name: 'The Atelier',
   difficulty: 'tricky',
   description:
@@ -419,6 +426,7 @@ const ATELIER = {
 
 const COASTAL_HOTEL = {
   id: 'lvl_sample_hotel',
+  code: 'm8',
   name: 'The Coastal Hotel',
   size: 12,
   difficulty: 'tricky',
@@ -529,6 +537,7 @@ const COASTAL_HOTEL = {
 
 const SPEAKEASY = {
   id: 'lvl_sample_speakeasy',
+  code: 'm9',
   name: 'The Speakeasy',
   size: 12,
   difficulty: 'tricky',
@@ -643,6 +652,7 @@ const RAW = [
 
 export const SAMPLES = RAW.map((s) => ({
   key: s.id,
+  code: s.code,
   name: s.name,
   description: s.description,
   difficulty: s.difficulty || null,
@@ -654,6 +664,11 @@ export const SAMPLES = RAW.map((s) => ({
     lvl.updatedAt = now;
     lvl.isSample = true;
     lvl.sampleKey = s.id;
+    // The raw sample carries the server-side mN code on the SAMPLES
+    // manifest, but the runtime level instance must not, lvl.code is
+    // the marker that distinguishes custom-shared puzzles from
+    // everything else in main.js.
+    delete lvl.code;
     lvl.playerPlacement = {};
     lvl.playerKiller = null;
     return lvl;

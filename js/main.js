@@ -20,7 +20,7 @@ import {
   apiAvailable, probeServer, claimProfile,
   shareLevel, updateSharedLevel, getSharedLevel, bumpPlays,
   recordCompletion, getLeaderboard, shareUrlFor,
-  getLevelCompletions, getPlayers, getPlayerProfile,
+  getLevelCompletions, getPlayers, getPlayerProfile, getPuzzles,
 } from './api.js';
 import { validateLevel } from './validator.js';
 import { renderGrid } from './grid.js';
@@ -84,6 +84,10 @@ const playersList = $('#players-list');
 const playersLoading = $('#players-loading');
 const playersError = $('#players-error');
 const playersBack = $('#players-back');
+const puzzlesModal = $('#puzzles-modal');
+const puzzlesList = $('#puzzles-list');
+const puzzlesLoading = $('#puzzles-loading');
+const puzzlesError = $('#puzzles-error');
 const shareModal   = $('#share-modal');
 const shareErrors  = $('#share-errors');
 const shareSuccess = $('#share-success');
@@ -898,9 +902,16 @@ function renderStartLibrary() {
       card.dataset.action = 'play-sample';
       card.dataset.sampleKey = s.key;
       const icon = done ? '✅' : '🔍';
+      const lbActions = s.code
+        ? `<div class="authored-actions">
+             <button data-sample-action="leaderboard" data-sample-key="${escapeHtml(s.key)}" class="leaderboard-btn">🏆 Leaderboard</button>
+             <button data-sample-action="solvers" data-sample-key="${escapeHtml(s.key)}" class="leaderboard-btn">👥 Players completed</button>
+           </div>`
+        : '';
       card.innerHTML = `
         <h3>${icon} ${escapeHtml(s.name)}</h3>
         <p>${escapeHtml(s.description)}</p>
+        ${lbActions}
       `;
       cards.appendChild(card);
     }
@@ -1069,10 +1080,36 @@ async function applyPlayUrlParam() {
   flashStatus(`Loaded "${lvl.name}" from @${data.ownerName}.`);
 }
 
-// On a win for a shared puzzle, post the completion + show the
-// top-of-leaderboard inline in the win toast.
+// Derive a server namespace from a bare puzzle code. Sample codes are
+// the short mN tokens drawn from the SAMPLES manifest; anything else
+// is treated as a custom shared-puzzle code. Used when the server
+// returned a code without telling us which namespace it belongs to
+// (e.g. inside a player's completion history).
+function inferNamespace(code) {
+  if (!code) return 'custom';
+  return SAMPLES.some((s) => s.code === code) ? 'sample' : 'custom';
+}
+
+// Resolve a level to its server target. Custom shared puzzles carry
+// their code directly; samples carry a sampleKey that we map back to
+// the canonical mN code via the SAMPLES manifest. Returns null for
+// authored-but-unshared levels (no leaderboard exists for those).
+function levelTarget(lvl) {
+  if (!lvl) return null;
+  if (lvl.code) return { code: lvl.code, namespace: 'custom', name: lvl.name };
+  if (lvl.sampleKey) {
+    const s = SAMPLES.find((x) => x.key === lvl.sampleKey);
+    if (s && s.code) return { code: s.code, namespace: 'sample', name: s.name };
+  }
+  return null;
+}
+
+// On a win, post the completion + show the top-of-leaderboard inline
+// in the win toast. Works for both shipped samples and custom shared
+// puzzles, the namespace is picked from levelTarget.
 async function postCompletionAndShowLeaderboard(lvl) {
-  if (!lvl || !lvl.code) return;
+  const tgt = levelTarget(lvl);
+  if (!tgt) return;
   const ap = activeProfile();
   if (!ap || !apiAvailable()) return;
   const session = playSession && playSession.levelId === lvl.id
@@ -1080,8 +1117,8 @@ async function postCompletionAndShowLeaderboard(lvl) {
     : null;
   const durationMs = session ? Math.max(1, Date.now() - session.startedAt) : 1000;
   const mistakes = session ? session.mistakes : 0;
-  await recordCompletion(ap.token, lvl.code, durationMs, mistakes);
-  const entries = await getLeaderboard(lvl.code);
+  await recordCompletion(ap.token, tgt.code, tgt.namespace, durationMs, mistakes);
+  const entries = await getLeaderboard(tgt.code, tgt.namespace);
   if (!entries || !entries.length) return;
   const top = entries.slice(0, 5);
   const items = top
@@ -1093,7 +1130,7 @@ async function postCompletionAndShowLeaderboard(lvl) {
       </li>`;
     })
     .join('');
-  winLeaderboard.innerHTML = `<h4>Leaderboard for "${escapeHtml(lvl.name || lvl.code)}"</h4><ol>${items}</ol>`;
+  winLeaderboard.innerHTML = `<h4>Leaderboard for "${escapeHtml(tgt.name || tgt.code)}"</h4><ol>${items}</ol>`;
   winLeaderboard.classList.remove('hidden');
 }
 
@@ -1119,15 +1156,15 @@ function formatWhen(ms) {
 
 // ---------- Leaderboard / completions modal ----------
 
-// Track the modal's current puzzle + tab so a re-fetch after tab switch
-// can be done without re-passing arguments. lbState.code is the puzzle
-// code; lbState.tab is 'top' or 'all'.
-const lbState = { code: null, name: null, tab: 'top' };
+// Track the modal's current puzzle + namespace + tab so a re-fetch
+// after tab switch can be done without re-passing arguments.
+const lbState = { code: null, name: null, namespace: 'custom', tab: 'top' };
 
-async function openLeaderboardModal(code, fallbackName, { initialTab = 'top' } = {}) {
+async function openLeaderboardModal(code, fallbackName, { initialTab = 'top', namespace = 'custom' } = {}) {
   if (!code) return;
   lbState.code = code;
   lbState.name = fallbackName || code;
+  lbState.namespace = namespace === 'sample' ? 'sample' : 'custom';
   lbState.tab = initialTab === 'all' ? 'all' : 'top';
   leaderboardModal.classList.remove('hidden');
   lbModalTitle.textContent = `Leaderboard, "${fallbackName || code}"`;
@@ -1143,7 +1180,7 @@ function closeLeaderboardModal() {
 }
 
 async function renderLeaderboardTab() {
-  const { code, tab } = lbState;
+  const { code, namespace, tab } = lbState;
   if (!code) return;
   lbTable.classList.add('hidden');
   lbEmpty.classList.add('hidden');
@@ -1153,7 +1190,7 @@ async function renderLeaderboardTab() {
 
   if (tab === 'top') {
     lbExtraCol.textContent = '';
-    const entries = await getLeaderboard(code);
+    const entries = await getLeaderboard(code, namespace);
     lbLoading.classList.add('hidden');
     if (entries === null) { lbError.classList.remove('hidden'); return; }
     if (!entries.length) { lbEmpty.classList.remove('hidden'); return; }
@@ -1176,7 +1213,7 @@ async function renderLeaderboardTab() {
 
   // 'all' tab: every completion, newest first.
   lbExtraCol.textContent = 'When';
-  const data = await getLevelCompletions(code);
+  const data = await getLevelCompletions(code, namespace);
   lbLoading.classList.add('hidden');
   if (data === null) { lbError.classList.remove('hidden'); return; }
   const entries = data.entries || [];
@@ -1293,6 +1330,38 @@ async function renderPlayerDetail(name) {
     </tbody>
   `;
   playersList.appendChild(table);
+}
+
+// ---------- Puzzles directory modal (global Leaderboards picker) ----------
+
+async function openPuzzlesModal() {
+  puzzlesModal.classList.remove('hidden');
+  puzzlesList.innerHTML = '';
+  puzzlesError.classList.add('hidden');
+  puzzlesLoading.classList.remove('hidden');
+  const entries = await getPuzzles();
+  puzzlesLoading.classList.add('hidden');
+  if (entries === null) { puzzlesError.classList.remove('hidden'); return; }
+  if (!entries.length) {
+    puzzlesList.innerHTML = '<p class="lb-empty">No puzzles have been solved yet.</p>';
+    return;
+  }
+  puzzlesList.innerHTML = entries
+    .map((p) => {
+      const ns = p.namespace === 'sample' ? 'Sample' : 'Custom';
+      return `<button class="player-row" data-puzzle-code="${escapeHtml(p.code)}" data-puzzle-namespace="${escapeHtml(p.namespace)}" data-puzzle-name="${escapeHtml(p.name || p.code)}">
+        <span>
+          <strong>${escapeHtml(p.name || p.code)}</strong>
+          <span class="player-meta">${ns} · code <code>${escapeHtml(p.code)}</code> · last solve ${escapeHtml(formatWhen(p.last_completed_at))}</span>
+        </span>
+        <span class="player-stats">${p.completion_count} solve(s)</span>
+      </button>`;
+    })
+    .join('');
+}
+
+function closePuzzlesModal() {
+  puzzlesModal.classList.add('hidden');
 }
 
 // Self-authored levels (the "Your levels" section). Always shows a
@@ -1669,6 +1738,22 @@ async function boot() {
     }
   });
 
+  // Global Leaderboards button: opens the cross-namespace puzzles
+  // directory. Rows click through into the per-puzzle leaderboard.
+  $('#btn-leaderboards-global').addEventListener('click', () => openPuzzlesModal());
+  for (const c of document.querySelectorAll('[data-close="puzzles"]')) c.addEventListener('click', closePuzzlesModal);
+  puzzlesModal.addEventListener('click', (e) => {
+    if (e.target === puzzlesModal) { closePuzzlesModal(); return; }
+    const row = e.target.closest('.player-row[data-puzzle-code]');
+    if (row) {
+      const code = row.dataset.puzzleCode;
+      const name = row.dataset.puzzleName;
+      const namespace = row.dataset.puzzleNamespace;
+      closePuzzlesModal();
+      openLeaderboardModal(code, name, { namespace });
+    }
+  });
+
   // Players directory modal: open button, close, back, and delegated
   // clicks for player rows + level codes (when drilled into a profile).
   $('#btn-players').addEventListener('click', () => openPlayersModal());
@@ -1689,15 +1774,16 @@ async function boot() {
       const code = lvlBtn.dataset.levelCode;
       const name = lvlBtn.dataset.levelName;
       closePlayersModal();
-      openLeaderboardModal(code, name);
+      openLeaderboardModal(code, name, { namespace: inferNamespace(code) });
     }
   });
 
   // "See full leaderboard" link inside the win toast. The button is
-  // only revealed for shared-puzzle wins (set by the win handler below).
+  // revealed for any level that has a server-side target (samples or
+  // shared puzzles); set by the win handler below.
   winViewLeaderboard.addEventListener('click', () => {
-    const lvl = activeLevel();
-    if (lvl && lvl.code) openLeaderboardModal(lvl.code, lvl.name);
+    const tgt = levelTarget(activeLevel());
+    if (tgt) openLeaderboardModal(tgt.code, tgt.name, { namespace: tgt.namespace });
   });
 
   // Reset all data, wipes every saved level, the profile, and progress
@@ -1730,6 +1816,19 @@ async function boot() {
   // Start-menu card delegation. Buttons inside an authored card are
   // detected first so the click doesn't bubble into the card itself.
   startModal.addEventListener('click', (e) => {
+    const sampleBtn = e.target.closest('[data-sample-action]');
+    if (sampleBtn) {
+      e.stopPropagation();
+      const s = SAMPLES.find((x) => x.key === sampleBtn.dataset.sampleKey);
+      if (s && s.code) {
+        const act = sampleBtn.dataset.sampleAction;
+        openLeaderboardModal(s.code, s.name, {
+          initialTab: act === 'solvers' ? 'all' : 'top',
+          namespace: 'sample',
+        });
+      }
+      return;
+    }
     const authoredBtn = e.target.closest('[data-authored-action]');
     if (authoredBtn) {
       if (authoredBtn.disabled) return;
@@ -1743,10 +1842,12 @@ async function boot() {
         cloneSharedLevelToAuthored(authoredBtn.dataset.authoredId);
       } else if (act === 'leaderboard') {
         const lvl = state.levels.find((l) => l.id === authoredBtn.dataset.authoredId);
-        if (lvl && lvl.code) openLeaderboardModal(lvl.code, lvl.name);
+        const tgt = levelTarget(lvl);
+        if (tgt) openLeaderboardModal(tgt.code, tgt.name, { namespace: tgt.namespace });
       } else if (act === 'solvers') {
         const lvl = state.levels.find((l) => l.id === authoredBtn.dataset.authoredId);
-        if (lvl && lvl.code) openLeaderboardModal(lvl.code, lvl.name, { initialTab: 'all' });
+        const tgt = levelTarget(lvl);
+        if (tgt) openLeaderboardModal(tgt.code, tgt.name, { initialTab: 'all', namespace: tgt.namespace });
       }
       return;
     }
@@ -1839,10 +1940,12 @@ async function boot() {
       winDetail.textContent = baseLine + elapsed;
       winLeaderboard.classList.add('hidden');
       winLeaderboard.innerHTML = '';
-      winViewLeaderboard.classList.toggle('hidden', !(lvl && lvl.code));
+      const tgt = levelTarget(lvl);
+      winViewLeaderboard.classList.toggle('hidden', !tgt);
       winToast.classList.remove('hidden', 'bad');
-      // Post completion + render leaderboard for shared puzzles.
-      if (lvl && lvl.code) postCompletionAndShowLeaderboard(lvl);
+      // Post completion + render leaderboard for any level with a
+      // server-side target (samples or custom shared puzzles).
+      if (tgt) postCompletionAndShowLeaderboard(lvl);
       // Outline only the cells the player actually placed, all correct on a win.
       highlightCells({ correct: result.correct, wrong: [] });
     } else {
