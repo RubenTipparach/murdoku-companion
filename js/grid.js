@@ -176,7 +176,7 @@ export function renderGrid(container, handlers) {
       // ONLY mark the placed-character cells that are themselves in
       // conflict (share a row or column with another placed suspect),
       // with a bright red X drawn on top of the portrait. Non-conflict
-      // suspects and empty cells get nothing — silent validation, only
+      // suspects and empty cells get nothing, silent validation, only
       // the rule violations light up.
       if (state.showRowColMarks) {
         const k = key(x, y);

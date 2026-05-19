@@ -29,7 +29,7 @@ export function checkSolution() {
   if (!lvl) return null;
   const solKeys = new Set(Object.keys(lvl.solution));
   // Cells the player has actually placed something on. We only ever
-  // highlight these — missing-but-expected cells are NOT marked, since
+  // highlight these, missing-but-expected cells are NOT marked, since
   // outlining them lights up half the board mid-puzzle.
   const correct = [];
   const wrong = [];

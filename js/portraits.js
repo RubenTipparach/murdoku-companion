@@ -16,7 +16,7 @@ export async function loadCharacters() {
 }
 
 // Render the suspect roster. Pass `filterIds` to scope the roster down to
-// only the characters used by the active level — Play mode uses this so the
+// only the characters used by the active level, Play mode uses this so the
 // player doesn't see twenty distractors when the case has six suspects.
 export function renderRoster(container, { filterIds = null, level = null } = {}) {
   container.innerHTML = '';
@@ -40,7 +40,7 @@ export function renderRoster(container, { filterIds = null, level = null } = {})
     btn.title = `${char.name}\n${char.description}`;
     btn.innerHTML = `<img src="${char.portrait}" alt="${char.name}" draggable="false" />`;
     if (state.selectedCharacterId === char.id) btn.classList.add('active');
-    // Same victim / killer badges as the grid — inline SVG so they render
+    // Same victim / killer badges as the grid, inline SVG so they render
     // identically on every device.
     if (char.id === victim || char.id === killer) {
       const badge = document.createElement('span');

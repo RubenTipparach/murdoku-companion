@@ -1,10 +1,10 @@
-// The shipped sample mysteries. Each is data only — read-only by default
+// The shipped sample mysteries. Each is data only, read-only by default
 // (cloned for editing).
 //
 // CLUE AUTHORING RULES (see CLAUDE.md):
 //   • Never name a room in a clue. Use furniture and relative positions.
 //   • Every victim's clue ends with "alone in the room with the killer".
-//   • The killer's clue never says "same room as the victim" — deduction
+//   • The killer's clue never says "same room as the victim", deduction
 //     happens via furniture proximity, not direct reveal.
 
 const CONSERVATORY = {
@@ -47,12 +47,12 @@ const CONSERVATORY = {
   victim: 'char-01',
   killerSolution: 'char-10',
   solution: {
-    '3,1': 'char-01', // Eveline (victim) — orchid table in the greenhouse
-    '2,2': 'char-10', // Crowe (killer) — chair near the orchid table
-    '1,3': 'char-03', // Marisol — armchair surrounded by bookshelves
-    '7,4': 'char-06', // Glover — long dinner table flanked by chairs
-    '4,5': 'char-15', // Yew — rug in the narrow corridor
-    '5,8': 'char-04', // Penn — at the piano
+    '3,1': 'char-01', // Eveline (victim), orchid table in the greenhouse
+    '2,2': 'char-10', // Crowe (killer), chair near the orchid table
+    '1,3': 'char-03', // Marisol, armchair surrounded by bookshelves
+    '7,4': 'char-06', // Glover, long dinner table flanked by chairs
+    '4,5': 'char-15', // Yew, rug in the narrow corridor
+    '5,8': 'char-04', // Penn, at the piano
   },
   decorations: {
     '2,0': 'plant', '5,0': 'plant',
@@ -106,10 +106,10 @@ const LIGHTHOUSE = {
   victim: 'char-08',
   killerSolution: 'char-19',
   solution: {
-    '4,1': 'char-08', // Captain (victim) — at the lantern
-    '3,2': 'char-19', // Imogen (killer) — at a plant near the lantern
-    '1,7': 'char-13', // Ottilie — kitchen table
-    '5,8': 'char-17', // Genevieve — the only bed
+    '4,1': 'char-08', // Captain (victim), at the lantern
+    '3,2': 'char-19', // Imogen (killer), at a plant near the lantern
+    '1,7': 'char-13', // Ottilie, kitchen table
+    '5,8': 'char-17', // Genevieve, the only bed
   },
   decorations: {
     '4,1': 'lamp',
@@ -152,9 +152,9 @@ const TEA_AND_TREACHERY = {
   victim: 'char-05',
   killerSolution: 'char-09',
   solution: {
-    '2,4': 'char-05', // Sable (victim) — on the sofa
-    '3,2': 'char-09', // Vivienne (killer) — beside a painting + lamp
-    '6,3': 'char-20', // Felix — at the piano
+    '2,4': 'char-05', // Sable (victim), on the sofa
+    '3,2': 'char-09', // Vivienne (killer), beside a painting + lamp
+    '6,3': 'char-20', // Felix, at the piano
   },
   decorations: {
     '2,4': 'sofa', '3,2': 'painting', '1,3': 'lamp', '2,2': 'lamp',
@@ -199,11 +199,11 @@ const BOOKSELLERS_LOFT = {
   victim: 'char-02',
   killerSolution: 'char-16',
   solution: {
-    '1,7': 'char-02', // Brand (victim) — the bed
-    '2,6': 'char-16', // Silas (killer) — chair next to the dresser by the bed
-    '3,4': 'char-14', // Mortimer — armchair flanked by bookshelves
-    '7,2': 'char-18', // Knox — at the desk
-    '8,5': 'char-12', // Hask — beside a dresser in the storage area
+    '1,7': 'char-02', // Brand (victim), the bed
+    '2,6': 'char-16', // Silas (killer), chair next to the dresser by the bed
+    '3,4': 'char-14', // Mortimer, armchair flanked by bookshelves
+    '7,2': 'char-18', // Knox, at the desk
+    '8,5': 'char-12', // Hask, beside a dresser in the storage area
   },
   decorations: {
     '1,7': 'bed', '1,6': 'dresser', '2,6': 'chair',

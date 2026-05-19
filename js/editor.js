@@ -162,7 +162,7 @@ export function renderRoomListReadonly(container) {
     sw.style.background = room.color;
     li.appendChild(sw);
     const name = document.createElement('div');
-    name.textContent = room.name + (room.description ? ` — ${room.description}` : '');
+    name.textContent = room.name + (room.description ? `, ${room.description}` : '');
     li.appendChild(name);
     container.appendChild(li);
   }

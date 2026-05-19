@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Murdoku</title>
-    <link rel="stylesheet" href="./css/style.css?v=22" />
+    <link rel="stylesheet" href="./css/style.css?v=23" />
     <link
       rel="icon"
       type="image/svg+xml"
@@ -58,7 +58,7 @@
         <div class="view-toggles" role="toolbar" aria-label="View toggles">
           <button id="btn-toggle-names" class="active" title="Show or hide room names on the grid">🚪 Room names</button>
           <button id="btn-toggle-guests" title="Fade placed suspect portraits so the floor is visible underneath">👤 Fade</button>
-          <button id="btn-toggle-rowcol" title="Mark every cell in the row + column of each placed suspect. Cells where two suspects collide are flagged red — no two suspects can share a row or column.">✕ Rows + cols</button>
+          <button id="btn-toggle-rowcol" title="Mark every cell in the row + column of each placed suspect. Cells where two suspects collide are flagged red, no two suspects can share a row or column.">✕ Rows + cols</button>
         </div>
         <div id="grid" class="grid" aria-label="9 by 9 grid"></div>
         <div id="status" class="status">Edit mode · paint a room to begin</div>
@@ -111,7 +111,7 @@
       </aside>
     </main>
 
-    <!-- Start screen — the entry point of the app. Not a modal; replaces
+    <!-- Start screen, the entry point of the app. Not a modal; replaces
          the game UI entirely until the user picks a level. -->
     <div id="start-modal" class="start-screen" role="dialog">
       <div class="start-inner">
@@ -140,7 +140,7 @@
       </div>
     </div>
 
-    <!-- Help modal — game rules walkthrough. -->
+    <!-- Help modal, game rules walkthrough. -->
     <div id="help-modal" class="modal hidden" role="dialog">
       <div class="modal-inner">
         <header>
@@ -168,7 +168,7 @@
           <h3>How to play</h3>
           <ol>
             <li>Click a suspect to read their clue.</li>
-            <li>Drag — or click cell — to place them where you think they stood.</li>
+            <li>Drag, or click cell, to place them where you think they stood.</li>
             <li>Re-placing a suspect moves them; each suspect can only be in one cell.</li>
             <li>Identify who shared the room with the victim and mark them with 🔪 <strong>Mark as killer</strong> in the clue bubble.</li>
             <li>When every suspect is placed and a killer is named, <strong>Check solution</strong> unlocks. Click it.</li>
@@ -194,7 +194,7 @@
       </div>
     </div>
 
-    <!-- Floating clue bubble — positioned at the selected suspect tile via JS. -->
+    <!-- Floating clue bubble, positioned at the selected suspect tile via JS. -->
     <div id="selected-clue" class="selected-clue hidden" role="tooltip"></div>
 
     <!-- Win toast -->
@@ -204,6 +204,6 @@
       <button data-close="toast">OK</button>
     </div>
 
-    <script type="module" src="./js/main.js?v=22"></script>
+    <script type="module" src="./js/main.js?v=23"></script>
   </body>
 </html>

@@ -98,7 +98,7 @@ function rerender() {
   } else {
     renderRoomListReadonly(roomListPlay);
     // In play mode only show suspects who actually appear in the level's
-    // solution — no point cluttering the roster with people the case never
+    // solution, no point cluttering the roster with people the case never
     // names. Derived live so it picks up edits.
     const suspectIds = lvl ? [...new Set(Object.values(lvl.solution))] : [];
     renderRoster(rosterPlay, { filterIds: suspectIds, level: lvl });
@@ -486,8 +486,8 @@ function renderStartContinue() {
   card.dataset.action = 'continue';
   card.dataset.continueId = lvl.id;
   const subtitle = lvl.isSample
-    ? 'Sample — resumes in Play mode.'
-    : 'Your last-edited level — resumes in Edit mode.';
+    ? 'Sample, resumes in Play mode.'
+    : 'Your last-edited level, resumes in Edit mode.';
   const icon = done ? '✅' : '↻';
   card.innerHTML = `
     <h3>${icon} ${escapeHtml(lvl.name || 'Untitled level')}</h3>
@@ -569,7 +569,7 @@ function closeLevels() { levelsModal.classList.add('hidden'); }
 // ---------- Start menu ----------
 
 function openStartMenu() {
-  // The menu is the page when it's up. There is no X — the user picks
+  // The menu is the page when it's up. There is no X, the user picks
   // one of the cards to leave. Refresh the dynamic cards every time so
   // the Continue card matches current state.
   renderStartSamples();
@@ -627,7 +627,7 @@ async function boot() {
   // first thing the user sees, even on returning visits. If there's a
   // previously-active level it's reachable via the menu's Continue card.
   const hasLevels = state.levels.length > 0;
-  // Clear activeId so nothing renders behind the modal — the menu is the
+  // Clear activeId so nothing renders behind the modal, the menu is the
   // whole UI until the user picks something.
   if (!hasLevels) state.activeId = null;
 
@@ -651,14 +651,14 @@ async function boot() {
     rerender();
   });
 
-  // Topbar room-name toggle. Pure view setting — does not modify the level.
+  // Topbar room-name toggle. Pure view setting, does not modify the level.
   $('#btn-toggle-names').addEventListener('click', () => {
     state.showRoomNames = !state.showRoomNames;
     $('#btn-toggle-names').classList.toggle('active', state.showRoomNames);
     rerender();
   });
 
-  // Topbar fade-guests toggle — drops the opacity of placed portraits so
+  // Topbar fade-guests toggle, drops the opacity of placed portraits so
   // the player can read the tile and furniture under them.
   $('#btn-toggle-guests').addEventListener('click', () => {
     state.transparentGuests = !state.transparentGuests;
@@ -666,7 +666,7 @@ async function boot() {
     document.body.classList.toggle('guests-transparent', state.transparentGuests);
   });
 
-  // Row/col X-ray — overlays an X on every cell in the row or column of
+  // Row/col X-ray, overlays an X on every cell in the row or column of
   // each placed suspect. Cells where two suspects share a row or column
   // get a red X (rule violation).
   $('#btn-toggle-rowcol').addEventListener('click', () => {
@@ -708,11 +708,11 @@ async function boot() {
     if (e.target === levelsModal) closeLevels();
   });
 
-  // Start menu wiring. There is no close affordance — the user picks a
+  // Start menu wiring. There is no close affordance, the user picks a
   // card to leave. The topbar Menu button reopens the menu mid-session.
   $('#btn-menu').addEventListener('click', () => openStartMenu());
 
-  // Help modal — accessible from both the start menu footer and the topbar.
+  // Help modal, accessible from both the start menu footer and the topbar.
   const helpModal = $('#help-modal');
   const openHelp = () => helpModal.classList.remove('hidden');
   const closeHelp = () => helpModal.classList.add('hidden');
@@ -721,17 +721,17 @@ async function boot() {
   for (const c of document.querySelectorAll('[data-close="help"]')) c.addEventListener('click', closeHelp);
   helpModal.addEventListener('click', (e) => { if (e.target === helpModal) closeHelp(); });
 
-  // Reset all data — wipes every saved level and progress flag. Confirmed
+  // Reset all data, wipes every saved level and progress flag. Confirmed
   // twice because there is no undo.
   $('#btn-reset-all').addEventListener('click', () => {
     if (!confirm('This will erase every saved level, all progress, and any in-flight clues you have written. Continue?')) return;
-    if (!confirm('Last chance — this cannot be undone. Reset everything?')) return;
+    if (!confirm('Last chance, this cannot be undone. Reset everything?')) return;
     try {
       localStorage.removeItem('murdoku.levels');
       localStorage.removeItem('murdoku.activeId');
       localStorage.removeItem('murdoku.completedSamples');
     } catch {}
-    // Reload to start clean — boot() will run again with empty state.
+    // Reload to start clean, boot() will run again with empty state.
     location.reload();
   });
   renderStartSamples();
@@ -819,22 +819,22 @@ async function boot() {
       }
       winDetail.textContent = lvl && lvl.name ? `You solved "${lvl.name}".` : 'You solved this case.';
       winToast.classList.remove('hidden', 'bad');
-      // Outline only the cells the player actually placed — all correct on a win.
+      // Outline only the cells the player actually placed, all correct on a win.
       highlightCells({ correct: result.correct, wrong: [] });
     } else {
       let msg;
       const hasWrong = result.wrong.length > 0;
       const hasMissing = result.missingCount > 0;
       if (hasWrong && result.killerWrong) {
-        msg = `${result.wrong.length} placement(s) wrong — and the killer is wrong too.`;
+        msg = `${result.wrong.length} placement(s) wrong, and the killer is wrong too.`;
       } else if (hasWrong) {
         msg = `${result.wrong.length} placement(s) wrong. Green ✓ red ✕ outlines show which.`;
       } else if (hasMissing && result.killerWrong) {
-        msg = `Still ${result.missingCount} suspect(s) left to place — and the killer is wrong.`;
+        msg = `Still ${result.missingCount} suspect(s) left to place, and the killer is wrong.`;
       } else if (hasMissing) {
         msg = `Place the remaining ${result.missingCount} suspect(s) first.`;
       } else if (result.killerWrong) {
-        msg = 'Everyone is in the right cell — but the killer is wrong. Look again at who shared a room with the victim.';
+        msg = 'Everyone is in the right cell, but the killer is wrong. Look again at who shared a room with the victim.';
       } else {
         msg = 'No solution has been set for this level yet.';
       }
@@ -842,7 +842,7 @@ async function boot() {
       winToast.classList.remove('hidden');
       winToast.classList.add('bad');
       // Outline only placed cells: green if right, red if wrong. NEVER
-      // outline cells the player hasn't placed on — they're not feedback.
+      // outline cells the player hasn't placed on, they're not feedback.
       highlightCells({ correct: result.correct, wrong: result.wrong });
     }
   });
@@ -909,12 +909,12 @@ async function boot() {
   }, 4000);
 
   // The start menu is the entire UI on boot. We deliberately do NOT
-  // render the game yet — the user must pick a level first.
+  // render the game yet, the user must pick a level first.
   openStartMenu();
 
   // Mobile browsers aggressively restore the page from the back-forward
   // cache (bfcache) when the user returns to the tab. boot() does NOT run
-  // again in that case — script state is restored as-is — so the start
+  // again in that case, script state is restored as-is, so the start
   // screen would not reappear. Re-open it on every bfcache restore so
   // the menu really is the first thing every visit.
   window.addEventListener('pageshow', (ev) => {

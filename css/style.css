@@ -254,13 +254,13 @@ input:focus, textarea:focus { outline: 2px solid var(--accent); outline-offset: 
   box-shadow: 0 0 0 2px rgba(0,0,0,0.3) inset;
   z-index: 1;
   position: relative;
-  /* Transition is consumed by the FLIP animator in main.js — re-rendered
+  /* Transition is consumed by the FLIP animator in main.js, re-rendered
      portraits slide from their old cell to the new one. */
   transition: transform 240ms cubic-bezier(0.2, 0.8, 0.2, 1);
   will-change: transform;
 }
 
-/* Furniture decoration — sits behind the portrait, never blocks clicks. */
+/* Furniture decoration, sits behind the portrait, never blocks clicks. */
 .cell .furniture {
   position: absolute;
   inset: 6%;
@@ -313,13 +313,13 @@ input:focus, textarea:focus { outline: 2px solid var(--accent); outline-offset: 
     linear-gradient(90deg, rgba(0,0,0,0.18) 1px, transparent 1px);
   background-size: 10px 10px;
 }
-/* Herringbone — two opposing diagonal stripes interleaved. */
+/* Herringbone, two opposing diagonal stripes interleaved. */
 .cell.in-room.tile-herringbone {
   background-image:
-    repeating-linear-gradient(45deg,  rgba(0,0,0,0.18) 0 2px, transparent 2px 7px),
+    repeating-linear-gradient(45deg, rgba(0,0,0,0.18) 0 2px, transparent 2px 7px),
     repeating-linear-gradient(-45deg, rgba(255,255,255,0.10) 0 2px, transparent 2px 7px);
 }
-/* Parquet — offset square panels. */
+/* Parquet, offset square panels. */
 .cell.in-room.tile-parquet {
   background-image:
     linear-gradient(45deg, rgba(0,0,0,0.16) 25%, transparent 25%, transparent 75%, rgba(0,0,0,0.16) 75%),
@@ -327,7 +327,7 @@ input:focus, textarea:focus { outline: 2px solid var(--accent); outline-offset: 
   background-size: 12px 12px;
   background-position: 0 0, 6px 6px;
 }
-/* Brick — staggered rows of rectangles. */
+/* Brick, staggered rows of rectangles. */
 .cell.in-room.tile-brick {
   background-color: var(--room-color);
   background-image:
@@ -346,7 +346,7 @@ input:focus, textarea:focus { outline: 2px solid var(--accent); outline-offset: 
   pointer-events: none;
   z-index: 0;
 }
-/* Hex — honeycomb cells via radial highlights on a translucent grid. */
+/* Hex, honeycomb cells via radial highlights on a translucent grid. */
 .cell.in-room.tile-hex {
   background-image:
     radial-gradient(circle at 50% 30%, rgba(255,255,255,0.10) 4px, transparent 5px),
@@ -358,10 +358,10 @@ input:focus, textarea:focus { outline: 2px solid var(--accent); outline-offset: 
 .cell.in-room.tile-weave {
   background-image:
     repeating-linear-gradient(90deg, rgba(0,0,0,0.22) 0 1px, transparent 1px 8px),
-    repeating-linear-gradient(0deg,  rgba(0,0,0,0.22) 0 1px, transparent 1px 8px),
+    repeating-linear-gradient(0deg, rgba(0,0,0,0.22) 0 1px, transparent 1px 8px),
     repeating-linear-gradient(45deg, rgba(255,255,255,0.06) 0 2px, transparent 2px 8px);
 }
-/* Marble — soft veining via layered radials. */
+/* Marble, soft veining via layered radials. */
 .cell.in-room.tile-marble {
   background-image:
     radial-gradient(circle at 20% 40%, rgba(255,255,255,0.18), transparent 40%),
@@ -381,7 +381,7 @@ input:focus, textarea:focus { outline: 2px solid var(--accent); outline-offset: 
 .cell.correct  { box-shadow: 0 0 0 3px var(--good) inset; }
 
 /* Victim / killer badge layered over the portrait. Uses inline SVG so it
-   renders the same on every device — no system-font emoji gaps. */
+   renders the same on every device, no system-font emoji gaps. */
 .md-icon {
   width: 18px;
   height: 18px;
@@ -440,7 +440,7 @@ input:focus, textarea:focus { outline: 2px solid var(--accent); outline-offset: 
 body.guests-transparent .cell .portrait { opacity: 0.4; }
 body.guests-transparent .cell.suspect-selected .portrait { opacity: 0.9; }
 
-/* The cell currently holding the selected suspect — pulses so the player can
+/* The cell currently holding the selected suspect, pulses so the player can
    see where they've already placed someone they're clicking on. */
 .cell.suspect-selected {
   box-shadow: 0 0 0 3px var(--accent-2) inset;
@@ -497,7 +497,7 @@ body.guests-transparent .cell.suspect-selected .portrait { opacity: 0.9; }
   min-height: 18px;
 }
 
-/* View toggles that sit directly above the grid — they affect how the
+/* View toggles that sit directly above the grid, they affect how the
    canvas renders, so they live next to it rather than in the topbar. */
 .view-toggles {
   display: flex;
@@ -606,7 +606,7 @@ body.guests-transparent .cell.suspect-selected .portrait { opacity: 0.9; }
 
 /* The selected-suspect clue bubble. Floats above the page UI and is
    positioned by JS to point at the currently-selected suspect tile.
-   `--arrow-x` is the offset of the arrow inside the bubble — JS sets it
+   `--arrow-x` is the offset of the arrow inside the bubble, JS sets it
    so the arrow always lines up with the tile that was clicked. */
 .selected-clue {
   position: fixed;

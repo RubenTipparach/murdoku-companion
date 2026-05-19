@@ -184,7 +184,7 @@ function drawPiano(cv, _rng) {
 function drawLamp(cv, rng) {
   cv.fillEllipse(16, 28, 8, 2, SHADOW);
   const shade = pickColor(rng, PASTELS);
-  // Shade — trapezoid via stacked rows.
+  // Shade, trapezoid via stacked rows.
   for (let y = 0; y < 8; y++) {
     const w = 6 + y * 1;
     cv.fillRect(16 - Math.floor(w / 2), 4 + y, w, 1, shade);
@@ -203,7 +203,7 @@ function drawPlant(cv, rng) {
   cv.fillRect(10, 22, 12, 6, [160, 90, 60, 255]);
   cv.fillRect(10, 22, 12, 1, [200, 130, 100, 255]);
   cv.fillRect(9, 21, 14, 2, [120, 70, 50, 255]);
-  // Leaves — clusters of green pixels.
+  // Leaves, clusters of green pixels.
   const green = [60, 130, 70, 255];
   const greenL = [100, 170, 90, 255];
   const greenD = [40, 90, 50, 255];
@@ -320,7 +320,7 @@ function drawClock(cv, _rng) {
   cv.fillRect(11, 28, 2, 2, WOOD_DARK);
   cv.fillRect(19, 28, 2, 2, WOOD_DARK);
 }
-// Tiny helper for the clock's pendulum bob — a single warm yellow.
+// Tiny helper for the clock's pendulum bob, a single warm yellow.
 function POMMEL_CLR() { return [205, 168, 88, 255]; }
 
 function drawMirror(cv, _rng) {
@@ -331,7 +331,7 @@ function drawMirror(cv, _rng) {
   cv.fillRect(8, 26, 16, 1, [120, 90, 30, 255]);
   // Glass.
   cv.fillRect(10, 5, 12, 20, [180, 210, 220, 255]);
-  // Reflection sheen — diagonal lighter band.
+  // Reflection sheen, diagonal lighter band.
   for (let i = 0; i < 14; i++) {
     if (10 + i < 22 && 6 + i < 25) cv.set(10 + i, 6 + i, [220, 235, 240, 255]);
   }
@@ -413,24 +413,24 @@ function drawSafe(cv, _rng) {
 // ---------- Roster ----------
 
 const SPRITES = [
-  { id: 'chair',       name: 'Chair',                  draw: drawChair },
-  { id: 'armchair',    name: 'Armchair',               draw: drawArmchair },
-  { id: 'sofa',        name: 'Sofa',                   draw: drawSofa },
-  { id: 'bed',         name: 'Bed',                    draw: drawBed },
-  { id: 'table',       name: 'Table',                  draw: drawTable },
-  { id: 'dresser',     name: 'Dresser',                draw: drawDresser },
-  { id: 'bookshelf',   name: 'Bookshelf',              draw: drawBookshelf },
-  { id: 'piano',       name: 'Piano',                  draw: drawPiano },
-  { id: 'lamp',        name: 'Floor lamp',             draw: drawLamp },
-  { id: 'plant',       name: 'Potted plant',           draw: drawPlant },
-  { id: 'painting',    name: 'Wall painting',          draw: drawPainting },
-  { id: 'rug',         name: 'Patterned rug',          draw: drawRug },
-  { id: 'fireplace',   name: 'Fireplace',              draw: drawFireplace },
-  { id: 'clock',       name: 'Grandfather clock',      draw: drawClock },
-  { id: 'mirror',      name: 'Mirror',                 draw: drawMirror },
-  { id: 'gramophone',  name: 'Gramophone',             draw: drawGramophone },
-  { id: 'typewriter',  name: 'Typewriter',             draw: drawTypewriter },
-  { id: 'safe',        name: 'Safe',                   draw: drawSafe },
+  { id: 'chair',      name: 'Chair',                 draw: drawChair },
+  { id: 'armchair',   name: 'Armchair',              draw: drawArmchair },
+  { id: 'sofa',       name: 'Sofa',                  draw: drawSofa },
+  { id: 'bed',        name: 'Bed',                   draw: drawBed },
+  { id: 'table',      name: 'Table',                 draw: drawTable },
+  { id: 'dresser',    name: 'Dresser',               draw: drawDresser },
+  { id: 'bookshelf',  name: 'Bookshelf',             draw: drawBookshelf },
+  { id: 'piano',      name: 'Piano',                 draw: drawPiano },
+  { id: 'lamp',       name: 'Floor lamp',            draw: drawLamp },
+  { id: 'plant',      name: 'Potted plant',          draw: drawPlant },
+  { id: 'painting',   name: 'Wall painting',         draw: drawPainting },
+  { id: 'rug',        name: 'Patterned rug',         draw: drawRug },
+  { id: 'fireplace',  name: 'Fireplace',             draw: drawFireplace },
+  { id: 'clock',      name: 'Grandfather clock',     draw: drawClock },
+  { id: 'mirror',     name: 'Mirror',                draw: drawMirror },
+  { id: 'gramophone', name: 'Gramophone',            draw: drawGramophone },
+  { id: 'typewriter', name: 'Typewriter',            draw: drawTypewriter },
+  { id: 'safe',       name: 'Safe',                  draw: drawSafe },
 ];
 
 function main() {

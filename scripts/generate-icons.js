@@ -13,7 +13,7 @@ const W = 32, H = 32;
 
 // ---------- palette ----------
 const STONE       = [205, 198, 184, 255];
-const STONE_DK    = [120, 110, 92,  255];
+const STONE_DK    = [120, 110, 92, 255];
 const STONE_SHADE = [160, 152, 138, 255];
 const CARVE       = [54, 46, 36, 255];
 const GRASS       = [80, 130, 60, 255];
@@ -102,9 +102,9 @@ function drawDagger(cv) {
   for (let t = 0; t <= 15; t++) {
     const x = 4 + t;
     const y = 26 - t;
-    bladeAt(x,     y);
+    bladeAt(x,    y);
     bladeAt(x + 1, y);
-    bladeAt(x,     y - 1);
+    bladeAt(x,    y - 1);
     bladeAt(x + 1, y - 1);
   }
   // Bevel highlight (lighter line down the spine of the blade).
@@ -126,8 +126,8 @@ function drawDagger(cv) {
 
   // Handle (continuation past the guard, brown).
   const handlePts = [
-    [19, 9],  [20, 8],  [21, 7],  [22, 6], [23, 5],
-    [20, 10], [21, 9],  [22, 8],  [23, 7], [24, 6],
+    [19, 9], [20, 8], [21, 7], [22, 6], [23, 5],
+    [20, 10], [21, 9], [22, 8], [23, 7], [24, 6],
   ];
   for (const [x, y] of handlePts) cv.set(x, y, HANDLE);
   // Handle highlight

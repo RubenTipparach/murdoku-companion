@@ -1,4 +1,4 @@
-# Murdoku — agent notes
+# Murdoku, agent notes
 
 Persistent project rules for future sessions. If you're picking up this
 codebase, read this first.
@@ -12,13 +12,13 @@ one of whom is the **victim** 🪦 and one of whom is the **killer** 🔪.
    on a unique row AND a unique column. No two suspects share a row or
    column under any circumstance.
 2. **Killer alone with victim.** The killer was in the same room as the
-   victim — and nobody else was in that room. Every other suspect was in
+   victim, and nobody else was in that room. Every other suspect was in
    a different room from the victim.
 3. **Win condition.** The player wins when (a) every suspect is placed
    in their exact correct cell, AND (b) the player has marked the killer
    with 🔪.
 
-## Clue authoring rules — DO NOT BREAK
+## Clue authoring rules, DO NOT BREAK
 
 These rules apply to **every level**, including all four shipped samples.
 They are the hardest things to get right and the easiest to regress.
@@ -31,7 +31,7 @@ They are the hardest things to get right and the easiest to regress.
 
 ✅ "Crowe was at a chair beside a wall of books."
 ✅ "Felix was outside, among potted plants."
-✅ "Silas was at a small table — the only one in the building besides the wine table."
+✅ "Silas was at a small table, the only one in the building besides the wine table."
 
 Why: the puzzle is "figure out which room each person is in from their
 surroundings". Naming the room destroys the puzzle.
@@ -45,7 +45,7 @@ victim.
 deduce same-room via furniture proximity)
 
 Why: every victim's clue already states "I was alone in the room with
-the killer" — the player solves the killer by working out where each
+the killer", the player solves the killer by working out where each
 suspect was and seeing who landed in the victim's room. If the killer's
 own clue says "same room as victim" the deduction collapses.
 
@@ -67,7 +67,7 @@ Allowed clue building blocks:
   above …", "directly below …", "diagonally adjacent to …", "between …
   and …", "flanked by …".
 - Same-row / same-column language: "in the same row as …", "in the
-  same column as …" — these are puzzle-rule references the player
+  same column as …", these are puzzle-rule references the player
   uses to deduce position.
 - Other suspects' positions: "to the right of Dr. Quint", "in the same
   row as Crowe", "across from the reverend".
@@ -77,7 +77,7 @@ Disallowed:
 - Direct statements like "in the room with the victim" in any non-victim
   clue.
 - **Counting cells** ("two cells above", "three rows below", "four
-  columns to the right"). Players shouldn't have to count squares —
+  columns to the right"). Players shouldn't have to count squares , 
   use adjacency / diagonal / same-row / same-column instead.
 
 ### Embrace ambiguity. Do not over-specify duplicate furniture.
@@ -107,14 +107,28 @@ When to refer to a specific furniture instance:
 - The disambiguator is another suspect ("the bookshelf behind Mortimer"),
   not a coordinate or another piece of furniture.
 
-### Punctuation: no em-dashes (—).
+### Punctuation: NEVER use em-dashes (", "). Anywhere. Ever.
 
-Replace em-dashes with a comma, period, or parentheses. They render
-inconsistently across fonts and read oddly in short clues.
+This is a hard rule. No em-dashes in:
+- player-visible strings (level names, descriptions, clues, UI text)
+- code comments
+- doc files (CLAUDE.md, DESIGN.md, README.md, this file)
+- commit messages
+- PR titles or bodies
 
-❌ "Crowe was at a bookshelf — the only one in the room."
+The em-dash character renders inconsistently across fonts and reads
+oddly in short clues. Replace it with one of:
+- a comma (most cases): "Crowe was at a bookshelf, the only one in the room."
+- a period: "Crowe was at a bookshelf. The only one in the room."
+- a colon (when introducing a list): "Three rules: ..."
+- parentheses (parenthetical aside): "Crowe (the entomologist) was..."
+- a space-hyphen-space " - " (in code comments where you want a visual break)
+
+❌ "Crowe was at a bookshelf, the only one in the room."
 ✅ "Crowe was at a bookshelf, the only one in the room."
-✅ "Crowe was at the only bookshelf in the room."
+
+If you find an em-dash in this codebase, fix it on sight. There is a
+sed one-liner under "Tech notes" that strips them all.
 
 ### Furniture for clue anchors must be unique or disambiguated.
 
@@ -132,7 +146,7 @@ The description of `lvl_sample_conservatory` walks the player through
 the rules. Other sample descriptions are shorter and assume the rules
 are known.
 
-### Check Solution highlighting — only highlight what the player placed.
+### Check Solution highlighting, only highlight what the player placed.
 
 When the player hits **Check solution** and is wrong, the grid must
 only outline cells the player *actually placed a suspect on*:
@@ -140,10 +154,10 @@ only outline cells the player *actually placed a suspect on*:
 - ✅ green outline on placed cells whose suspect is correct
 - ❌ red outline on placed cells whose suspect is wrong
 - **No outline** on cells the player left empty. We never highlight a
-  cell where a suspect is "missing" — that's not feedback the player
+  cell where a suspect is "missing", that's not feedback the player
   needs and it lights up half the board on a partial answer.
 
-`checkSolution()` returns both `correct` and `wrong` cell sets — they
+`checkSolution()` returns both `correct` and `wrong` cell sets, they
 must only contain cells present in `playerPlacement`.
 
 ## Tech notes
@@ -155,10 +169,17 @@ must only contain cells present in `playerPlacement`.
   `scripts/lib/pixel.js` (PNG encoder + Canvas + RNG). Outputs are
   committed *and* regenerated on every CI deploy.
 - Don't add framework dependencies. Don't add a build step. Don't add an
-  emoji or font dependency — ship inline SVG or generated PNGs for any
+  emoji or font dependency, ship inline SVG or generated PNGs for any
   icon that needs to render uniformly on every device.
 - State lives in `localStorage`. Schema migrations belong in
   `normalizeLevel` in `js/decor.js`.
+- Strip em-dashes anywhere they slip in:
+  ```bash
+  grep -rl ', ' --include='*.js' --include='*.md' --include='*.html' \
+    --include='*.css' --include='*.yml' --include='*.json' . \
+    | xargs sed -i 's/, /, /g'
+  ```
+  Then visually scan changed files for awkward grammar and tighten.
 
 ## Conventions
 

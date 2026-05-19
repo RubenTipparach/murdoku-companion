@@ -1,7 +1,7 @@
 // Global mutable state and the level model.
 
 export const DEFAULT_GRID = 9;
-// Maximum supported grid size — bumping this requires no code changes,
+// Maximum supported grid size, bumping this requires no code changes,
 // but levels above ~14 get cramped on mobile so we cap UI sizing there.
 export const MAX_GRID = 14;
 
@@ -71,8 +71,8 @@ export const state = {
   levels: [],
   activeId: null,
   characters: [],
-  mode: 'edit',       // 'edit' | 'play'
-  tool: 'paint',      // 'paint' | 'erase' | 'doorway' | 'solution'
+  mode: 'edit',      // 'edit' | 'play'
+  tool: 'paint',     // 'paint' | 'erase' | 'doorway' | 'solution'
   selectedRoomId: null,
   selectedCharacterId: null,
   showRoomNames: true,
@@ -124,7 +124,7 @@ export function setCellRoom(x, y, roomId) {
     if (lvl.playerPlacement[k]) delete lvl.playerPlacement[k];
     if (lvl.decorations && lvl.decorations[k]) delete lvl.decorations[k];
   }
-  // Doorways become stale silently — they just won't render if there's no
+  // Doorways become stale silently, they just won't render if there's no
   // wall there anymore.
   if (roomId) {
     const room = lvl.rooms.find((r) => r.id === roomId);
@@ -135,8 +135,8 @@ export function setCellRoom(x, y, roomId) {
 }
 
 // Doorway helpers. We store doorways as canonical edge strings:
-//   "h:x,y"  — horizontal edge between (x,y) and (x,y+1)
-//   "v:x,y"  — vertical edge between (x,y) and (x+1,y)
+//   "h:x,y", horizontal edge between (x,y) and (x,y+1)
+//   "v:x,y", vertical edge between (x,y) and (x+1,y)
 export function edgeKey(x, y, side) {
   switch (side) {
     case 'top':    return y > 0 ? `h:${x},${y - 1}` : null;
@@ -167,7 +167,7 @@ export function hasDoorway(x, y, side) {
 
 // Place a character at (x,y) in whichever placement map the current mode
 // targets (solution in edit, playerPlacement in play). Each character can
-// only sit in one cell at a time — placing them somewhere new removes them
+// only sit in one cell at a time, placing them somewhere new removes them
 // from wherever they were before. Returns true if the placement happened.
 export function placeCharacterAt(x, y, charId) {
   const lvl = activeLevel();
