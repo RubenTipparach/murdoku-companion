@@ -59,6 +59,7 @@ export const state = {
   selectedRoomId: null,
   selectedCharacterId: null,
   showRoomNames: true,
+  transparentGuests: false,
   // Cache of cell → roomId for O(1) lookup. Rebuilt on render.
   cellRoomCache: new Map(),
 };

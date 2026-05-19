@@ -601,6 +601,14 @@ async function boot() {
     rerender();
   });
 
+  // Topbar fade-guests toggle — drops the opacity of placed portraits so
+  // the player can read the tile and furniture under them.
+  $('#btn-toggle-guests').addEventListener('click', () => {
+    state.transparentGuests = !state.transparentGuests;
+    $('#btn-toggle-guests').classList.toggle('active', state.transparentGuests);
+    document.body.classList.toggle('guests-transparent', state.transparentGuests);
+  });
+
   // Topbar Clone (also exposed on the in-grid sample banner).
   const cloneCurrent = () => {
     const cloned = cloneActiveLevel();

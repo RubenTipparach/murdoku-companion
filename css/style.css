@@ -323,6 +323,12 @@ input:focus, textarea:focus { outline: 2px solid var(--accent); outline-offset: 
 .cell.correct  { box-shadow: 0 0 0 3px var(--good) inset; }
 .cell.drag-over { outline: 2px dashed var(--accent-2); outline-offset: -2px; }
 
+/* Fade-guests view: drops placed portrait opacity so the tile/furniture
+   under them shows through. Pulse on the selected suspect stays at full
+   so the player can still see who they've highlighted. */
+body.guests-transparent .cell .portrait { opacity: 0.4; }
+body.guests-transparent .cell.suspect-selected .portrait { opacity: 0.9; }
+
 /* The cell currently holding the selected suspect — pulses so the player can
    see where they've already placed someone they're clicking on. */
 .cell.suspect-selected {
