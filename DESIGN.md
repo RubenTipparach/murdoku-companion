@@ -268,7 +268,35 @@ Each phase ends in a runnable, demoable state.
 - Sample is exposed via the Levels modal (**Load sample**) — always imports
   a fresh copy with a new id.
 
-### Phase 9 — Clues, start menu, one-cell rule *(this branch)*
+### Phase 10 — Sample library, lock, clone, mobile nav *(this branch)*
+- **Four shipped sample mysteries** in `js/sample.js`:
+  *The Crimson Conservatory* (6 suspects), *Midnight at the Lighthouse* (4),
+  *Tea and Treachery* (3), *The Bookseller's Loft* (5). Each is read-only
+  (`isSample: true`) until cloned.
+- **Sample lock.** When a sample is the active level, the edit sidebar's
+  interactions are disabled, the level metadata fields go read-only, and a
+  banner above the grid prompts the player to clone first.
+- **Clone button** in the topbar (and on the banner) deep-clones the active
+  level, strips `isSample`, switches to the clone in edit mode.
+- **Topbar level select** lists every saved level (samples prefixed with 🔒).
+- **Persistent mode toggle.** The Edit/Play pill is now its own row in the
+  topbar and stays visible at every viewport.
+- **Mobile-friendly topbar.** Flexbox with `flex-wrap`; a `@media
+  (max-width: 560px)` breakpoint scales cells and tightens the action
+  buttons. Topbar is `position: sticky`.
+- **Play-mode metadata view.** The level description textarea is hidden in
+  play mode and replaced with a read-only paragraph. The meta-heading
+  changes from "Level description" to "Case file".
+- **Character descriptions in clues.** Both the edit-mode clue editor and
+  the play-mode clue bubble now show the character's manifest description
+  alongside the level-specific clue.
+- **Suspect-clue merge in play mode.** The standalone clues list is gone.
+  Tapping a suspect tile now pops a clue bubble below the roster *and*
+  highlights that suspect's currently-placed cell on the grid with a
+  pulsing accent ring, so the player can see at a glance where they've
+  already put the person they're reading a clue about.
+
+### Phase 9 — Clues, start menu, one-cell rule
 - **Start menu** modal on first visit (no closable X) asks **Play the
   sample mystery** vs **Create your own house** — so players are never
   spoiled by landing in edit mode on a level with a visible solution. A

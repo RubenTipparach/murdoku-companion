@@ -20,6 +20,7 @@
 }
 
 * { box-sizing: border-box; }
+[hidden], .hidden { display: none !important; }
 
 html, body {
   margin: 0;
@@ -52,13 +53,21 @@ input, textarea {
 input:focus, textarea:focus { outline: 2px solid var(--accent); outline-offset: -1px; }
 
 .topbar {
-  display: grid;
-  grid-template-columns: auto 1fr auto auto;
-  gap: 14px;
-  align-items: center;
-  padding: 10px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px 14px;
   background: var(--bg-2);
   border-bottom: 1px solid #322b4d;
+  position: sticky;
+  top: 0;
+  z-index: 5;
+}
+.topbar-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
 }
 .topbar h1 {
   margin: 0;
@@ -66,12 +75,91 @@ input:focus, textarea:focus { outline: 2px solid var(--accent); outline-offset: 
   letter-spacing: 1px;
   color: var(--accent-2);
 }
-.level-meta input {
-  width: 100%;
-  font-size: 16px;
+.topbar .mode-toggle {
+  display: inline-flex;
+  background: var(--panel-2);
+  border-radius: 6px;
+  padding: 2px;
 }
-.mode-toggle button { margin-left: 4px; }
-.topbar-actions { display: flex; gap: 6px; }
+.topbar .mode-toggle button {
+  border: none;
+  background: transparent;
+  padding: 6px 14px;
+  font-weight: 600;
+}
+.topbar .mode-toggle button.active {
+  background: var(--accent);
+  color: #1c1330;
+  border-radius: 4px;
+}
+.topbar-actions { display: flex; gap: 6px; flex-wrap: wrap; margin-left: auto; }
+
+.topbar .secondary { gap: 8px; }
+.level-picker {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--panel-2);
+  border-radius: 6px;
+  padding: 4px 8px;
+  flex: 1 1 200px;
+}
+.level-picker span { font-size: 12px; color: var(--ink-dim); }
+.level-picker select {
+  flex: 1;
+  background: transparent;
+  color: var(--ink);
+  border: none;
+  padding: 4px 0;
+  font: inherit;
+  cursor: pointer;
+  min-width: 0;
+}
+.level-picker select:focus { outline: 2px solid var(--accent); border-radius: 3px; }
+#level-name { flex: 1 1 160px; font-size: 14px; }
+#level-name:read-only { background: var(--bg-2); color: var(--ink-dim); border-style: dashed; cursor: default; }
+
+/* ------ Sample banner (shown in edit mode on read-only samples) ------ */
+.sample-banner {
+  width: 100%;
+  background: var(--warn);
+  color: #2a1f06;
+  border-radius: 8px;
+  padding: 8px 12px;
+  margin-bottom: 10px;
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  justify-content: space-between;
+}
+.sample-banner button {
+  background: #2a1f06;
+  color: var(--warn);
+  border-color: #1a1303;
+}
+.sample-banner.hidden { display: none; }
+.sample-banner span { font-size: 13px; }
+
+/* ------ Meta panel read-only view ------ */
+.meta-readonly {
+  margin: 0;
+  padding: 8px 10px;
+  background: var(--bg-2);
+  border-radius: 6px;
+  border: 1px dashed #4a416c;
+  color: var(--ink);
+  line-height: 1.4;
+  font-size: 13px;
+  white-space: pre-wrap;
+}
+.meta-readonly.hidden { display: none; }
+.meta-panel textarea.hidden { display: none; }
+
+/* ------ Disabled state for edit tools when on a sample ------ */
+.panel.locked .tool, .panel.locked button:not(.banner-allow), .panel.locked input, .panel.locked textarea {
+  pointer-events: none;
+  opacity: 0.5;
+}
 
 .layout {
   display: grid;
@@ -80,9 +168,16 @@ input:focus, textarea:focus { outline: 2px solid var(--accent); outline-offset: 
   gap: 14px;
   padding: 14px;
 }
-.board-wrap {
+.meta-panel {
   grid-column: 1;
   grid-row: 1;
+  background: var(--panel);
+  border-radius: 10px;
+  padding: 14px;
+}
+.board-wrap {
+  grid-column: 1;
+  grid-row: 2;
   background: var(--panel);
   border-radius: 10px;
   padding: 16px;
@@ -97,13 +192,6 @@ input:focus, textarea:focus { outline: 2px solid var(--accent); outline-offset: 
   border-radius: 10px;
   padding: 14px;
   overflow: auto;
-}
-.meta-panel {
-  grid-column: 1;
-  grid-row: 2;
-  background: var(--panel);
-  border-radius: 10px;
-  padding: 14px;
 }
 .meta-panel textarea { width: 100%; resize: vertical; min-height: 60px; }
 
@@ -235,6 +323,17 @@ input:focus, textarea:focus { outline: 2px solid var(--accent); outline-offset: 
 .cell.correct  { box-shadow: 0 0 0 3px var(--good) inset; }
 .cell.drag-over { outline: 2px dashed var(--accent-2); outline-offset: -2px; }
 
+/* The cell currently holding the selected suspect — pulses so the player can
+   see where they've already placed someone they're clicking on. */
+.cell.suspect-selected {
+  box-shadow: 0 0 0 3px var(--accent-2) inset;
+  animation: suspectPulse 1.2s ease-in-out infinite;
+}
+@keyframes suspectPulse {
+  0%, 100% { box-shadow: 0 0 0 3px var(--accent-2) inset; }
+  50%      { box-shadow: 0 0 0 5px var(--accent) inset; }
+}
+
 /* Make portrait/img inside char-tile show the system drag cursor cleanly. */
 .char-tile { cursor: grab; }
 .char-tile:active { cursor: grabbing; }
@@ -357,6 +456,59 @@ input:focus, textarea:focus { outline: 2px solid var(--accent); outline-offset: 
 
 .play-actions { display: flex; gap: 6px; margin: 10px 0; }
 .play-actions button { flex: 1; }
+
+/* The selected-suspect clue bubble. Lives below the play-mode roster, with
+   a little arrow pointing up at the tiles. */
+.selected-clue {
+  position: relative;
+  margin-top: 12px;
+  padding: 10px 12px;
+  background: var(--panel-2);
+  border: 1px solid var(--accent);
+  border-radius: 8px;
+  display: grid;
+  grid-template-columns: 40px 1fr;
+  gap: 10px;
+  align-items: start;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+}
+.selected-clue::before {
+  content: '';
+  position: absolute;
+  top: -8px;
+  left: 24px;
+  width: 14px;
+  height: 14px;
+  background: var(--panel-2);
+  border-top: 1px solid var(--accent);
+  border-left: 1px solid var(--accent);
+  transform: rotate(45deg);
+}
+.selected-clue img {
+  width: 40px;
+  height: 40px;
+  image-rendering: pixelated;
+  border-radius: 4px;
+}
+.selected-clue.hidden { display: none; }
+.selected-clue .clue-body strong {
+  display: block;
+  font-size: 13px;
+  margin-bottom: 2px;
+}
+.selected-clue .char-desc {
+  margin: 0 0 4px;
+  font-size: 11px;
+  font-style: italic;
+  color: var(--ink-dim);
+  line-height: 1.35;
+}
+.selected-clue .clue-text {
+  margin: 0;
+  font-size: 12px;
+  color: var(--ink);
+  line-height: 1.4;
+}
 
 /* ------ Clue editor / list ------ */
 .clue-editor, .clue-list {
@@ -501,6 +653,30 @@ input:focus, textarea:focus { outline: 2px solid var(--accent); outline-offset: 
 .toast.hidden { display: none; }
 .toast.bad { border-color: var(--bad); }
 
+/* Start menu section heading */
+.start-section {
+  margin: 14px 0 6px;
+  font-size: 12px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--ink-dim);
+}
+
+/* Character description under the clue */
+.clue-row .char-desc {
+  margin: 0 0 4px;
+  font-size: 11px;
+  color: var(--ink-dim);
+  font-style: italic;
+  line-height: 1.35;
+}
+.clue-row .clue-text {
+  margin: 0;
+  font-size: 12px;
+  color: var(--ink);
+  line-height: 1.4;
+}
+
 @media (max-width: 900px) {
   .layout {
     grid-template-columns: 1fr;
@@ -508,4 +684,11 @@ input:focus, textarea:focus { outline: 2px solid var(--accent); outline-offset: 
   .side-panel { grid-column: 1; grid-row: auto; }
   .meta-panel { grid-column: 1; grid-row: auto; }
   .grid { --cell: 40px; }
+}
+
+@media (max-width: 560px) {
+  .topbar h1 { font-size: 18px; }
+  .topbar-actions button { padding: 4px 8px; font-size: 12px; }
+  .grid { --cell: 34px; }
+  .char-roster { grid-template-columns: repeat(4, 1fr); }
 }

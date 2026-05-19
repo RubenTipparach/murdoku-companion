@@ -90,6 +90,7 @@ export function normalizeLevel(lvl) {
   if (!lvl.decorations || typeof lvl.decorations !== 'object') lvl.decorations = {};
   if (!lvl.clues || typeof lvl.clues !== 'object') lvl.clues = {};
   if (!Array.isArray(lvl.rooms)) lvl.rooms = [];
+  if (typeof lvl.isSample !== 'boolean') lvl.isSample = false;
   for (const room of lvl.rooms) {
     if (!room.tilePattern) room.tilePattern = 'solid';
   }

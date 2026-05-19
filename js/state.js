@@ -178,3 +178,21 @@ export function deleteRoom(roomId) {
   lvl.updatedAt = Date.now();
   rebuildCellCache();
 }
+
+// Deep-clone the active level into a new, editable one. The clone always
+// drops the isSample flag so the player can modify their copy freely.
+export function cloneActiveLevel() {
+  const lvl = activeLevel();
+  if (!lvl) return null;
+  const copy = JSON.parse(JSON.stringify(lvl));
+  copy.id = 'lvl_' + Math.random().toString(36).slice(2, 8);
+  copy.name = (lvl.name || 'Level') + ' (copy)';
+  copy.isSample = false;
+  copy.createdAt = Date.now();
+  copy.updatedAt = Date.now();
+  state.levels.push(copy);
+  state.activeId = copy.id;
+  state.selectedRoomId = null;
+  rebuildCellCache();
+  return copy;
+}
