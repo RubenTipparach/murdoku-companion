@@ -48,6 +48,13 @@ fly volumes create murdoku_data --size 1 --region ams
 using the `FLY_API_TOKEN` repo secret. The job uses the same trigger
 as the GitHub Pages frontend deploy and runs in parallel.
 
+## Live URLs
+
+- API base: https://murdoku-companion.fly.dev
+- Health check: https://murdoku-companion.fly.dev/healthz
+- Fly app dashboard (logs, metrics, machines, volumes, secrets):
+  https://fly.io/apps/murdoku-companion
+
 ## Schema notes
 
 The `profiles` table stores `sha256(token)`, never the raw token.
