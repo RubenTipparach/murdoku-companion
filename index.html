@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Murdoku</title>
-    <link rel="stylesheet" href="./css/style.css?v=25" />
+    <link rel="stylesheet" href="./css/style.css?v=26" />
     <link
       rel="icon"
       type="image/svg+xml"
@@ -123,16 +123,27 @@
         </header>
         <div class="modal-body">
           <p class="start-tagline">A murder-mystery puzzle in nine by nine.</p>
-          <h3 id="start-continue-heading" class="start-section hidden">Continue</h3>
-          <div id="start-continue" class="start-cards hidden"></div>
-          <h3 class="start-section">Play a sample</h3>
-          <div id="start-samples" class="start-cards"></div>
-          <h3 class="start-section">Or author your own</h3>
-          <div class="start-cards">
-            <button class="start-card" data-action="edit-mode">
-              <h3>🛠 Create your own house</h3>
-              <p>Author rooms, place suspects, write the clues.</p>
-            </button>
+
+          <!-- Profile row. Shows a creation form when no profile is
+               set, or the active profile with a sign-out affordance.
+               Everything below is gated until a profile exists. -->
+          <div id="start-profile" class="start-profile-row"></div>
+
+          <div id="start-gated" class="start-gated">
+            <h3 id="start-continue-heading" class="start-section hidden">Continue</h3>
+            <div id="start-continue" class="start-cards hidden"></div>
+
+            <h3 class="start-section">Levels</h3>
+            <div id="start-filter-tabs" class="start-filter-tabs" role="tablist">
+              <button class="filter-tab active" data-filter="all">All</button>
+              <button class="filter-tab" data-filter="new">New</button>
+              <button class="filter-tab" data-filter="finished">Finished</button>
+              <button class="filter-tab" data-filter="usergames">User games</button>
+            </div>
+            <div id="start-library" class="start-library"></div>
+
+            <h3 class="start-section">Your levels</h3>
+            <div id="start-authored" class="start-cards"></div>
           </div>
 
           <div class="start-footer">
@@ -207,6 +218,6 @@
       <button data-close="toast">OK</button>
     </div>
 
-    <script type="module" src="./js/main.js?v=25"></script>
+    <script type="module" src="./js/main.js?v=26"></script>
   </body>
 </html>

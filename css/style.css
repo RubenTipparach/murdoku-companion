@@ -950,6 +950,170 @@ body:has(> #start-modal.start-screen:not(.hidden)) > .layout {
 }
 .start-section:first-of-type { margin-top: 0; }
 
+/* ------ Profile row at the top of the start menu ------ */
+.start-profile-row {
+  margin: 0 0 18px;
+}
+.profile-create {
+  background: var(--panel-2);
+  border: 1px solid #4a416c;
+  border-radius: 8px;
+  padding: 14px;
+}
+.profile-create h3 {
+  margin: 0 0 6px;
+  font-size: 15px;
+  color: var(--accent-2);
+}
+.profile-create .hint {
+  margin: 0 0 10px;
+  font-size: 12px;
+  color: var(--ink-dim);
+  line-height: 1.45;
+}
+.profile-create form {
+  display: flex;
+  gap: 8px;
+  align-items: stretch;
+  flex-wrap: wrap;
+}
+.profile-create input {
+  flex: 1;
+  min-width: 160px;
+  padding: 6px 10px;
+}
+.profile-create button {
+  background: var(--accent);
+  color: #1c1330;
+  border-color: var(--accent-2);
+  font-weight: 600;
+}
+.profile-create button:hover { background: var(--accent-2); }
+.profile-error {
+  margin: 8px 0 0;
+  font-size: 12px;
+  color: var(--bad);
+}
+
+.profile-active {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  background: var(--panel-2);
+  border: 1px solid #4a416c;
+  border-radius: 8px;
+  padding: 10px 12px;
+}
+.profile-info {
+  flex: 1;
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.profile-icon {
+  font-size: 18px;
+}
+.profile-name {
+  font-weight: 600;
+  color: var(--accent-2);
+}
+.profile-hint {
+  font-size: 11px;
+  color: var(--ink-dim);
+}
+.profile-signout {
+  font-size: 11px;
+  padding: 4px 10px;
+}
+
+/* Gated sections hidden via .hidden when no profile is present. */
+.start-gated.hidden { display: none !important; }
+
+/* ------ Library filter tabs ------ */
+.start-filter-tabs {
+  display: flex;
+  gap: 6px;
+  margin: 0 0 10px;
+  flex-wrap: wrap;
+}
+.filter-tab {
+  font-size: 12px;
+  padding: 4px 12px;
+}
+.filter-tab.active {
+  background: var(--accent);
+  color: #1c1330;
+  border-color: var(--accent-2);
+}
+
+/* Difficulty tier headers inside the library. Matches difficulty-chip
+   colors so the section header reads as the tier itself. */
+.start-tier-header {
+  margin: 14px 0 6px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+}
+.start-tier-header.diff-tutorial { color: var(--accent-2); }
+.start-tier-header.diff-gentle   { color: var(--good); }
+.start-tier-header.diff-standard { color: var(--ink-dim); }
+.start-tier-header.diff-tricky   { color: var(--warn); }
+.start-tier-header.diff-expert   { color: var(--bad); }
+.start-tier-header.diff-fiendish {
+  background: linear-gradient(90deg, var(--accent), var(--bad));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+.start-library .start-cards { margin-bottom: 4px; }
+.start-library + .start-section { margin-top: 18px; }
+
+.empty-state {
+  font-size: 12px;
+  color: var(--ink-dim);
+  font-style: italic;
+  line-height: 1.45;
+  margin: 8px 0;
+}
+
+/* ------ Authored levels (Your levels section) ------ */
+.new-level-card {
+  border-style: dashed;
+  background: transparent;
+}
+.new-level-card:hover {
+  background: var(--panel-2);
+}
+.authored-card {
+  cursor: default;
+}
+.authored-card:hover { background: var(--panel-2); }
+.authored-actions {
+  display: flex;
+  gap: 6px;
+  margin-top: 8px;
+}
+.authored-actions button {
+  font-size: 11px;
+  padding: 4px 10px;
+}
+.authored-actions button[disabled] {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+.share-btn-disabled {
+  display: inline-block;
+  font-size: 11px;
+  padding: 3px 8px;
+  border: 1px solid #4a416c;
+  border-radius: 4px;
+  color: var(--ink-dim);
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
 /* Character description under the clue */
 .clue-row .char-desc {
   margin: 0 0 4px;

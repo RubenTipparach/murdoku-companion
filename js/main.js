@@ -11,6 +11,7 @@ import {
 import {
   loadLevels, saveLevels, loadActiveId, saveActiveId,
   loadCompletedSamples, saveCompletedSamples,
+  loadProfile, saveProfile,
 } from './storage.js';
 import { renderGrid } from './grid.js';
 import { loadCharacters, renderRoster } from './portraits.js';
@@ -48,7 +49,11 @@ const selectedClue = $('#selected-clue');
 const modeEditBtn  = $('#mode-edit');
 const modePlayBtn  = $('#mode-play');
 const startModal   = $('#start-modal');
-const startSamples = $('#start-samples');
+const startProfile = $('#start-profile');
+const startGated   = $('#start-gated');
+const startLibrary = $('#start-library');
+const startAuthored = $('#start-authored');
+const startFilterTabs = $('#start-filter-tabs');
 const levelsModal  = $('#levels-modal');
 const levelsListEl = $('#levels-list');
 const winToast     = $('#win-toast');
@@ -69,6 +74,22 @@ const DIFFICULTY_LABELS = {
   expert: 'Expert',
   fiendish: 'Fiendish',
 };
+
+// Difficulty tier rendering order in the library. Tiers not present in
+// the current sample roster are silently skipped.
+const DIFFICULTY_ORDER = ['tutorial', 'gentle', 'standard', 'tricky', 'expert', 'fiendish'];
+
+// Profile name rules. Mirrors the server-side regex planned for Phase 12,
+// so a locally-created name is portable when the API ships.
+const PROFILE_NAME_RE = /^[A-Za-z0-9_-]{3,20}$/;
+const RESERVED_NAMES = new Set(['admin', 'system', 'anonymous', 'guest', 'murdoku']);
+
+function validateProfileName(name) {
+  if (!name) return 'Pick a name.';
+  if (!PROFILE_NAME_RE.test(name)) return 'Use 3 to 20 letters, numbers, _ or -.';
+  if (RESERVED_NAMES.has(name.toLowerCase())) return 'That name is reserved. Try another.';
+  return null;
+}
 
 // ---------- Mode / tool switching ----------
 
@@ -466,34 +487,79 @@ function loadSampleAsNewLevel(sampleKey) {
   state.selectedRoomId = null;
 }
 
-// Populate the start-menu sample cards from SAMPLES, plus a Continue card
-// when there's an active level to resume.
-function renderStartSamples() {
-  startSamples.innerHTML = '';
-  for (const s of SAMPLES) {
-    const done = state.completedSamples.has(s.key);
-    const card = document.createElement('button');
-    card.className = 'start-card' + (done ? ' completed' : '');
-    card.dataset.action = 'play-sample';
-    card.dataset.sampleKey = s.key;
-    const icon = done ? '✅' : '🔍';
-    const chip = s.difficulty && DIFFICULTY_LABELS[s.difficulty]
-      ? `<span class="difficulty-chip diff-${s.difficulty}">${DIFFICULTY_LABELS[s.difficulty]}</span>`
-      : '';
-    card.innerHTML = `
-      <h3>${icon} ${escapeHtml(s.name)} ${chip}</h3>
-      <p>${escapeHtml(s.description)}</p>
+// Render the profile row at the top of the start menu. Two states:
+//  - No profile: creation form with a name input and a hint about the
+//    Phase 12 server claim. Gated sections below stay hidden.
+//  - Profile present: name chip with a sign-out affordance. Gated
+//    sections become visible.
+function renderStartProfile() {
+  if (!state.profile) {
+    startGated.classList.add('hidden');
+    startProfile.innerHTML = `
+      <div class="profile-create">
+        <h3>Pick a name to play</h3>
+        <p class="hint">Your name will be public on shared levels and leaderboards once the Murdoku server ships. Don't use your real name if you'd rather stay anonymous. For now this is just a local handle, stored on this device.</p>
+        <form id="profile-create-form" autocomplete="off">
+          <input id="profile-name-input" type="text" placeholder="e.g. inspector_grim" autocomplete="off" maxlength="20" spellcheck="false" />
+          <button type="submit">Create profile</button>
+        </form>
+        <p id="profile-error" class="profile-error hidden"></p>
+      </div>
     `;
-    startSamples.appendChild(card);
+    const form = startProfile.querySelector('#profile-create-form');
+    const input = startProfile.querySelector('#profile-name-input');
+    const errEl = startProfile.querySelector('#profile-error');
+    form.addEventListener('submit', (ev) => {
+      ev.preventDefault();
+      const name = input.value.trim();
+      const err = validateProfileName(name);
+      if (err) {
+        errEl.textContent = err;
+        errEl.classList.remove('hidden');
+        return;
+      }
+      state.profile = { name, createdAt: Date.now() };
+      saveProfile(state.profile);
+      renderStartMenu();
+    });
+    requestAnimationFrame(() => input.focus());
+    return;
   }
+  startGated.classList.remove('hidden');
+  startProfile.innerHTML = `
+    <div class="profile-active">
+      <div class="profile-info">
+        <span class="profile-icon">🪪</span>
+        <span class="profile-name">@${escapeHtml(state.profile.name)}</span>
+        <span class="profile-hint">Local profile, server sync ships in Phase 12.</span>
+      </div>
+      <button id="btn-sign-out" class="profile-signout">Sign out</button>
+    </div>
+  `;
+  startProfile.querySelector('#btn-sign-out').addEventListener('click', () => {
+    if (!confirm(`Sign out of @${state.profile.name}? Your levels stay on this device. You can create a new profile after.`)) return;
+    state.profile = null;
+    saveProfile(null);
+    renderStartMenu();
+  });
+}
+
+// Render every dynamic section of the start menu. Cheap, called whenever
+// any of profile / filter / completion state changes.
+function renderStartMenu() {
+  renderStartProfile();
+  if (!state.profile) return; // gated sections stay empty + hidden
   renderStartContinue();
+  renderStartFilterTabs();
+  renderStartLibrary();
+  renderStartAuthored();
 }
 
 function renderStartContinue() {
   const continueEl = $('#start-continue');
   const headingEl = $('#start-continue-heading');
   continueEl.innerHTML = '';
-  const lvl = state.levels.find((l) => l.id === state.activeId) || state.levels[0];
+  const lvl = state.levels.find((l) => l.id === state.activeId);
   if (!lvl) {
     continueEl.classList.add('hidden');
     headingEl.classList.add('hidden');
@@ -511,11 +577,128 @@ function renderStartContinue() {
     ? 'Sample, resumes in Play mode.'
     : 'Your last-edited level, resumes in Edit mode.';
   const icon = done ? '✅' : '↻';
+  const chip = lvl.difficulty && DIFFICULTY_LABELS[lvl.difficulty]
+    ? `<span class="difficulty-chip diff-${lvl.difficulty}">${DIFFICULTY_LABELS[lvl.difficulty]}</span>`
+    : '';
   card.innerHTML = `
-    <h3>${icon} ${escapeHtml(lvl.name || 'Untitled level')}</h3>
+    <h3>${icon} ${escapeHtml(lvl.name || 'Untitled level')} ${chip}</h3>
     <p>${escapeHtml(subtitle)}</p>
   `;
   continueEl.appendChild(card);
+}
+
+function renderStartFilterTabs() {
+  for (const btn of startFilterTabs.querySelectorAll('.filter-tab')) {
+    btn.classList.toggle('active', btn.dataset.filter === state.menuFilter);
+  }
+}
+
+// The shipped-sample library, grouped by difficulty tier with filter
+// support. The "User games" filter swaps the whole section for a
+// placeholder until shared-level fetching ships in Phase 13.
+function renderStartLibrary() {
+  startLibrary.innerHTML = '';
+
+  if (state.menuFilter === 'usergames') {
+    const p = document.createElement('p');
+    p.className = 'empty-state';
+    p.textContent = 'Levels shared by other players will appear here. Visit a share link to add one. Sharing ships in Phase 13.';
+    startLibrary.appendChild(p);
+    return;
+  }
+
+  const samples = SAMPLES.filter((s) => {
+    if (state.menuFilter === 'new') return !state.completedSamples.has(s.key);
+    if (state.menuFilter === 'finished') return state.completedSamples.has(s.key);
+    return true;
+  });
+
+  const groups = new Map();
+  for (const s of samples) {
+    const tier = s.difficulty && DIFFICULTY_LABELS[s.difficulty] ? s.difficulty : 'standard';
+    if (!groups.has(tier)) groups.set(tier, []);
+    groups.get(tier).push(s);
+  }
+
+  for (const tier of DIFFICULTY_ORDER) {
+    const list = groups.get(tier);
+    if (!list || !list.length) continue;
+    const header = document.createElement('h4');
+    header.className = `start-tier-header diff-${tier}`;
+    header.textContent = DIFFICULTY_LABELS[tier];
+    startLibrary.appendChild(header);
+
+    const cards = document.createElement('div');
+    cards.className = 'start-cards';
+    for (const s of list) {
+      const done = state.completedSamples.has(s.key);
+      const card = document.createElement('button');
+      card.className = 'start-card' + (done ? ' completed' : '');
+      card.dataset.action = 'play-sample';
+      card.dataset.sampleKey = s.key;
+      const icon = done ? '✅' : '🔍';
+      card.innerHTML = `
+        <h3>${icon} ${escapeHtml(s.name)}</h3>
+        <p>${escapeHtml(s.description)}</p>
+      `;
+      cards.appendChild(card);
+    }
+    startLibrary.appendChild(cards);
+  }
+
+  if (startLibrary.children.length === 0) {
+    const empty = document.createElement('p');
+    empty.className = 'empty-state';
+    empty.textContent = state.menuFilter === 'new'
+      ? 'You have solved every shipped sample. Try authoring one of your own.'
+      : state.menuFilter === 'finished'
+        ? 'No solved samples yet. Pick one from the All tab.'
+        : 'No samples available.';
+    startLibrary.appendChild(empty);
+  }
+}
+
+// Self-authored levels (the "Your levels" section). Always shows a
+// + New level card first; the share button is present but disabled
+// until Phase 13.
+function renderStartAuthored() {
+  startAuthored.innerHTML = '';
+
+  const newCard = document.createElement('button');
+  newCard.className = 'start-card new-level-card';
+  newCard.dataset.action = 'new-level';
+  newCard.innerHTML = `
+    <h3>+ New level</h3>
+    <p>Author rooms, place suspects, write the clues.</p>
+  `;
+  startAuthored.appendChild(newCard);
+
+  const authored = state.levels.filter((l) => !l.isSample && !l.isShared);
+  for (const lvl of authored) {
+    const card = document.createElement('button');
+    card.className = 'start-card authored-card';
+    card.dataset.action = 'open-authored';
+    card.dataset.authoredId = lvl.id;
+    const updated = new Date(lvl.updatedAt);
+    const chip = lvl.difficulty && DIFFICULTY_LABELS[lvl.difficulty]
+      ? `<span class="difficulty-chip diff-${lvl.difficulty}">${DIFFICULTY_LABELS[lvl.difficulty]}</span>`
+      : '';
+    card.innerHTML = `
+      <h3>✏ ${escapeHtml(lvl.name || 'Untitled level')} ${chip}</h3>
+      <p>Last edited ${updated.toLocaleDateString()}</p>
+      <div class="authored-actions">
+        <span data-authored-action="share" class="share-btn-disabled" title="Sharing ships in Phase 13.">Share (soon)</span>
+      </div>
+    `;
+    startAuthored.appendChild(card);
+  }
+
+  if (authored.length === 0) {
+    const empty = document.createElement('p');
+    empty.className = 'empty-state';
+    empty.textContent = 'No authored levels yet. Click + New level to start.';
+    startAuthored.appendChild(empty);
+  }
 }
 
 // ---------- Levels modal ----------
@@ -593,8 +776,8 @@ function closeLevels() { levelsModal.classList.add('hidden'); }
 function openStartMenu() {
   // The menu is the page when it's up. There is no X, the user picks
   // one of the cards to leave. Refresh the dynamic cards every time so
-  // the Continue card matches current state.
-  renderStartSamples();
+  // Continue, library, and authored sections match current state.
+  renderStartMenu();
   startModal.classList.remove('hidden');
   document.body.classList.add('menu-active');
 }
@@ -604,6 +787,10 @@ function closeStartMenu() {
 }
 
 function handleStartAction(action, opts = {}) {
+  // Every play / author action requires a profile. The profile creation
+  // form lives in the same menu, so a missing profile just means we
+  // don't leave; the form is already in front of the user.
+  if (!state.profile) return;
   switch (action) {
     case 'play-sample': {
       loadSampleAsNewLevel(opts.sampleKey);
@@ -611,14 +798,21 @@ function handleStartAction(action, opts = {}) {
       setMode('play');
       break;
     }
-    case 'edit-mode': {
-      // If we have no levels yet, create a blank one to give the author a
-      // canvas to start on.
-      if (!state.levels.length) {
-        const lvl = emptyLevel();
-        state.levels.push(lvl);
-        state.activeId = lvl.id;
-      }
+    case 'new-level': {
+      const lvl = emptyLevel();
+      state.levels.push(lvl);
+      state.activeId = lvl.id;
+      state.selectedRoomId = null;
+      persist();
+      setMode('edit');
+      break;
+    }
+    case 'open-authored': {
+      const id = opts.authoredId;
+      const lvl = state.levels.find((l) => l.id === id);
+      if (!lvl) break;
+      state.activeId = id;
+      state.selectedRoomId = null;
       persist();
       setMode('edit');
       break;
@@ -645,6 +839,7 @@ async function boot() {
   state.levels = loadLevels().map(normalizeLevel);
   state.activeId = loadActiveId();
   state.completedSamples = new Set(loadCompletedSamples());
+  state.profile = loadProfile();
   // We *never* auto-load a level on boot. The start menu is always the
   // first thing the user sees, even on returning visits. If there's a
   // previously-active level it's reachable via the menu's Continue card.
@@ -743,21 +938,43 @@ async function boot() {
   for (const c of document.querySelectorAll('[data-close="help"]')) c.addEventListener('click', closeHelp);
   helpModal.addEventListener('click', (e) => { if (e.target === helpModal) closeHelp(); });
 
-  // Reset all data, wipes every saved level and progress flag. Confirmed
-  // twice because there is no undo.
+  // Reset all data, wipes every saved level, the profile, and progress
+  // flags. Confirmed twice because there is no undo.
   $('#btn-reset-all').addEventListener('click', () => {
-    if (!confirm('This will erase every saved level, all progress, and any in-flight clues you have written. Continue?')) return;
+    if (!confirm('This will erase every saved level, your profile, all progress, and any in-flight clues you have written. Continue?')) return;
     if (!confirm('Last chance, this cannot be undone. Reset everything?')) return;
     try {
       localStorage.removeItem('murdoku.levels');
       localStorage.removeItem('murdoku.activeId');
       localStorage.removeItem('murdoku.completedSamples');
+      localStorage.removeItem('murdoku.profile');
     } catch {}
     // Reload to start clean, boot() will run again with empty state.
     location.reload();
   });
-  renderStartSamples();
+  renderStartMenu();
+
+  // Filter-tab clicks restrict the library view without leaving the menu.
+  startFilterTabs.addEventListener('click', (ev) => {
+    const tab = ev.target.closest('.filter-tab');
+    if (!tab) return;
+    state.menuFilter = tab.dataset.filter;
+    renderStartFilterTabs();
+    renderStartLibrary();
+  });
+
+  // Start-menu card delegation. Buttons inside an authored card are
+  // detected first so the click doesn't bubble into the card itself.
   startModal.addEventListener('click', (e) => {
+    const authoredBtn = e.target.closest('[data-authored-action]');
+    if (authoredBtn) {
+      if (authoredBtn.disabled) return;
+      const act = authoredBtn.dataset.authoredAction;
+      if (act === 'open') {
+        handleStartAction('open-authored', { authoredId: authoredBtn.dataset.authoredId });
+      }
+      return;
+    }
     const card = e.target.closest('.start-card');
     if (!card) return;
     handleStartAction(card.dataset.action, {
