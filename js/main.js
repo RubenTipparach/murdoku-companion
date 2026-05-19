@@ -20,6 +20,7 @@ import {
   apiAvailable, probeServer, claimProfile,
   shareLevel, updateSharedLevel, getSharedLevel, bumpPlays,
   recordCompletion, getLeaderboard, shareUrlFor,
+  getLevelCompletions, getPlayers, getPlayerProfile,
 } from './api.js';
 import { validateLevel } from './validator.js';
 import { renderGrid } from './grid.js';
@@ -68,6 +69,21 @@ const levelsListEl = $('#levels-list');
 const winToast     = $('#win-toast');
 const winDetail    = $('#win-detail');
 const winLeaderboard = $('#win-leaderboard');
+const winViewLeaderboard = $('#win-view-leaderboard');
+const leaderboardModal = $('#leaderboard-modal');
+const lbModalTitle = $('#lb-modal-title');
+const lbTable = $('#lb-table');
+const lbTbody = $('#lb-tbody');
+const lbExtraCol = $('#lb-extra-col');
+const lbLoading = $('#lb-loading');
+const lbEmpty = $('#lb-empty');
+const lbError = $('#lb-error');
+const playersModal = $('#players-modal');
+const playersModalTitle = $('#players-modal-title');
+const playersList = $('#players-list');
+const playersLoading = $('#players-loading');
+const playersError = $('#players-error');
+const playersBack = $('#players-back');
 const shareModal   = $('#share-modal');
 const shareErrors  = $('#share-errors');
 const shareSuccess = $('#share-success');
@@ -831,10 +847,14 @@ function renderStartLibrary() {
       card.dataset.action = 'open-authored';
       card.dataset.authoredId = lvl.id;
       const who = lvl.ownerName ? `@${escapeHtml(lvl.ownerName)}` : 'someone';
+      const lbBtn = lvl.code
+        ? `<button data-authored-action="leaderboard" data-authored-id="${escapeHtml(lvl.id)}" class="leaderboard-btn">🏆 Leaderboard</button>`
+        : '';
       card.innerHTML = `
         <h3>🔗 ${escapeHtml(lvl.name || 'Shared puzzle')}</h3>
         <p>By ${who} · code <code>${escapeHtml(lvl.code || '')}</code></p>
         <div class="authored-actions">
+          ${lbBtn}
           <button data-authored-action="clone" data-authored-id="${escapeHtml(lvl.id)}" class="clone-btn">Clone to edit</button>
         </div>
       `;
@@ -1079,6 +1099,197 @@ function formatMs(ms) {
   const m = Math.floor(totalSec / 60);
   const s = totalSec % 60;
   return `${m}:${s.toString().padStart(2, '0')}`;
+}
+
+// Format a millisecond timestamp as a short "Mon DD" string for the
+// completion list. Skips the year, the list is recency-ordered so the
+// year is obvious from context.
+function formatWhen(ms) {
+  if (!Number.isFinite(ms)) return '';
+  try {
+    return new Date(ms).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+  } catch {
+    return '';
+  }
+}
+
+// ---------- Leaderboard / completions modal ----------
+
+// Track the modal's current puzzle + tab so a re-fetch after tab switch
+// can be done without re-passing arguments. lbState.code is the puzzle
+// code; lbState.tab is 'top' or 'all'.
+const lbState = { code: null, name: null, tab: 'top' };
+
+async function openLeaderboardModal(code, fallbackName) {
+  if (!code) return;
+  lbState.code = code;
+  lbState.name = fallbackName || code;
+  lbState.tab = 'top';
+  leaderboardModal.classList.remove('hidden');
+  lbModalTitle.textContent = `Leaderboard, "${fallbackName || code}"`;
+  // Reset tab visuals.
+  for (const tab of leaderboardModal.querySelectorAll('.lb-tab')) {
+    tab.classList.toggle('active', tab.dataset.lbTab === 'top');
+  }
+  await renderLeaderboardTab();
+}
+
+function closeLeaderboardModal() {
+  leaderboardModal.classList.add('hidden');
+  lbState.code = null;
+}
+
+async function renderLeaderboardTab() {
+  const { code, tab } = lbState;
+  if (!code) return;
+  lbTable.classList.add('hidden');
+  lbEmpty.classList.add('hidden');
+  lbError.classList.add('hidden');
+  lbLoading.classList.remove('hidden');
+  lbTbody.innerHTML = '';
+
+  if (tab === 'top') {
+    lbExtraCol.textContent = '';
+    const entries = await getLeaderboard(code);
+    lbLoading.classList.add('hidden');
+    if (entries === null) { lbError.classList.remove('hidden'); return; }
+    if (!entries.length) { lbEmpty.classList.remove('hidden'); return; }
+    const ap = activeProfile();
+    lbTbody.innerHTML = entries
+      .map((e, i) => {
+        const mine = ap && ap.name === e.profile_name;
+        return `<tr class="${mine ? 'lb-you' : ''}">
+          <td class="num">${i + 1}</td>
+          <td><button class="lb-player-btn" data-player-name="${escapeHtml(e.profile_name)}">${mine ? 'You' : '@' + escapeHtml(e.profile_name)}</button></td>
+          <td class="num">${formatMs(e.best_ms)}</td>
+          <td class="num">${e.best_mistakes ?? 0}</td>
+          <td></td>
+        </tr>`;
+      })
+      .join('');
+    lbTable.classList.remove('hidden');
+    return;
+  }
+
+  // 'all' tab: every completion, newest first.
+  lbExtraCol.textContent = 'When';
+  const data = await getLevelCompletions(code);
+  lbLoading.classList.add('hidden');
+  if (data === null) { lbError.classList.remove('hidden'); return; }
+  const entries = data.entries || [];
+  if (!entries.length) { lbEmpty.classList.remove('hidden'); return; }
+  const ap = activeProfile();
+  lbTbody.innerHTML = entries
+    .map((e, i) => {
+      const mine = ap && ap.name === e.profile_name;
+      return `<tr class="${mine ? 'lb-you' : ''}">
+        <td class="num">${i + 1}</td>
+        <td><button class="lb-player-btn" data-player-name="${escapeHtml(e.profile_name)}">${mine ? 'You' : '@' + escapeHtml(e.profile_name)}</button></td>
+        <td class="num">${formatMs(e.duration_ms)}</td>
+        <td class="num">${e.mistakes ?? 0}</td>
+        <td>${escapeHtml(formatWhen(e.completed_at))}</td>
+      </tr>`;
+    })
+    .join('');
+  lbTable.classList.remove('hidden');
+}
+
+// ---------- Players directory modal ----------
+
+async function openPlayersModal({ initialPlayer } = {}) {
+  playersModal.classList.remove('hidden');
+  if (initialPlayer) {
+    await renderPlayerDetail(initialPlayer);
+    return;
+  }
+  playersModalTitle.textContent = 'Players';
+  playersBack.classList.add('hidden');
+  await renderPlayersDirectory();
+}
+
+function closePlayersModal() {
+  playersModal.classList.add('hidden');
+}
+
+async function renderPlayersDirectory() {
+  playersList.innerHTML = '';
+  playersError.classList.add('hidden');
+  playersLoading.classList.remove('hidden');
+  const entries = await getPlayers();
+  playersLoading.classList.add('hidden');
+  if (entries === null) { playersError.classList.remove('hidden'); return; }
+  if (!entries.length) {
+    playersList.innerHTML = '<p class="lb-empty">No players yet.</p>';
+    return;
+  }
+  const ap = activeProfile();
+  playersList.innerHTML = entries
+    .map((p) => {
+      const mine = ap && ap.name === p.name;
+      const seen = formatWhen(p.last_seen_at);
+      return `<button class="player-row ${mine ? 'player-you' : ''}" data-player-name="${escapeHtml(p.name)}">
+        <span>
+          <strong>${mine ? 'You · ' : ''}@${escapeHtml(p.name)}</strong>
+          <span class="player-meta">last seen ${escapeHtml(seen)}</span>
+        </span>
+        <span class="player-stats">
+          ${p.completion_count} solved · ${p.authored_count} authored
+        </span>
+      </button>`;
+    })
+    .join('');
+}
+
+async function renderPlayerDetail(name) {
+  playersBack.classList.remove('hidden');
+  playersModalTitle.textContent = `@${name}`;
+  playersList.innerHTML = '';
+  playersError.classList.add('hidden');
+  playersLoading.classList.remove('hidden');
+  const data = await getPlayerProfile(name);
+  playersLoading.classList.add('hidden');
+  if (!data) { playersError.classList.remove('hidden'); return; }
+  const head = document.createElement('div');
+  head.className = 'player-detail-head';
+  head.innerHTML = `
+    <h3>@${escapeHtml(data.name)}</h3>
+    <p>Joined ${escapeHtml(formatWhen(data.createdAt))} ·
+       last seen ${escapeHtml(formatWhen(data.lastSeenAt))} ·
+       ${data.completions.length} solve(s) ·
+       ${data.authoredCount} authored
+    </p>
+  `;
+  playersList.appendChild(head);
+  if (!data.completions.length) {
+    const empty = document.createElement('p');
+    empty.className = 'lb-empty';
+    empty.textContent = 'No solves logged yet.';
+    playersList.appendChild(empty);
+    return;
+  }
+  const table = document.createElement('table');
+  table.className = 'lb-table';
+  table.innerHTML = `
+    <thead>
+      <tr>
+        <th>Puzzle</th>
+        <th class="num">Time</th>
+        <th class="num">Mistakes</th>
+        <th>When</th>
+      </tr>
+    </thead>
+    <tbody>
+      ${data.completions
+        .map((c) => `<tr>
+          <td><button class="lb-player-btn" data-level-code="${escapeHtml(c.level_code)}" data-level-name="${escapeHtml(c.level_name || c.level_code)}">${escapeHtml(c.level_name || c.level_code)}</button></td>
+          <td class="num">${formatMs(c.duration_ms)}</td>
+          <td class="num">${c.mistakes ?? 0}</td>
+          <td>${escapeHtml(formatWhen(c.completed_at))}</td>
+        </tr>`)
+        .join('')}
+    </tbody>
+  `;
+  playersList.appendChild(table);
 }
 
 // Self-authored levels (the "Your levels" section). Always shows a
@@ -1430,6 +1641,62 @@ async function boot() {
   for (const c of document.querySelectorAll('[data-close="help"]')) c.addEventListener('click', closeHelp);
   helpModal.addEventListener('click', (e) => { if (e.target === helpModal) closeHelp(); });
 
+  // Leaderboard modal close + tab switching + player drill-down. The
+  // table is rebuilt by renderLeaderboardTab so we don't need to listen
+  // per-row, instead delegate at the modal root.
+  for (const c of document.querySelectorAll('[data-close="leaderboard"]')) c.addEventListener('click', closeLeaderboardModal);
+  leaderboardModal.addEventListener('click', (e) => {
+    if (e.target === leaderboardModal) { closeLeaderboardModal(); return; }
+    const tab = e.target.closest('.lb-tab');
+    if (tab) {
+      lbState.tab = tab.dataset.lbTab;
+      for (const t of leaderboardModal.querySelectorAll('.lb-tab')) {
+        t.classList.toggle('active', t === tab);
+      }
+      renderLeaderboardTab();
+      return;
+    }
+    const playerBtn = e.target.closest('.lb-player-btn[data-player-name]');
+    if (playerBtn) {
+      // Cross-open: close leaderboard, jump straight into the detail
+      // view so the directory list never flashes underneath.
+      const name = playerBtn.dataset.playerName;
+      closeLeaderboardModal();
+      openPlayersModal({ initialPlayer: name });
+    }
+  });
+
+  // Players directory modal: open button, close, back, and delegated
+  // clicks for player rows + level codes (when drilled into a profile).
+  $('#btn-players').addEventListener('click', () => openPlayersModal());
+  for (const c of document.querySelectorAll('[data-close="players"]')) c.addEventListener('click', closePlayersModal);
+  playersModal.addEventListener('click', (e) => {
+    if (e.target === playersModal) { closePlayersModal(); return; }
+    if (e.target === playersBack) {
+      playersModalTitle.textContent = 'Players';
+      playersBack.classList.add('hidden');
+      renderPlayersDirectory();
+      return;
+    }
+    const row = e.target.closest('.player-row[data-player-name]');
+    if (row) { renderPlayerDetail(row.dataset.playerName); return; }
+    const lvlBtn = e.target.closest('.lb-player-btn[data-level-code]');
+    if (lvlBtn) {
+      // Cross-open: close players, open the leaderboard for that puzzle.
+      const code = lvlBtn.dataset.levelCode;
+      const name = lvlBtn.dataset.levelName;
+      closePlayersModal();
+      openLeaderboardModal(code, name);
+    }
+  });
+
+  // "See full leaderboard" link inside the win toast. The button is
+  // only revealed for shared-puzzle wins (set by the win handler below).
+  winViewLeaderboard.addEventListener('click', () => {
+    const lvl = activeLevel();
+    if (lvl && lvl.code) openLeaderboardModal(lvl.code, lvl.name);
+  });
+
   // Reset all data, wipes every saved level, the profile, and progress
   // flags. Confirmed twice because there is no undo.
   $('#btn-reset-all').addEventListener('click', () => {
@@ -1471,6 +1738,9 @@ async function boot() {
         openShareModal(authoredBtn.dataset.authoredId);
       } else if (act === 'clone') {
         cloneSharedLevelToAuthored(authoredBtn.dataset.authoredId);
+      } else if (act === 'leaderboard') {
+        const lvl = state.levels.find((l) => l.id === authoredBtn.dataset.authoredId);
+        if (lvl && lvl.code) openLeaderboardModal(lvl.code, lvl.name);
       }
       return;
     }
@@ -1563,6 +1833,7 @@ async function boot() {
       winDetail.textContent = baseLine + elapsed;
       winLeaderboard.classList.add('hidden');
       winLeaderboard.innerHTML = '';
+      winViewLeaderboard.classList.toggle('hidden', !(lvl && lvl.code));
       winToast.classList.remove('hidden', 'bad');
       // Post completion + render leaderboard for shared puzzles.
       if (lvl && lvl.code) postCompletionAndShowLeaderboard(lvl);
@@ -1587,6 +1858,7 @@ async function boot() {
         msg = 'No solution has been set for this level yet.';
       }
       winDetail.textContent = msg;
+      winViewLeaderboard.classList.add('hidden');
       winToast.classList.remove('hidden');
       winToast.classList.add('bad');
       // Outline only placed cells: green if right, red if wrong. NEVER

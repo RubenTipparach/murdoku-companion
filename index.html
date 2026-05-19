@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Murdoku</title>
-    <link rel="stylesheet" href="./css/style.css?v=29" />
+    <link rel="stylesheet" href="./css/style.css?v=30" />
     <!-- API base URL for the Murdoku companion server. Empty = local-
          only mode (no claims, no leaderboards). The deploy.yml workflow
          can substitute this from a build-time env var if needed. -->
@@ -163,6 +163,7 @@
 
           <div class="start-footer">
             <button id="btn-help" class="start-footer-btn">❓ How to play</button>
+            <button id="btn-players" class="start-footer-btn">👥 Players</button>
             <button id="btn-reset-all" class="start-footer-btn danger">⚠ Reset all data</button>
           </div>
         </div>
@@ -231,7 +232,59 @@
       <strong>Case closed.</strong>
       <span id="win-detail"></span>
       <div id="win-leaderboard" class="win-leaderboard hidden"></div>
-      <button data-close="toast">OK</button>
+      <div class="toast-actions">
+        <button id="win-view-leaderboard" class="hidden">See full leaderboard</button>
+        <button data-close="toast">OK</button>
+      </div>
+    </div>
+
+    <!-- Per-level leaderboard / solver list modal. Opened from the
+         shared-puzzle cards on the start menu and from the win toast. -->
+    <div id="leaderboard-modal" class="modal hidden" role="dialog">
+      <div class="modal-inner">
+        <header>
+          <h2 id="lb-modal-title">Leaderboard</h2>
+          <button class="close" data-close="leaderboard">×</button>
+        </header>
+        <div class="modal-body">
+          <div class="lb-tabs" role="tablist">
+            <button class="lb-tab active" data-lb-tab="top">🏆 Top times</button>
+            <button class="lb-tab" data-lb-tab="all">👣 All solvers</button>
+          </div>
+          <div id="lb-loading" class="lb-loading hidden">Loading...</div>
+          <div id="lb-empty" class="lb-empty hidden">Nobody has solved this puzzle yet. Be the first.</div>
+          <div id="lb-error" class="lb-error hidden">Could not load leaderboard.</div>
+          <table id="lb-table" class="lb-table hidden">
+            <thead>
+              <tr>
+                <th class="num">#</th>
+                <th>Player</th>
+                <th class="num">Time</th>
+                <th class="num">Mistakes</th>
+                <th id="lb-extra-col"></th>
+              </tr>
+            </thead>
+            <tbody id="lb-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Players directory modal. Browse every profile on the server,
+         click in for a per-player completion list. -->
+    <div id="players-modal" class="modal hidden" role="dialog">
+      <div class="modal-inner">
+        <header>
+          <h2 id="players-modal-title">Players</h2>
+          <button class="close" data-close="players">×</button>
+        </header>
+        <div class="modal-body">
+          <div id="players-loading" class="lb-loading hidden">Loading...</div>
+          <div id="players-error" class="lb-error hidden">Could not load the player directory.</div>
+          <button id="players-back" class="players-back hidden">‹ Back to all players</button>
+          <div id="players-list"></div>
+        </div>
+      </div>
     </div>
 
     <!-- Share modal: shown when the author hits Share on an authored level. -->
@@ -256,6 +309,6 @@
       </div>
     </div>
 
-    <script type="module" src="./js/main.js?v=29"></script>
+    <script type="module" src="./js/main.js?v=30"></script>
   </body>
 </html>

@@ -318,6 +318,92 @@ app.get('/levels/:code/leaderboard', (req, res) => {
   res.json({ code, entries: rows });
 });
 
+// Full solver list for a shared puzzle. One row per completion (a
+// player who solves the same puzzle twice shows up twice), newest
+// first. Used by the "Who has finished" tab next to the leaderboard.
+// Public and uncapped on retries; the LIMIT 200 ceiling stops a
+// pathological puzzle from streaming a megabyte of solves.
+app.get('/levels/:code/completions', (req, res) => {
+  const code = String(req.params.code || '').toLowerCase();
+  const lvl = db.prepare('SELECT name FROM levels WHERE code = ?').get(code);
+  if (!lvl) return res.status(404).json({ error: 'not_found' });
+  const rows = db
+    .prepare(
+      `SELECT p.name AS profile_name,
+              c.duration_ms,
+              c.mistakes,
+              c.completed_at
+       FROM completions c
+       JOIN profiles p ON p.id = c.profile_id
+       WHERE c.level_code = ?
+       ORDER BY c.completed_at DESC
+       LIMIT 200`
+    )
+    .all(code);
+  res.json({ code, levelName: lvl.name, entries: rows });
+});
+
+// ----- Public player directory -----
+
+// List every profile, freshest first. Includes the count of puzzles
+// each one has authored and solved, so the directory card can
+// summarise "@X has solved N puzzles" without a second lookup per
+// row. Banned profiles are hidden from the public listing.
+app.get('/players', (_req, res) => {
+  const rows = db
+    .prepare(
+      `SELECT p.name,
+              p.created_at,
+              p.last_seen_at,
+              (SELECT COUNT(*) FROM completions c WHERE c.profile_id = p.id) AS completion_count,
+              (SELECT COUNT(*) FROM levels    l WHERE l.owner_id   = p.id) AS authored_count
+       FROM profiles p
+       WHERE p.banned_at IS NULL
+       ORDER BY p.last_seen_at DESC
+       LIMIT 200`
+    )
+    .all();
+  res.json({ entries: rows });
+});
+
+// Public profile view: every solve this player has logged, with the
+// level name denormalised in for display. Hidden if the profile is
+// banned, so a banned account can't be browsed. Newest solve first.
+app.get('/players/:name', (req, res) => {
+  const nameLower = String(req.params.name || '').toLowerCase();
+  const prof = db
+    .prepare(
+      `SELECT id, name, created_at, last_seen_at, banned_at
+       FROM profiles WHERE name_lower = ?`
+    )
+    .get(nameLower);
+  if (!prof || prof.banned_at) return res.status(404).json({ error: 'not_found' });
+  const completions = db
+    .prepare(
+      `SELECT c.level_code,
+              c.duration_ms,
+              c.mistakes,
+              c.completed_at,
+              l.name AS level_name
+       FROM completions c
+       LEFT JOIN levels l ON l.code = c.level_code
+       WHERE c.profile_id = ?
+       ORDER BY c.completed_at DESC
+       LIMIT 200`
+    )
+    .all(prof.id);
+  const authoredCount = db
+    .prepare('SELECT COUNT(*) AS n FROM levels WHERE owner_id = ?')
+    .get(prof.id).n;
+  res.json({
+    name: prof.name,
+    createdAt: prof.created_at,
+    lastSeenAt: prof.last_seen_at,
+    authoredCount,
+    completions,
+  });
+});
+
 // ----- Admin dashboard -----
 
 function formatDuration(ms) {

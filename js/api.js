@@ -187,6 +187,50 @@ export async function getLeaderboard(code) {
   }
 }
 
+// Full solver list for a puzzle. Newest first, one row per completion
+// (so a player who finishes twice shows up twice). Returns
+// { levelName, entries } where each entry has profile_name,
+// duration_ms, mistakes, completed_at. Returns null on failure.
+export async function getLevelCompletions(code) {
+  if (!apiAvailable()) return null;
+  try {
+    const res = await call('GET', `/levels/${encodeURIComponent(code)}/completions`);
+    if (!res.ok) return null;
+    return await res.json();
+  } catch {
+    return null;
+  }
+}
+
+// Public player directory. Returns the array of entries (each
+// { name, created_at, last_seen_at, completion_count, authored_count })
+// or null on failure.
+export async function getPlayers() {
+  if (!apiAvailable()) return null;
+  try {
+    const res = await call('GET', '/players');
+    if (!res.ok) return null;
+    const data = await res.json();
+    return data.entries || [];
+  } catch {
+    return null;
+  }
+}
+
+// Public profile view for a single player. Returns the full record
+// { name, createdAt, lastSeenAt, authoredCount, completions[] } or
+// null on a network or 404 failure.
+export async function getPlayerProfile(name) {
+  if (!apiAvailable()) return null;
+  try {
+    const res = await call('GET', `/players/${encodeURIComponent(name)}`);
+    if (!res.ok) return null;
+    return await res.json();
+  } catch {
+    return null;
+  }
+}
+
 // Convenience: build the public share URL for a level code. We point
 // at the current origin + ?play=<code> so the link the author copies
 // matches the URL handler in main.js.
