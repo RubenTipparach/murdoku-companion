@@ -700,6 +700,9 @@ async function runServerClaim(profile) {
   if (result.ok) {
     profile.claimed = true;
     saveProfiles(state.profiles);
+    // First-time claim from this device: pull any server-side
+    // completions so cross-device wins flow back in.
+    syncCompletionsFromServer(profile).catch(() => {});
   } else if (result.nameTaken) {
     alert(
       `The name @${profile.name} is already claimed on the server. ` +
@@ -756,6 +759,10 @@ function onServerReachable() {
   // becomes reachable. Skipped on transitions from already-reachable
   // so we don't loop on a stuck name-taken collision.
   if (!wasReachable && cur && !cur.claimed) runServerClaim(cur);
+  // Pull completions from the server on every reach event for the
+  // current profile. Idempotent, only merges new server-side codes
+  // into local state. Cheap: one /players/:name fetch.
+  if (cur && cur.claimed) syncCompletionsFromServer(cur).catch(() => {});
 }
 
 function onServerUnreachable() {
@@ -1088,6 +1095,32 @@ async function applyPlayUrlParam() {
 function inferNamespace(code) {
   if (!code) return 'custom';
   return SAMPLES.some((s) => s.code === code) ? 'sample' : 'custom';
+}
+
+// Pull the active profile's completions from the server and merge any
+// server-side sample wins into the local completedSamples set. The
+// server is the source of truth for cross-device sync: if a player
+// solved m1 on their phone, this loop is what makes the laptop's
+// start-menu card light up green too. Best-effort, swallows errors.
+async function syncCompletionsFromServer(profile) {
+  if (!profile || !apiAvailable()) return;
+  const data = await getPlayerProfile(profile.name);
+  if (!data || !Array.isArray(data.completions)) return;
+  let added = 0;
+  for (const c of data.completions) {
+    const s = SAMPLES.find((x) => x.code === c.level_code);
+    if (s && !state.completedSamples.has(s.key)) {
+      state.completedSamples.add(s.key);
+      added++;
+    }
+  }
+  if (added > 0) {
+    saveCompletedSamples([...state.completedSamples]);
+    // If the start menu is up, rebuild the library so the new green
+    // checks render without waiting for the next user action.
+    if (!startModal.classList.contains('hidden')) renderStartMenu();
+    flashStatus(`Synced ${added} completion${added === 1 ? '' : 's'} from the server.`);
+  }
 }
 
 // Resolve a level to its server target. Custom shared puzzles carry
@@ -1511,6 +1544,9 @@ function handleStartAction(action, opts = {}) {
     saveActiveProfileName(p.name);
     // If the chosen profile hasn't been claimed yet, attempt now.
     if (!p.claimed) runServerClaim(p);
+    // Pull this profile's server-side completions so the start-menu
+    // ✅ checks reflect cross-device wins right away.
+    if (p.claimed && state.serverReachable) syncCompletionsFromServer(p).catch(() => {});
     renderStartMenu();
     return;
   }
