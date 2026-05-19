@@ -120,6 +120,11 @@ export function renderGrid(container, handlers) {
           p.style.backgroundImage = `url('${char.portrait}')`;
           p.title = char.name;
           cell.appendChild(p);
+          // Highlight the cell when its character is the currently-selected
+          // suspect so players can see where they've already placed them.
+          if (state.selectedCharacterId === charId) {
+            cell.classList.add('suspect-selected');
+          }
         }
       }
 

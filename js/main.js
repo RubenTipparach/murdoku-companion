@@ -6,12 +6,13 @@ import {
   activeLevel,
   rebuildCellCache,
   placeCharacterAt,
+  cloneActiveLevel,
 } from './state.js';
 import { loadLevels, saveLevels, loadActiveId, saveActiveId } from './storage.js';
 import { renderGrid } from './grid.js';
 import { loadCharacters, renderRoster } from './portraits.js';
 import { loadFurniture, normalizeLevel, rollAllRooms } from './decor.js';
-import { buildSampleLevel } from './sample.js';
+import { SAMPLES, buildSampleLevel } from './sample.js';
 import {
   selectTool,
   createRoom,
@@ -32,7 +33,6 @@ const $ = (sel) => document.querySelector(sel);
 const gridEl       = $('#grid');
 const statusEl     = $('#status');
 const nameInput    = $('#level-name');
-const descInput    = $('#level-description');
 const editTools    = $('#edit-tools');
 const playTools    = $('#play-tools');
 const roomList     = $('#room-list');
@@ -40,15 +40,21 @@ const roomListPlay = $('#room-list-play');
 const roster       = $('#char-roster');
 const rosterPlay   = $('#char-roster-play');
 const clueEditorEl = $('#clue-editor');
-const clueListEl   = $('#clue-list');
+const selectedClue = $('#selected-clue');
 const modeEditBtn  = $('#mode-edit');
 const modePlayBtn  = $('#mode-play');
 const startModal   = $('#start-modal');
+const startSamples = $('#start-samples');
 const levelsModal  = $('#levels-modal');
 const levelsListEl = $('#levels-list');
 const winToast     = $('#win-toast');
 const winDetail    = $('#win-detail');
 const importFile   = $('#import-file');
+const levelSelect  = $('#level-select');
+const sampleBanner = $('#sample-banner');
+const metaTextarea = $('#level-description');
+const metaReadonly = $('#meta-readonly');
+const metaHeading  = $('#meta-heading');
 
 // ---------- Mode / tool switching ----------
 
@@ -80,6 +86,7 @@ function rerender() {
   rebuildCellCache();
   renderGrid(gridEl);
   const lvl = activeLevel();
+  const isSample = !!(lvl && lvl.isSample);
   if (state.mode === 'edit') {
     renderRoomList(roomList);
     renderRoster(roster, {});
@@ -91,15 +98,37 @@ function rerender() {
     // names. Derived live so it picks up edits.
     const suspectIds = lvl ? [...new Set(Object.values(lvl.solution))] : [];
     renderRoster(rosterPlay, { filterIds: suspectIds });
-    renderClueList(clueListEl);
+    renderSelectedClue(selectedClue);
   }
   nameInput.value = lvl ? lvl.name : '';
-  descInput.value = lvl ? lvl.description : '';
-  // Lock metadata fields in play mode so a player can't accidentally
-  // rename / re-describe the case.
-  const readOnly = state.mode === 'play';
-  nameInput.readOnly = readOnly;
-  descInput.readOnly = readOnly;
+  metaTextarea.value = lvl ? lvl.description : '';
+
+  // Lock metadata fields in play mode AND on sample levels in any mode so
+  // a player can't accidentally rename / re-describe the case, and a
+  // sample stays pristine until cloned.
+  const lockMetadata = state.mode === 'play' || isSample;
+  nameInput.readOnly = lockMetadata;
+  // In play mode swap the description textarea for a read-only paragraph
+  // so it's visibly not editable. In edit mode show the textarea (locked
+  // via readOnly if this is a sample).
+  if (state.mode === 'play') {
+    metaTextarea.classList.add('hidden');
+    metaReadonly.classList.remove('hidden');
+    metaReadonly.textContent = (lvl && lvl.description) || '(No description.)';
+    metaHeading.textContent = 'Case file';
+  } else {
+    metaTextarea.classList.remove('hidden');
+    metaReadonly.classList.add('hidden');
+    metaTextarea.readOnly = isSample;
+    metaHeading.textContent = 'Level description';
+  }
+
+  // Sample banner sits above the grid in edit mode only.
+  sampleBanner.classList.toggle('hidden', !(isSample && state.mode === 'edit'));
+  // Lock the edit sidebar interactions when on a sample.
+  editTools.classList.toggle('locked', isSample);
+
+  renderLevelSelect();
   updateStatus();
 
   // FLIP "play" step: for each portrait that existed before, translate it
@@ -145,7 +174,8 @@ function renderClueEditor(container) {
     row.innerHTML = `
       <img src="${char.portrait}" alt="${char.name}" />
       <div class="clue-body">
-        <strong>${char.name}</strong>
+        <strong>${escapeHtml(char.name)}</strong>
+        <p class="char-desc">${escapeHtml(char.description || '')}</p>
         <textarea rows="2" placeholder="e.g. Was at the piano in the same room as Yew."></textarea>
       </div>
     `;
@@ -159,32 +189,43 @@ function renderClueEditor(container) {
   }
 }
 
-function renderClueList(container) {
-  container.innerHTML = '';
+// Play mode: render a clue bubble for the currently-selected suspect.
+// Renders nothing (hidden) when no suspect is selected, or when the level
+// doesn't have a clue for them.
+function renderSelectedClue(container) {
   const lvl = activeLevel();
-  if (!lvl) return;
-  const suspectIds = [...new Set(Object.values(lvl.solution))];
-  if (!suspectIds.length) {
-    const empty = document.createElement('p');
-    empty.className = 'hint';
-    empty.textContent = 'This level has no suspects to deduce yet.';
-    container.appendChild(empty);
+  const charId = state.selectedCharacterId;
+  if (!lvl || !charId) {
+    container.classList.add('hidden');
+    container.innerHTML = '';
     return;
   }
-  for (const charId of suspectIds) {
-    const char = state.characters.find((c) => c.id === charId);
-    if (!char) continue;
-    const row = document.createElement('div');
-    row.className = 'clue-row';
-    const clueText = lvl.clues[charId] || '(No clue written for this suspect.)';
-    row.innerHTML = `
-      <img src="${char.portrait}" alt="${char.name}" />
-      <div class="clue-body">
-        <strong>${char.name}</strong>
-        <p>${escapeHtml(clueText)}</p>
-      </div>
-    `;
-    container.appendChild(row);
+  const char = state.characters.find((c) => c.id === charId);
+  if (!char) {
+    container.classList.add('hidden');
+    return;
+  }
+  const clueText = lvl.clues[charId] || '(No clue has been written for this suspect.)';
+  container.classList.remove('hidden');
+  container.innerHTML = `
+    <img src="${char.portrait}" alt="${char.name}" />
+    <div class="clue-body">
+      <strong>${escapeHtml(char.name)}</strong>
+      <p class="char-desc">${escapeHtml(char.description || '')}</p>
+      <p class="clue-text">${escapeHtml(clueText)}</p>
+    </div>
+  `;
+}
+
+// Repopulate the topbar level-select dropdown to mirror state.levels.
+function renderLevelSelect() {
+  levelSelect.innerHTML = '';
+  for (const lvl of state.levels) {
+    const opt = document.createElement('option');
+    opt.value = lvl.id;
+    opt.textContent = (lvl.isSample ? '🔒 ' : '') + (lvl.name || '(untitled)');
+    if (lvl.id === state.activeId) opt.selected = true;
+    levelSelect.appendChild(opt);
   }
 }
 
@@ -317,11 +358,30 @@ function ensureAtLeastOneLevel({ seedSample = false } = {}) {
   }
 }
 
-function loadSampleAsNewLevel() {
-  const lvl = buildSampleLevel();
+// Load a fresh copy of the named sample (or the default if no key supplied).
+// The new copy gets a unique id and is marked isSample so the editor locks it
+// until the player clones.
+function loadSampleAsNewLevel(sampleKey) {
+  const lvl = buildSampleLevel(sampleKey);
   state.levels.push(lvl);
   state.activeId = lvl.id;
   state.selectedRoomId = null;
+}
+
+// Populate the start-menu sample cards from SAMPLES.
+function renderStartSamples() {
+  startSamples.innerHTML = '';
+  for (const s of SAMPLES) {
+    const card = document.createElement('button');
+    card.className = 'start-card';
+    card.dataset.action = 'play-sample';
+    card.dataset.sampleKey = s.key;
+    card.innerHTML = `
+      <h3>🔍 ${escapeHtml(s.name)}</h3>
+      <p>${escapeHtml(s.description)}</p>
+    `;
+    startSamples.appendChild(card);
+  }
 }
 
 // ---------- Levels modal ----------
@@ -360,6 +420,7 @@ function renderLevelsList() {
       const copy = JSON.parse(JSON.stringify(lvl));
       copy.id = 'lvl_' + Math.random().toString(36).slice(2, 8);
       copy.name = `${lvl.name} (copy)`;
+      copy.isSample = false; // duplicates are always editable
       copy.updatedAt = Date.now();
       copy.createdAt = Date.now();
       state.levels.push(copy);
@@ -400,10 +461,10 @@ function openStartMenu({ closable } = { closable: true }) {
 }
 function closeStartMenu() { startModal.classList.add('hidden'); }
 
-function handleStartAction(action) {
+function handleStartAction(action, opts = {}) {
   switch (action) {
     case 'play-sample': {
-      loadSampleAsNewLevel();
+      loadSampleAsNewLevel(opts.sampleKey);
       persist();
       setMode('play');
       break;
@@ -455,6 +516,28 @@ async function boot() {
     rerender();
   });
 
+  // Topbar Clone (also exposed on the in-grid sample banner).
+  const cloneCurrent = () => {
+    const cloned = cloneActiveLevel();
+    if (!cloned) return;
+    persist();
+    setMode('edit');
+    rerender();
+    flashStatus(`Cloned to "${cloned.name}".`);
+  };
+  $('#btn-clone').addEventListener('click', cloneCurrent);
+  $('#btn-clone-banner').addEventListener('click', cloneCurrent);
+
+  // Topbar level select.
+  levelSelect.addEventListener('change', () => {
+    const id = levelSelect.value;
+    if (!id || id === state.activeId) return;
+    state.activeId = id;
+    state.selectedRoomId = null;
+    persist();
+    rerender();
+  });
+
   $('#btn-save').addEventListener('click', () => {
     persist();
     flashStatus('Saved.');
@@ -474,9 +557,13 @@ async function boot() {
     // visit, where we want the user to make a real choice).
     if (e.target === startModal && !$('#start-close').hidden) closeStartMenu();
   });
-  for (const card of document.querySelectorAll('.start-card')) {
-    card.addEventListener('click', () => handleStartAction(card.dataset.action));
-  }
+  // Dynamic sample cards + the static "edit mode" card.
+  renderStartSamples();
+  startModal.addEventListener('click', (e) => {
+    const card = e.target.closest('.start-card');
+    if (!card) return;
+    handleStartAction(card.dataset.action, { sampleKey: card.dataset.sampleKey });
+  });
 
   $('#btn-new-level').addEventListener('click', () => {
     const lvl = emptyLevel();
@@ -574,10 +661,10 @@ async function boot() {
     lvl.name = nameInput.value;
     lvl.updatedAt = Date.now();
   });
-  descInput.addEventListener('input', () => {
+  metaTextarea.addEventListener('input', () => {
     const lvl = activeLevel();
     if (!lvl) return;
-    lvl.description = descInput.value;
+    lvl.description = metaTextarea.value;
     lvl.updatedAt = Date.now();
   });
 

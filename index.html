@@ -13,26 +13,37 @@
   </head>
   <body>
     <header class="topbar">
-      <h1>Murdoku</h1>
-      <div class="level-meta">
-        <input id="level-name" type="text" placeholder="Untitled level" />
+      <div class="topbar-row primary">
+        <h1>Murdoku</h1>
+        <div class="mode-toggle" role="group" aria-label="Mode">
+          <button id="mode-edit" class="active">Edit</button>
+          <button id="mode-play">Play</button>
+        </div>
+        <div class="topbar-actions">
+          <button id="btn-menu" title="Open the start menu">Menu</button>
+          <button id="btn-clone" title="Clone the current level into an editable copy">Clone</button>
+          <button id="btn-save" title="Force save to localStorage">Save</button>
+          <button id="btn-export" title="Download this level as JSON">Export</button>
+          <button id="btn-import" title="Import a level from a JSON file">Import</button>
+          <input id="import-file" type="file" accept="application/json" hidden />
+        </div>
       </div>
-      <div class="mode-toggle">
-        <button id="mode-edit" class="active">Edit</button>
-        <button id="mode-play">Play</button>
-      </div>
-      <div class="topbar-actions">
-        <button id="btn-menu">Menu</button>
-        <button id="btn-levels">Levels</button>
-        <button id="btn-save">Save</button>
-        <button id="btn-export">Export</button>
-        <button id="btn-import">Import</button>
-        <input id="import-file" type="file" accept="application/json" hidden />
+      <div class="topbar-row secondary">
+        <label class="level-picker">
+          <span>Level</span>
+          <select id="level-select" aria-label="Active level"></select>
+        </label>
+        <input id="level-name" type="text" placeholder="Level name" />
+        <button id="btn-levels" title="Manage all levels">⋯</button>
       </div>
     </header>
 
     <main class="layout">
       <section class="board-wrap">
+        <div id="sample-banner" class="sample-banner hidden">
+          <span>This is a shipped sample. To make changes, <strong>Clone</strong> it first.</span>
+          <button id="btn-clone-banner">Clone to edit</button>
+        </div>
         <div id="grid" class="grid" aria-label="9 by 9 grid"></div>
         <div id="status" class="status">Edit mode · paint a room to begin</div>
       </section>
@@ -69,13 +80,10 @@
 
         <!-- Play-mode tools -->
         <div id="play-tools" class="panel hidden">
-          <h2>Clues</h2>
-          <p class="hint">Each suspect stood in exactly one cell at the moment of the murder.</p>
-          <div id="clue-list" class="clue-list"></div>
-
           <h2>Suspects</h2>
-          <p class="hint">Drag a suspect into a room — or click suspect → cell. Re-placing them moves them.</p>
+          <p class="hint">Tap a suspect to read their clue, then drop them into a room cell.</p>
           <div id="char-roster-play" class="char-roster"></div>
+          <div id="selected-clue" class="selected-clue hidden"></div>
 
           <div class="play-actions">
             <button id="btn-check">Check solution</button>
@@ -88,12 +96,13 @@
       </aside>
 
       <section class="meta-panel">
-        <h2>Level description</h2>
+        <h2 id="meta-heading">Level description</h2>
         <textarea
           id="level-description"
           rows="3"
           placeholder="Set the scene for your players…"
         ></textarea>
+        <p id="meta-readonly" class="meta-readonly hidden"></p>
       </section>
     </main>
 
@@ -106,11 +115,10 @@
         </header>
         <div class="modal-body">
           <p class="start-tagline">A murder-mystery puzzle in nine by nine.</p>
+          <h3 class="start-section">Play a sample</h3>
+          <div id="start-samples" class="start-cards"></div>
+          <h3 class="start-section">Or author your own</h3>
           <div class="start-cards">
-            <button class="start-card" data-action="play-sample">
-              <h3>🔍 Solve the sample mystery</h3>
-              <p>"The Crimson Conservatory" — six suspects, six clues, one body.</p>
-            </button>
             <button class="start-card" data-action="edit-mode">
               <h3>🛠 Create your own house</h3>
               <p>Author rooms, place suspects, write the clues.</p>
