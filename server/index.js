@@ -167,6 +167,9 @@ const SAMPLE_NAMES = {
   m7: 'The Atelier',
   m8: 'The Coastal Hotel',
   m9: 'The Speakeasy',
+  m10: 'The Witchstone Sanctum',
+  m11: 'The Sunken Library',
+  m12: 'The Iron Citadel',
 };
 function isSampleCode(code) {
   return Object.prototype.hasOwnProperty.call(SAMPLE_NAMES, code);

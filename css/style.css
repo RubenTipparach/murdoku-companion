@@ -186,6 +186,9 @@ input:focus, textarea:focus { outline: 2px solid var(--accent); outline-offset: 
   vertical-align: middle;
 }
 .difficulty-chip.hidden { display: none; }
+.difficulty-chip.diff-easy     { color: var(--good); }
+.difficulty-chip.diff-medium   { color: var(--warn); }
+.difficulty-chip.diff-hard     { color: var(--bad); }
 .difficulty-chip.diff-tutorial { color: var(--accent-2); }
 .difficulty-chip.diff-gentle   { color: var(--good); }
 .difficulty-chip.diff-standard { color: var(--ink-dim); }
@@ -1182,6 +1185,9 @@ body:has(> #start-modal.start-screen:not(.hidden)) > .layout {
   letter-spacing: 1.5px;
   text-transform: uppercase;
 }
+.start-tier-header.diff-easy     { color: var(--good); }
+.start-tier-header.diff-medium   { color: var(--warn); }
+.start-tier-header.diff-hard     { color: var(--bad); }
 .start-tier-header.diff-tutorial { color: var(--accent-2); }
 .start-tier-header.diff-gentle   { color: var(--good); }
 .start-tier-header.diff-standard { color: var(--ink-dim); }

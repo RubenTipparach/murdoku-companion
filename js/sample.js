@@ -11,7 +11,7 @@ const CONSERVATORY = {
   id: 'lvl_sample_conservatory',
   code: 'm1',
   name: 'The Crimson Conservatory',
-  difficulty: 'tutorial',
+  difficulty: 'easy',
   description:
     'Lady Wraithmoor is dead among her orchids. Five guests were in the ' +
     'house tonight, and each one swears they were elsewhere.',
@@ -75,7 +75,7 @@ const LIGHTHOUSE = {
   id: 'lvl_sample_lighthouse',
   code: 'm2',
   name: 'Midnight at the Lighthouse',
-  difficulty: 'gentle',
+  difficulty: 'easy',
   description:
     'The keeper of Black Cape Light is dead. Three others were on the ' +
     'rock tonight. Place each one and name the killer.',
@@ -126,7 +126,7 @@ const TEA_AND_TREACHERY = {
   id: 'lvl_sample_tea',
   code: 'm3',
   name: 'Tea and Treachery',
-  difficulty: 'gentle',
+  difficulty: 'easy',
   description:
     'A medium dies mid-séance. Two guests were in the house. A gentle ' +
     'first case for learning the rules.',
@@ -169,7 +169,7 @@ const BOOKSELLERS_LOFT = {
   id: 'lvl_sample_loft',
   code: 'm4',
   name: "The Bookseller's Loft",
-  difficulty: 'standard',
+  difficulty: 'easy',
   description:
     'A reclusive bookseller is dead in his own shop. Five suspects were ' +
     'in the building tonight.',
@@ -228,7 +228,7 @@ const MAGISTRATES_STUDY = {
   id: 'lvl_sample_magistrate',
   code: 'm5',
   name: "The Magistrate's Study",
-  difficulty: 'standard',
+  difficulty: 'easy',
   description:
     'Colonel Hask, a retired magistrate, is dead in his own house. Four ' +
     'guests were under the roof tonight. Place them, then name the one ' +
@@ -299,7 +299,7 @@ const FERNS_AND_FELONIES = {
   id: 'lvl_sample_ferns',
   code: 'm6',
   name: 'Ferns and Felonies',
-  difficulty: 'gentle',
+  difficulty: 'easy',
   description:
     'A botanist is found dead among her own potted plants. Three guests ' +
     'were visiting tonight.',
@@ -360,7 +360,7 @@ const ATELIER = {
   id: 'lvl_sample_atelier',
   code: 'm7',
   name: 'The Atelier',
-  difficulty: 'tricky',
+  difficulty: 'easy',
   description:
     'A society photographer is dead in his studio. Four guests were in ' +
     'the building. Paintings cover every wall, so use the rule of unique ' +
@@ -429,7 +429,7 @@ const COASTAL_HOTEL = {
   code: 'm8',
   name: 'The Coastal Hotel',
   size: 12,
-  difficulty: 'tricky',
+  difficulty: 'easy',
   description:
     'Captain Ardent is dead in his hotel suite. Six other guests were ' +
     'staying tonight. A larger case across twelve rooms and twelve rows.',
@@ -540,7 +540,7 @@ const SPEAKEASY = {
   code: 'm9',
   name: 'The Speakeasy',
   size: 12,
-  difficulty: 'tricky',
+  difficulty: 'easy',
   description:
     'Reverend Penn is dead on the stage of the back-room speakeasy. ' +
     'Five others were in the establishment.',
@@ -638,6 +638,373 @@ const SPEAKEASY = {
   },
 };
 
+// ----- Medium tier: fantasy-themed houses with non-rectangular rooms -----
+// These three are deliberately harder than the easy roster: bigger casts,
+// duplicate furniture forcing row / column deduction, L / T / plus / S
+// shaped rooms. The fantasy flavour lives in the names and clues, the
+// portraits and furniture art are reused from the easy set.
+
+const WITCHSTONE_SANCTUM = {
+  id: 'lvl_sample_witchstone',
+  code: 'm10',
+  name: 'The Witchstone Sanctum',
+  difficulty: 'medium',
+  size: 11,
+  description:
+    'On the eve of the Sigil Moon the coven gathered for council. Their ' +
+    'high witch did not come to bear witness, the others found her cold ' +
+    'beside her scrying table. Six remained in the keep tonight.',
+  rooms: [
+    { id: 'r1', name: 'Scrying Chamber', description: 'A plus-shaped sanctum of black candles around the scrying table.',
+      color: '#7b5db5', tilePattern: 'diamond',
+      cells: [[5,0],[5,1],[5,2],[5,3],[5,4],[3,2],[4,2],[6,2],[7,2]] },
+    { id: 'r2', name: 'Hearthroom', description: 'An L of soot-dark wood, hung with charm bundles.',
+      color: '#c97b5d', tilePattern: 'wood',
+      cells: [[0,0],[1,0],[2,0],[3,0],[0,1],[0,2],[0,3]] },
+    { id: 'r3', name: 'Reliquary', description: 'A crooked T, lined with reliquaries of antler and ash.',
+      color: '#5da8c4', tilePattern: 'square',
+      cells: [[8,0],[9,0],[10,0],[8,1],[9,1],[10,1],[9,2],[9,3]] },
+    { id: 'r4', name: 'Mandrake Garden', description: 'A close square of black soil, half-tame mandrakes in rows.',
+      color: '#7bc48f', tilePattern: 'check',
+      cells: [[0,7],[1,7],[2,7],[0,8],[1,8],[2,8],[0,9],[1,9],[2,9]] },
+    { id: 'r5', name: 'Bone Sanctum', description: 'A square chapel of antler, ash and a tall standing-stone.',
+      color: '#d1c084', tilePattern: 'stripe-h',
+      cells: [[6,5],[7,5],[8,5],[9,5],[6,6],[7,6],[8,6],[9,6],[6,7],[7,7],[8,7],[9,7]] },
+    { id: 'r6', name: 'Wellhouse', description: 'A low room sheltering the moonwater spring.',
+      color: '#7b9ed1', tilePattern: 'dots',
+      cells: [[5,9],[6,9],[7,9],[5,10],[6,10],[7,10]] },
+  ],
+  doorways: [],
+  victim: 'char-05',
+  killerSolution: 'char-04',
+  solution: {
+    '5,1': 'char-05', // Sable, directly above the scrying table
+    '3,2': 'char-04', // Penn (killer), beside an armchair in the same chamber
+    '0,0': 'char-13', // Bramwell, in the L
+    '9,3': 'char-10', // Crowe, below a bookshelf in the T
+    '1,8': 'char-15', // Yew, on a rug ringed by mandrakes
+    '7,6': 'char-08', // Ardent, slung across a sofa
+    '6,10': 'char-16', // Roe, on a rug between two potted ferns
+  },
+  decorations: {
+    // Scrying Chamber, plus-shaped, with the scrying table at its centre.
+    '5,2': 'table',
+    '4,2': 'armchair',
+    '5,3': 'rug',
+    '5,4': 'lamp',
+    '6,2': 'lamp',
+    '7,2': 'bookshelf',
+    '5,0': 'mirror',
+    // Hearthroom, L-shape: fireplace, armchair, bookshelf, rug.
+    '0,0': 'armchair',
+    '1,0': 'fireplace',
+    '2,0': 'bookshelf',
+    '3,0': 'clock',
+    '0,2': 'rug',
+    '0,3': 'dresser',
+    // Reliquary, crooked T: safe, mirror, bookshelf, armchair.
+    '8,0': 'safe',
+    '10,0': 'mirror',
+    '8,1': 'dresser',
+    '10,1': 'mirror',
+    '9,2': 'bookshelf',
+    '9,3': 'armchair',
+    // Mandrake Garden, 3x3 square of pots with a rug at the centre.
+    '0,7': 'plant',
+    '1,7': 'plant',
+    '2,7': 'plant',
+    '0,8': 'plant',
+    '1,8': 'rug',
+    '2,8': 'plant',
+    '0,9': 'plant',
+    '1,9': 'plant',
+    '2,9': 'plant',
+    // Bone Sanctum, 4x3 square with a sofa, a rug, a standing clock,
+    // and two dressers. Multiple anchors so the player has to triangulate.
+    '6,5': 'gramophone',
+    '8,5': 'dresser',
+    '9,5': 'clock',
+    '7,6': 'sofa',
+    '8,6': 'rug',
+    '6,7': 'bed',
+    '8,7': 'bookshelf',
+    '9,7': 'mirror',
+    // Wellhouse, small irregular room: ferns flanking the central rug.
+    '5,9': 'sofa',
+    '5,10': 'plant',
+    '6,10': 'rug',
+    '7,10': 'plant',
+  },
+  clues: {
+    'char-05':
+      'Madame Sable was slumped directly above a scrying table set with ' +
+      'iron candlesticks. She was alone in the room with the killer.',
+    'char-04':
+      'The reverend stood beside an armchair stitched with green velvet ' +
+      'cushions, three rooms away from the only fireplace in the keep.',
+    'char-13':
+      'Ottilie Bramwell was curled in an armchair, directly beside a ' +
+      'crackling hearth.',
+    'char-10':
+      'Professor Crowe was reading from an armchair, directly below a ' +
+      'tall bookshelf of mouldering bestiaries.',
+    'char-15':
+      'Constance Yew stood on a rug, flanked on all four sides by potted ' +
+      'mandrakes.',
+    'char-08':
+      'Captain Ardent had thrown himself across a sofa, directly beside ' +
+      'a worn rug stitched with bones.',
+    'char-16':
+      'Silas Roe stood on a rug, flanked left and right by potted ferns.',
+  },
+};
+
+const SUNKEN_LIBRARY = {
+  id: 'lvl_sample_sunken_library',
+  code: 'm11',
+  name: 'The Sunken Library',
+  difficulty: 'medium',
+  size: 11,
+  description:
+    'Beneath the seacliff the Lorewarden kept his stacks. He was found ' +
+    'cold at his reading desk, ink still pooling on a half-finished page. ' +
+    'Six scholars were in the library tonight.',
+  rooms: [
+    { id: 'r1', name: 'Reading Hall', description: 'A long T of desks, ink and lamplight.',
+      color: '#a87bc4', tilePattern: 'wood',
+      cells: [[3,0],[4,0],[5,0],[6,0],[7,0],[5,1],[5,2],[5,3]] },
+    { id: 'r2', name: 'Scribes Loft', description: 'An L of slanted desks under a clerestory.',
+      color: '#c4a87b', tilePattern: 'stripe-v',
+      cells: [[0,0],[1,0],[2,0],[0,1],[0,2]] },
+    { id: 'r3', name: 'Stacks of the West', description: 'A plus of bookshelves rising two stories.',
+      color: '#7b9ed1', tilePattern: 'square',
+      cells: [[1,5],[0,6],[1,6],[2,6],[1,7]] },
+    { id: 'r4', name: 'Stacks of the East', description: 'A second plus of shelves, slightly higher than its western twin.',
+      color: '#7b9ed1', tilePattern: 'square',
+      cells: [[9,3],[8,4],[9,4],[10,4],[9,5]] },
+    { id: 'r5', name: 'Cartographers Round', description: 'A small square strewn with parchment and a great safe.',
+      color: '#c4937b', tilePattern: 'check',
+      cells: [[3,8],[4,8],[5,8],[3,9],[4,9],[5,9],[3,10],[4,10],[5,10]] },
+    { id: 'r6', name: 'Saltwater Garden', description: 'An S-shaped sluice of seawater pools and ferns.',
+      color: '#7bc48f', tilePattern: 'dots',
+      cells: [[7,8],[8,8],[8,9],[9,9],[9,10],[10,10]] },
+  ],
+  doorways: [],
+  victim: 'char-17',
+  killerSolution: 'char-14',
+  solution: {
+    '5,1': 'char-17', // Dame Genevieve Pell, victim, directly below the reading desk
+    '7,0': 'char-14', // Mortimer Finch, killer, far end of the long row of desks
+    '0,2': 'char-11', // Sister Adelheid Voss in the scribes loft
+    '1,6': 'char-03', // Dr. Quint among the western stacks
+    '9,4': 'char-02', // Inspector Brand among the eastern stacks
+    '4,9': 'char-09', // Vivienne Marchand at the cartographers table
+    '8,8': 'char-15', // Constance Yew in the saltwater garden
+  },
+  decorations: {
+    // Reading Hall, T-shape: the Lorewarden's reading desk at the top
+    // of the stem, three more desks across the top, lamps and a rug.
+    '5,0': 'table',
+    '3,0': 'table',
+    '4,0': 'lamp',
+    '6,0': 'lamp',
+    '7,0': 'armchair',
+    '5,2': 'rug',
+    '5,3': 'rug',
+    // Scribes Loft, L-shape: a writing desk, a typewriter, an armchair.
+    // Voss sits in the armchair at the foot of the L.
+    '0,0': 'table',
+    '2,0': 'bookshelf',
+    '0,1': 'typewriter',
+    '0,2': 'armchair',
+    // Western Stacks, plus-shape: three bookshelves and a typewriter
+    // around a reading armchair. The typewriter is what marks this
+    // plus apart from its eastern twin.
+    '1,5': 'typewriter',
+    '0,6': 'bookshelf',
+    '2,6': 'bookshelf',
+    '1,6': 'armchair',
+    '1,7': 'bookshelf',
+    // Eastern Stacks, plus-shape: four bookshelves around an armchair.
+    // No typewriter, so flanked-on-four-sides uniquely identifies it.
+    '9,3': 'bookshelf',
+    '8,4': 'bookshelf',
+    '10,4': 'bookshelf',
+    '9,4': 'armchair',
+    '9,5': 'bookshelf',
+    // Cartographers Round: a great safe, a chart table with a chair,
+    // a standing lamp.
+    '3,8': 'safe',
+    '4,8': 'lamp',
+    '5,8': 'plant',
+    '3,9': 'table',
+    '4,9': 'chair',
+    '5,9': 'bookshelf',
+    '5,10': 'plant',
+    // Saltwater Garden: ferns line the sluice, with a low sofa at one end.
+    '7,8': 'plant',
+    '8,8': 'sofa',
+    '9,9': 'plant',
+    '10,10': 'plant',
+  },
+  clues: {
+    'char-17':
+      'Dame Pell was slumped directly below a table flanked left and ' +
+      'right by standing lamps. She was alone in the room with the ' +
+      'killer.',
+    'char-14':
+      'Mortimer Finch sat in an armchair at the far end of a long row of ' +
+      'desks, directly to the right of a low standing lamp.',
+    'char-11':
+      'Sister Voss was curled in an armchair, with a typewriter directly ' +
+      'above her.',
+    'char-03':
+      'Dr. Quint was reading in an armchair, with a typewriter directly ' +
+      'above him and tall bookshelves on the other three sides.',
+    'char-02':
+      'Inspector Brand was curled in an armchair, flanked on all four ' +
+      'sides by tall bookshelves.',
+    'char-09':
+      'Vivienne Marchand was at a chair pulled up to a chart table, ' +
+      'diagonally adjacent to a great iron safe.',
+    'char-15':
+      'Constance Yew was thrown across a sofa, with potted ferns at the ' +
+      'far end of the sluice.',
+  },
+};
+
+const IRON_CITADEL = {
+  id: 'lvl_sample_iron_citadel',
+  code: 'm12',
+  name: 'The Iron Citadel',
+  difficulty: 'medium',
+  size: 11,
+  description:
+    'In the high citadel the Marshal kept his war. He was found at dawn ' +
+    'slumped across his war table, with seven of his banner captains ' +
+    'still within the walls.',
+  rooms: [
+    { id: 'r1', name: 'War Room', description: 'A square strategy chamber with the great war table at its centre.',
+      color: '#c47b7b', tilePattern: 'check',
+      cells: [[4,4],[5,4],[6,4],[4,5],[5,5],[6,5],[4,6],[5,6],[6,6]] },
+    { id: 'r2', name: 'Banner Hall', description: 'A wide T of stone, hung with the captains banners.',
+      color: '#7b9ed1', tilePattern: 'stripe-h',
+      cells: [[1,0],[2,0],[3,0],[4,0],[5,0],[6,0],[7,0],[8,0],[9,0],[5,1]] },
+    { id: 'r3', name: 'East Battlement', description: 'An L of walkway and watch-niches above the eastern gate.',
+      color: '#a87bc4', tilePattern: 'square',
+      cells: [[9,2],[9,3],[9,4],[9,5],[10,5]] },
+    { id: 'r4', name: 'West Battlement', description: 'Mirror to the east, an L of walkway above the western gate.',
+      color: '#a87bc4', tilePattern: 'square',
+      cells: [[1,2],[1,3],[1,4],[1,5],[0,5]] },
+    { id: 'r5', name: 'Iron Armoury', description: 'A square smithy of standing weapons and a long workbench.',
+      color: '#c4a87b', tilePattern: 'diamond',
+      cells: [[7,7],[8,7],[9,7],[7,8],[8,8],[9,8]] },
+    { id: 'r6', name: 'Solar', description: 'A plus-shaped private chamber with a bed and a hearth.',
+      color: '#c4937b', tilePattern: 'wood',
+      cells: [[3,9],[2,10],[3,10],[4,10],[3,8]] },
+    { id: 'r7', name: 'Postern', description: 'A long S of stone passageways from the postern gate.',
+      color: '#7bc48f', tilePattern: 'dots',
+      cells: [[5,8],[5,9],[6,9],[6,10],[7,10]] },
+  ],
+  doorways: [],
+  victim: 'char-12',
+  killerSolution: 'char-18',
+  solution: {
+    '6,4': 'char-12',  // Hask, victim, on a rug diagonally adjacent to the war table
+    '4,6': 'char-18',  // Knox (killer), seated in a chair across the chamber from him
+    '8,0': 'char-19',  // Imogen, in the only armchair in the banner row
+    '9,3': 'char-08',  // Ardent, between a bookshelf and a clock on the east wall
+    '1,2': 'char-06',  // Glover, above a bookshelf on the west wall
+    '7,7': 'char-20',  // Felix, on the lone sofa above a dresser
+    '3,10': 'char-07', // Beatrice, on a rug between an armchair and the only bed
+    '5,9': 'char-16',  // Silas, on a rug below a potted plant
+  },
+  decorations: {
+    // War Room, 3x3: war table dead centre, chairs to four sides,
+    // a rug, a standing lamp, a tall clock.
+    '5,5': 'table',
+    '5,4': 'chair',
+    '4,4': 'clock',
+    '6,4': 'rug',
+    '4,5': 'rug',
+    '6,5': 'lamp',
+    '4,6': 'chair',
+    '5,6': 'chair',
+    '6,6': 'chair',
+    // Banner Hall, T: a long line of chairs and three painted banners
+    // (walls), with the captains armchair at the far end.
+    '1,0': 'chair',
+    '2,0': 'chair',
+    '3,0': 'painting',
+    '4,0': 'painting',
+    '5,0': 'painting',
+    '6,0': 'chair',
+    '7,0': 'chair',
+    '8,0': 'armchair',
+    '9,0': 'chair',
+    '5,1': 'rug',
+    // East Battlement, L: a watch chair, a standing clock, a small bookshelf.
+    '9,2': 'bookshelf',
+    '9,3': 'chair',
+    '9,4': 'clock',
+    '9,5': 'chair',
+    '10,5': 'bookshelf',
+    // West Battlement, L: mirror to the east. Chair, clock, bookshelf.
+    '1,2': 'chair',
+    '1,3': 'bookshelf',
+    '1,4': 'clock',
+    '1,5': 'chair',
+    '0,5': 'bookshelf',
+    // Iron Armoury, 3x2: a workbench (table), a safe, two dressers.
+    '7,7': 'sofa',
+    '8,7': 'table',
+    '9,7': 'safe',
+    '7,8': 'dresser',
+    '8,8': 'table',
+    '9,8': 'dresser',
+    // Solar, plus: a fireplace at the top of the stem, the only bed
+    // on the floor, an armchair on the far end, a rug in the middle.
+    '3,8': 'fireplace',
+    '3,9': 'rug',
+    '2,10': 'bed',
+    '3,10': 'rug',
+    '4,10': 'armchair',
+    // Postern, S: rugs and plants in a winding passage.
+    '5,8': 'plant',
+    '5,9': 'rug',
+    '6,9': 'rug',
+    '6,10': 'plant',
+    '7,10': 'plant',
+  },
+  clues: {
+    'char-12':
+      'Colonel Hask was slumped on a rug, diagonally adjacent to the ' +
+      'only war table in the citadel. He was alone in the room with ' +
+      'the killer.',
+    'char-18':
+      'Bartholomew Knox sat at a chair, directly below a rug, with ' +
+      'another chair directly to his right.',
+    'char-19':
+      'Imogen Sarsfield was curled in an armchair, flanked left and ' +
+      'right by stiff-backed chairs.',
+    'char-08':
+      'Captain Ardent stood at a chair, with a tall bookshelf directly ' +
+      'above him and a standing clock directly below.',
+    'char-06':
+      'The butler stood at a chair, directly above a tall bookshelf ' +
+      'that itself sat directly above a standing clock.',
+    'char-20':
+      'Felix Drummond had thrown himself across a sofa, directly above ' +
+      'a heavy dresser.',
+    'char-07':
+      'Beatrice Halloran stood on a rug, with an armchair directly to ' +
+      'her right and the only bed in the citadel directly to her left.',
+    'char-16':
+      'Silas Roe stood on a rug, directly below a potted plant, with ' +
+      'another rug directly to his right.',
+  },
+};
+
 const RAW = [
   CONSERVATORY,
   LIGHTHOUSE,
@@ -648,6 +1015,9 @@ const RAW = [
   ATELIER,
   COASTAL_HOTEL,
   SPEAKEASY,
+  WITCHSTONE_SANCTUM,
+  SUNKEN_LIBRARY,
+  IRON_CITADEL,
 ];
 
 export const SAMPLES = RAW.map((s) => ({

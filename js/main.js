@@ -105,6 +105,15 @@ const metaHeading  = $('#meta-heading');
 const difficultyChip = $('#difficulty-chip');
 
 const DIFFICULTY_LABELS = {
+  // New primary tiers. Easy is the shipped on-ramp set; medium is the
+  // fantasy batch with non-rectangular rooms; hard is reserved for the
+  // forthcoming ability + house-modifier content.
+  easy: 'Easy',
+  medium: 'Medium',
+  hard: 'Hard',
+  // Legacy tier names still recognised so user-authored levels saved
+  // before the taxonomy change keep their chip + ordering. The shipped
+  // samples no longer use any of these.
   tutorial: 'Tutorial',
   gentle: 'Gentle',
   standard: 'Standard',
@@ -115,7 +124,10 @@ const DIFFICULTY_LABELS = {
 
 // Difficulty tier rendering order in the library. Tiers not present in
 // the current sample roster are silently skipped.
-const DIFFICULTY_ORDER = ['tutorial', 'gentle', 'standard', 'tricky', 'expert', 'fiendish'];
+const DIFFICULTY_ORDER = [
+  'easy', 'medium', 'hard',
+  'tutorial', 'gentle', 'standard', 'tricky', 'expert', 'fiendish',
+];
 
 // Profile name rules. Mirrors the server-side regex planned for Phase 12,
 // so a locally-created name is portable when the API ships.
