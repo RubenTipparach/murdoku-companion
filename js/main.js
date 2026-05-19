@@ -5,11 +5,13 @@ import {
   emptyLevel,
   activeLevel,
   rebuildCellCache,
+  placeCharacterAt,
 } from './state.js';
 import { loadLevels, saveLevels, loadActiveId, saveActiveId } from './storage.js';
 import { renderGrid } from './grid.js';
 import { loadCharacters, renderRoster } from './portraits.js';
 import { loadFurniture, normalizeLevel, rollAllRooms } from './decor.js';
+import { buildSampleLevel } from './sample.js';
 import {
   selectTool,
   createRoom,
@@ -37,8 +39,11 @@ const roomList     = $('#room-list');
 const roomListPlay = $('#room-list-play');
 const roster       = $('#char-roster');
 const rosterPlay   = $('#char-roster-play');
+const clueEditorEl = $('#clue-editor');
+const clueListEl   = $('#clue-list');
 const modeEditBtn  = $('#mode-edit');
 const modePlayBtn  = $('#mode-play');
+const startModal   = $('#start-modal');
 const levelsModal  = $('#levels-modal');
 const levelsListEl = $('#levels-list');
 const winToast     = $('#win-toast');
@@ -65,19 +70,129 @@ function setStatus(msg) {
 // ---------- Render ----------
 
 function rerender() {
+  // FLIP: snapshot portrait positions before the DOM is rebuilt so we can
+  // animate any suspect that moved to a new cell.
+  const oldPositions = new Map();
+  for (const p of gridEl.querySelectorAll('.portrait[data-char-id]')) {
+    oldPositions.set(p.dataset.charId, p.getBoundingClientRect());
+  }
+
   rebuildCellCache();
   renderGrid(gridEl);
+  const lvl = activeLevel();
   if (state.mode === 'edit') {
     renderRoomList(roomList);
-    renderRoster(roster, { mode: 'edit' });
+    renderRoster(roster, {});
+    renderClueEditor(clueEditorEl);
   } else {
     renderRoomListReadonly(roomListPlay);
-    renderRoster(rosterPlay, { mode: 'play' });
+    // In play mode only show suspects who actually appear in the level's
+    // solution — no point cluttering the roster with people the case never
+    // names. Derived live so it picks up edits.
+    const suspectIds = lvl ? [...new Set(Object.values(lvl.solution))] : [];
+    renderRoster(rosterPlay, { filterIds: suspectIds });
+    renderClueList(clueListEl);
   }
-  const lvl = activeLevel();
   nameInput.value = lvl ? lvl.name : '';
   descInput.value = lvl ? lvl.description : '';
+  // Lock metadata fields in play mode so a player can't accidentally
+  // rename / re-describe the case.
+  const readOnly = state.mode === 'play';
+  nameInput.readOnly = readOnly;
+  descInput.readOnly = readOnly;
   updateStatus();
+
+  // FLIP "play" step: for each portrait that existed before, translate it
+  // back to its old position with no transition, then drop the transform
+  // so the CSS transition slides it to the new spot.
+  requestAnimationFrame(() => {
+    for (const p of gridEl.querySelectorAll('.portrait[data-char-id]')) {
+      const oldRect = oldPositions.get(p.dataset.charId);
+      if (!oldRect) continue;
+      const newRect = p.getBoundingClientRect();
+      const dx = oldRect.left - newRect.left;
+      const dy = oldRect.top - newRect.top;
+      if (dx === 0 && dy === 0) continue;
+      p.style.transition = 'none';
+      p.style.transform = `translate(${dx}px, ${dy}px)`;
+      // Force reflow so the browser registers the displaced start state.
+      p.getBoundingClientRect();
+      p.style.transition = '';
+      p.style.transform = '';
+    }
+  });
+}
+
+// ---------- Clue rendering ----------
+
+function renderClueEditor(container) {
+  container.innerHTML = '';
+  const lvl = activeLevel();
+  if (!lvl) return;
+  const placedIds = [...new Set(Object.values(lvl.solution))];
+  if (!placedIds.length) {
+    const empty = document.createElement('p');
+    empty.className = 'hint';
+    empty.textContent = 'No suspects placed in the solution yet.';
+    container.appendChild(empty);
+    return;
+  }
+  for (const charId of placedIds) {
+    const char = state.characters.find((c) => c.id === charId);
+    if (!char) continue;
+    const row = document.createElement('div');
+    row.className = 'clue-row';
+    row.innerHTML = `
+      <img src="${char.portrait}" alt="${char.name}" />
+      <div class="clue-body">
+        <strong>${char.name}</strong>
+        <textarea rows="2" placeholder="e.g. Was at the piano in the same room as Yew."></textarea>
+      </div>
+    `;
+    const ta = row.querySelector('textarea');
+    ta.value = lvl.clues[charId] || '';
+    ta.addEventListener('input', () => {
+      lvl.clues[charId] = ta.value;
+      lvl.updatedAt = Date.now();
+    });
+    container.appendChild(row);
+  }
+}
+
+function renderClueList(container) {
+  container.innerHTML = '';
+  const lvl = activeLevel();
+  if (!lvl) return;
+  const suspectIds = [...new Set(Object.values(lvl.solution))];
+  if (!suspectIds.length) {
+    const empty = document.createElement('p');
+    empty.className = 'hint';
+    empty.textContent = 'This level has no suspects to deduce yet.';
+    container.appendChild(empty);
+    return;
+  }
+  for (const charId of suspectIds) {
+    const char = state.characters.find((c) => c.id === charId);
+    if (!char) continue;
+    const row = document.createElement('div');
+    row.className = 'clue-row';
+    const clueText = lvl.clues[charId] || '(No clue written for this suspect.)';
+    row.innerHTML = `
+      <img src="${char.portrait}" alt="${char.name}" />
+      <div class="clue-body">
+        <strong>${char.name}</strong>
+        <p>${escapeHtml(clueText)}</p>
+      </div>
+    `;
+    container.appendChild(row);
+  }
+}
+
+function escapeHtml(s) {
+  return String(s)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
 }
 
 function updateStatus() {
@@ -141,6 +256,48 @@ function onRosterClick(ev) {
   rerender();
 }
 
+// ---------- Drag and drop ----------
+
+function onRosterDragStart(ev) {
+  const tile = ev.target.closest('.char-tile');
+  if (!tile) return;
+  const id = tile.dataset.charId;
+  if (!id) return;
+  // Firefox requires setData to actually start the drag.
+  ev.dataTransfer.setData('text/x-murdoku-character', id);
+  ev.dataTransfer.setData('text/plain', id);
+  ev.dataTransfer.effectAllowed = 'copy';
+}
+
+function onGridDragOver(ev) {
+  const cellEl = ev.target.closest('.cell');
+  if (!cellEl) return;
+  // Only accept drops over in-room cells.
+  if (!cellEl.classList.contains('in-room')) return;
+  ev.preventDefault();
+  ev.dataTransfer.dropEffect = 'copy';
+  if (!cellEl.classList.contains('drag-over')) cellEl.classList.add('drag-over');
+}
+
+function onGridDragLeave(ev) {
+  const cellEl = ev.target.closest('.cell');
+  if (cellEl) cellEl.classList.remove('drag-over');
+}
+
+function onGridDrop(ev) {
+  const cellEl = ev.target.closest('.cell');
+  if (!cellEl) return;
+  ev.preventDefault();
+  cellEl.classList.remove('drag-over');
+  const charId =
+    ev.dataTransfer.getData('text/x-murdoku-character') ||
+    ev.dataTransfer.getData('text/plain');
+  if (!charId) return;
+  const x = +cellEl.dataset.x;
+  const y = +cellEl.dataset.y;
+  if (placeCharacterAt(x, y, charId)) rerender();
+}
+
 // ---------- Persistence ----------
 
 function persist() {
@@ -148,9 +305,9 @@ function persist() {
   saveActiveId(state.activeId);
 }
 
-function ensureAtLeastOneLevel() {
+function ensureAtLeastOneLevel({ seedSample = false } = {}) {
   if (!state.levels.length) {
-    const lvl = emptyLevel();
+    const lvl = seedSample ? buildSampleLevel() : emptyLevel();
     state.levels.push(lvl);
     state.activeId = lvl.id;
     return;
@@ -158,6 +315,13 @@ function ensureAtLeastOneLevel() {
   if (!state.activeId || !state.levels.find((l) => l.id === state.activeId)) {
     state.activeId = state.levels[0].id;
   }
+}
+
+function loadSampleAsNewLevel() {
+  const lvl = buildSampleLevel();
+  state.levels.push(lvl);
+  state.activeId = lvl.id;
+  state.selectedRoomId = null;
 }
 
 // ---------- Levels modal ----------
@@ -227,12 +391,49 @@ function openLevels() {
 }
 function closeLevels() { levelsModal.classList.add('hidden'); }
 
+// ---------- Start menu ----------
+
+function openStartMenu({ closable } = { closable: true }) {
+  const closeBtn = $('#start-close');
+  if (closeBtn) closeBtn.hidden = !closable;
+  startModal.classList.remove('hidden');
+}
+function closeStartMenu() { startModal.classList.add('hidden'); }
+
+function handleStartAction(action) {
+  switch (action) {
+    case 'play-sample': {
+      loadSampleAsNewLevel();
+      persist();
+      setMode('play');
+      break;
+    }
+    case 'edit-mode': {
+      // If we have no levels yet, create a blank one to give the author a
+      // canvas to start on.
+      if (!state.levels.length) {
+        const lvl = emptyLevel();
+        state.levels.push(lvl);
+        state.activeId = lvl.id;
+      }
+      persist();
+      setMode('edit');
+      break;
+    }
+  }
+  closeStartMenu();
+  rerender();
+}
+
 // ---------- Boot ----------
 
 async function boot() {
   state.levels = loadLevels().map(normalizeLevel);
   state.activeId = loadActiveId();
-  ensureAtLeastOneLevel();
+  // First-visit users hit the start menu instead of auto-loading the sample,
+  // so they aren't spoiled by seeing the solution in edit mode.
+  const firstVisit = state.levels.length === 0;
+  if (!firstVisit) ensureAtLeastOneLevel();
 
   await Promise.all([loadCharacters(), loadFurniture()]);
 
@@ -265,11 +466,30 @@ async function boot() {
     if (e.target === levelsModal) closeLevels();
   });
 
+  // Start menu wiring.
+  $('#btn-menu').addEventListener('click', () => openStartMenu({ closable: true }));
+  for (const c of document.querySelectorAll('[data-close="start"]')) c.addEventListener('click', closeStartMenu);
+  startModal.addEventListener('click', (e) => {
+    // Backdrop click closes only when the X is visible (i.e. not on first
+    // visit, where we want the user to make a real choice).
+    if (e.target === startModal && !$('#start-close').hidden) closeStartMenu();
+  });
+  for (const card of document.querySelectorAll('.start-card')) {
+    card.addEventListener('click', () => handleStartAction(card.dataset.action));
+  }
+
   $('#btn-new-level').addEventListener('click', () => {
     const lvl = emptyLevel();
     state.levels.push(lvl);
     state.activeId = lvl.id;
     state.selectedRoomId = null;
+    persist();
+    rerender();
+    renderLevelsList();
+  });
+
+  $('#btn-load-sample').addEventListener('click', () => {
+    loadSampleAsNewLevel();
     persist();
     rerender();
     renderLevelsList();
@@ -364,10 +584,15 @@ async function boot() {
   // Grid event delegation.
   gridEl.addEventListener('click', onGridClick);
   gridEl.addEventListener('mousemove', onGridDrag);
+  gridEl.addEventListener('dragover', onGridDragOver);
+  gridEl.addEventListener('dragleave', onGridDragLeave);
+  gridEl.addEventListener('drop', onGridDrop);
 
   // Roster event delegation (for both edit and play roster containers).
   roster.addEventListener('click', onRosterClick);
   rosterPlay.addEventListener('click', onRosterClick);
+  roster.addEventListener('dragstart', onRosterDragStart);
+  rosterPlay.addEventListener('dragstart', onRosterDragStart);
 
   // Inter-module re-render trigger.
   document.addEventListener('murdoku:rerender', rerender);
@@ -382,7 +607,14 @@ async function boot() {
     }
   }, 4000);
 
-  setMode('edit');
+  // First-visit users see the start menu (not closable — they must pick).
+  // Returning users land in edit mode on their last-active level.
+  if (firstVisit) {
+    setMode('edit'); // initial paint will be hidden behind the modal
+    openStartMenu({ closable: false });
+  } else {
+    setMode('edit');
+  }
 }
 
 let flashTimer = null;

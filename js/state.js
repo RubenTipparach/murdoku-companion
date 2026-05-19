@@ -31,6 +31,8 @@ export function emptyLevel(name = 'Untitled house') {
     solution: {},
     playerPlacement: {},
     decorations: {},
+    // Per-character clue text. Keyed by character id. Rendered in Play mode.
+    clues: {},
     createdAt: now,
     updatedAt: now,
   };
@@ -138,6 +140,25 @@ export function hasDoorway(x, y, side) {
   if (!lvl) return false;
   const k = edgeKey(x, y, side);
   return k ? lvl.doorways.includes(k) : false;
+}
+
+// Place a character at (x,y) in whichever placement map the current mode
+// targets (solution in edit, playerPlacement in play). Each character can
+// only sit in one cell at a time — placing them somewhere new removes them
+// from wherever they were before. Returns true if the placement happened.
+export function placeCharacterAt(x, y, charId) {
+  const lvl = activeLevel();
+  if (!lvl || !charId) return false;
+  if (!roomAt(x, y)) return false;
+  const k = key(x, y);
+  const map = state.mode === 'edit' ? lvl.solution : lvl.playerPlacement;
+  // Remove this character from any other cell first.
+  for (const otherK of Object.keys(map)) {
+    if (map[otherK] === charId && otherK !== k) delete map[otherK];
+  }
+  map[k] = charId;
+  lvl.updatedAt = Date.now();
+  return true;
 }
 
 export function deleteRoom(roomId) {

@@ -114,6 +114,9 @@ export function renderGrid(container, handlers) {
         if (char) {
           const p = document.createElement('div');
           p.className = 'portrait';
+          // data-char-id lets the FLIP animator track a portrait across
+          // re-renders and slide it between cells.
+          p.dataset.charId = charId;
           p.style.backgroundImage = `url('${char.portrait}')`;
           p.title = char.name;
           cell.appendChild(p);
