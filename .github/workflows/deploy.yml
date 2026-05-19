@@ -89,8 +89,26 @@ jobs:
       - name: Set up flyctl
         uses: superfly/flyctl-actions/setup-flyctl@master
 
+      - name: Confirm Fly auth and app exist
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+        run: |
+          if [ -z "${FLY_API_TOKEN}" ]; then
+            echo "::error::FLY_API_TOKEN repo secret is empty or missing."
+            exit 1
+          fi
+          echo "FLY_API_TOKEN length: ${#FLY_API_TOKEN}"
+          echo "--- flyctl version ---"
+          flyctl version
+          echo "--- flyctl auth whoami ---"
+          flyctl auth whoami || { echo "::error::flyctl auth check failed"; exit 1; }
+          echo "--- app status ---"
+          flyctl status -a murdoku-companion || { echo "::error::App 'murdoku-companion' not visible to this token"; exit 1; }
+          echo "--- volumes ---"
+          flyctl volumes list -a murdoku-companion || true
+
       - name: Deploy API to Fly.io
         working-directory: server
         env:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
-        run: flyctl deploy --remote-only
+        run: flyctl deploy --remote-only --verbose
