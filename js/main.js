@@ -8,7 +8,10 @@ import {
   placeCharacterAt,
   cloneActiveLevel,
 } from './state.js';
-import { loadLevels, saveLevels, loadActiveId, saveActiveId } from './storage.js';
+import {
+  loadLevels, saveLevels, loadActiveId, saveActiveId,
+  loadCompletedSamples, saveCompletedSamples,
+} from './storage.js';
 import { renderGrid } from './grid.js';
 import { loadCharacters, renderRoster } from './portraits.js';
 import { loadFurniture, normalizeLevel, rollAllRooms } from './decor.js';
@@ -403,12 +406,14 @@ function loadSampleAsNewLevel(sampleKey) {
 function renderStartSamples() {
   startSamples.innerHTML = '';
   for (const s of SAMPLES) {
+    const done = state.completedSamples.has(s.key);
     const card = document.createElement('button');
-    card.className = 'start-card';
+    card.className = 'start-card' + (done ? ' completed' : '');
     card.dataset.action = 'play-sample';
     card.dataset.sampleKey = s.key;
+    const icon = done ? '✅' : '🔍';
     card.innerHTML = `
-      <h3>🔍 ${escapeHtml(s.name)}</h3>
+      <h3>${icon} ${escapeHtml(s.name)}</h3>
       <p>${escapeHtml(s.description)}</p>
     `;
     startSamples.appendChild(card);
@@ -429,14 +434,17 @@ function renderStartContinue() {
   continueEl.classList.remove('hidden');
   headingEl.classList.remove('hidden');
   const card = document.createElement('button');
-  card.className = 'start-card';
+  const done =
+    (lvl.sampleKey && state.completedSamples.has(lvl.sampleKey)) || !!lvl.completed;
+  card.className = 'start-card' + (done ? ' completed' : '');
   card.dataset.action = 'continue';
   card.dataset.continueId = lvl.id;
   const subtitle = lvl.isSample
     ? 'Sample — resumes in Play mode.'
     : 'Your last-edited level — resumes in Edit mode.';
+  const icon = done ? '✅' : '↻';
   card.innerHTML = `
-    <h3>↻ ${escapeHtml(lvl.name || 'Untitled level')}</h3>
+    <h3>${icon} ${escapeHtml(lvl.name || 'Untitled level')}</h3>
     <p>${escapeHtml(subtitle)}</p>
   `;
   continueEl.appendChild(card);
@@ -452,7 +460,9 @@ function renderLevelsList() {
 
     const title = document.createElement('div');
     title.className = 'title';
-    title.textContent = lvl.name || '(untitled)';
+    const done =
+      (lvl.sampleKey && state.completedSamples.has(lvl.sampleKey)) || !!lvl.completed;
+    title.textContent = (done ? '✅ ' : '') + (lvl.name || '(untitled)');
     li.appendChild(title);
 
     const meta = document.createElement('div');
@@ -566,6 +576,7 @@ function handleStartAction(action, opts = {}) {
 async function boot() {
   state.levels = loadLevels().map(normalizeLevel);
   state.activeId = loadActiveId();
+  state.completedSamples = new Set(loadCompletedSamples());
   // We *never* auto-load a level on boot. The start menu is always the
   // first thing the user sees, even on returning visits. If there's a
   // previously-active level it's reachable via the menu's Continue card.
@@ -714,13 +725,27 @@ async function boot() {
     const result = checkSolution();
     if (!result) return;
     if (result.win) {
-      winDetail.textContent = activeLevel().name ? `You solved "${activeLevel().name}".` : 'You solved this case.';
+      const lvl = activeLevel();
+      // Record completion. Sample levels go into a per-install Set keyed
+      // by sampleKey so the green check stays on the menu even after the
+      // user loads a fresh copy of the same sample. Custom levels just
+      // get a sticky boolean on the level itself.
+      if (lvl) {
+        if (lvl.sampleKey) {
+          state.completedSamples.add(lvl.sampleKey);
+          saveCompletedSamples([...state.completedSamples]);
+        }
+        lvl.completed = true;
+        lvl.updatedAt = Date.now();
+        persist();
+      }
+      winDetail.textContent = lvl && lvl.name ? `You solved "${lvl.name}".` : 'You solved this case.';
       winToast.classList.remove('hidden', 'bad');
       highlightCells([]);
       // Mark all solution cells as correct.
       for (const cellEl of document.querySelectorAll('.cell')) {
         const k = `${cellEl.dataset.x},${cellEl.dataset.y}`;
-        if (activeLevel().solution[k]) cellEl.classList.add('correct');
+        if (lvl && lvl.solution[k]) cellEl.classList.add('correct');
       }
     } else {
       winDetail.textContent =

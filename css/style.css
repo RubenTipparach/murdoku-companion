@@ -592,6 +592,11 @@ body.guests-transparent .cell.suspect-selected .portrait { opacity: 0.9; }
   background: #4a416c;
   border-color: var(--accent-2);
 }
+.start-card.completed {
+  border-color: var(--good);
+  background: linear-gradient(180deg, rgba(110, 231, 183, 0.10), transparent);
+}
+.start-card.completed h3 { color: var(--good); }
 .start-card h3 {
   margin: 0 0 4px;
   font-size: 15px;
