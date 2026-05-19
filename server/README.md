@@ -1,30 +1,25 @@
 # Murdoku companion API
 
 Small Express + sqlite service that backs profile claiming, level
-sharing, leaderboards, sessions, and the admin dashboard. Deployed on
-Fly.io. Data lives on a persistent volume so the database survives
-machine restarts.
+sharing, leaderboards, and sessions. Deployed on Fly.io. Data lives on
+a persistent volume so the database survives machine restarts.
 
 ## Phase 12 ships
 
 - `POST /profiles { name, token }`, register or re-claim a profile
 - `GET /profiles/me`, whoami (bearer-token auth)
 - `GET /healthz`, liveness probe
-- `GET /admin`, basic-auth gated minimal overview
 
 Subsequent phases add level sharing (13), completions and leaderboards
-(14), sessions (15), and the full admin views.
+(14), and sessions (15). An admin surface lands behind OAuth (no
+password storage) when there's something worth showing.
 
 ## Local development
 
 ```
 cd server
 npm install
-SERVER_SALT="$(openssl rand -hex 32)" \
-ADMIN_USER=admin ADMIN_PASSWORD=admin \
-DATABASE_PATH=./murdoku.db \
-PORT=8080 \
-npm run dev
+DATABASE_PATH=./murdoku.db PORT=8080 npm run dev
 ```
 
 Then in another shell:
@@ -39,19 +34,19 @@ a local API during development, change that meta value.
 
 ## One-time Fly bootstrap
 
-`fly.toml` covers app config but the app, volume, and secrets need to
-exist before the first deploy. Run these once locally with the
-`flyctl` CLI:
+`fly.toml` covers app config. For an unconfigured environment the
+server boots with an insecure default salt and warns on startup; this
+is fine pre-launch since no real users exist yet. Before going public,
+set a real salt once:
 
 ```
 fly apps create murdoku-companion
 fly volumes create murdoku_data --size 1 --region ams
 fly secrets set SERVER_SALT="$(openssl rand -hex 32)"
-fly secrets set ADMIN_USER=admin ADMIN_PASSWORD="$(openssl rand -hex 16)"
 ```
 
-The `SERVER_SALT` value must never change once set; rotating it
-invalidates every existing client token.
+Rotating `SERVER_SALT` invalidates every existing client token, so
+only change it deliberately.
 
 ## Continuous deploy
 

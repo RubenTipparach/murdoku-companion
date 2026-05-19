@@ -4,9 +4,10 @@
 # secret. Bootstrap on a fresh app (run once locally with flyctl):
 #
 #   fly apps create murdoku-companion
-#   fly volumes create murdoku_data --size 1 --region iad
-#   fly secrets set SERVER_SALT="$(openssl rand -hex 32)"
-#   fly secrets set ADMIN_USER=admin ADMIN_PASSWORD="$(openssl rand -hex 16)"
+#   fly volumes create murdoku_data --size 1 --region ams
+#
+# The server boots without secrets (warning on startup, insecure
+# default salt); set a real SERVER_SALT before going public.
 #
 # Subsequent deploys are automatic on every push to the repo.
 
