@@ -1120,6 +1120,31 @@ function cloneSharedLevelToAuthored(sharedId) {
   flashStatus(`Cloned "${src.name}" into your authored levels.`);
 }
 
+// Delete an authored level from the local library. If the level has
+// been published to the server (lvl.code is set), the confirm prompt
+// tells the player that an admin can restore the published copy
+// later, the public listing on the server is untouched. Local-only
+// authored levels just get a plain "are you sure" prompt.
+function deleteAuthoredLevel(authoredId) {
+  const lvl = state.levels.find((l) => l.id === authoredId);
+  if (!lvl) return;
+  const name = lvl.name || '(untitled)';
+  const message = lvl.code
+    ? `Delete "${name}" from this device?\n\n` +
+      `This level is published on the server (code ${lvl.code}). ` +
+      `The published copy stays online and an admin can retrieve it ` +
+      `for you at any time. Only the local copy on this device is ` +
+      `removed; you will not be able to edit or re-publish it from ` +
+      `this device unless an admin restores it.`
+    : `Delete "${name}"?\n\nThis cannot be undone.`;
+  if (!confirm(message)) return;
+  state.levels = state.levels.filter((l) => l.id !== authoredId);
+  if (state.activeId === authoredId) state.activeId = null;
+  persist();
+  renderStartMenu();
+  flashStatus(`Deleted "${name}".`);
+}
+
 // Pull a level by code from the server and merge into the local
 // library. If we already have it (matching code), just activate it.
 // If the active profile owns it, store it as an authored (editable)
@@ -1585,11 +1610,13 @@ function renderStartAuthored() {
     const shareBtn = canShare
       ? `<button data-authored-action="share" data-authored-id="${escapeHtml(lvl.id)}" class="share-btn">${lvl.code ? 'Re-publish' : 'Share'}</button>`
       : `<span class="share-btn-disabled" title="Sign in and connect to the server first.">Share</span>`;
+    const deleteBtn = `<button data-authored-action="delete" data-authored-id="${escapeHtml(lvl.id)}" class="delete-btn">Delete</button>`;
     card.innerHTML = `
       <h3>✏ ${escapeHtml(lvl.name || 'Untitled level')} ${chip} ${sharedChip}</h3>
       <p>Last edited ${updated.toLocaleDateString()}</p>
       <div class="authored-actions">
         ${shareBtn}
+        ${deleteBtn}
       </div>
     `;
     startAuthored.appendChild(card);
@@ -2083,6 +2110,8 @@ async function boot() {
         const lvl = state.levels.find((l) => l.id === authoredBtn.dataset.authoredId);
         const tgt = levelTarget(lvl);
         if (tgt) openLeaderboardModal(tgt.code, tgt.name, { initialTab: 'all', namespace: tgt.namespace });
+      } else if (act === 'delete') {
+        deleteAuthoredLevel(authoredBtn.dataset.authoredId);
       }
       return;
     }

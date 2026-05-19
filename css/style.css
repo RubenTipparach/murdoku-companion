@@ -1241,7 +1241,8 @@ body:has(> #start-modal.start-screen:not(.hidden)) > .layout {
 }
 .share-btn,
 .clone-btn,
-.leaderboard-btn {
+.leaderboard-btn,
+.delete-btn {
   display: inline-block;
   font-size: 11px;
   padding: 3px 10px;
@@ -1256,6 +1257,14 @@ body:has(> #start-modal.start-screen:not(.hidden)) > .layout {
 .clone-btn:hover,
 .leaderboard-btn:hover {
   background: #3a2c4a;
+}
+.delete-btn {
+  border-color: var(--bad);
+  color: var(--bad);
+}
+.delete-btn:hover {
+  background: var(--bad);
+  color: #1c1330;
 }
 .shared-chip {
   display: inline-block;
