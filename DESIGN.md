@@ -260,6 +260,18 @@ Each phase ends in a runnable, demoable state.
 - **Shared lib.** PNG encoding, CRC32, the pixel canvas, and the seeded
   RNG live in `scripts/lib/pixel.js`. Both art generators import from it.
 
+### Phase 8 — Starter level + drag-and-drop *(this branch)*
+- Hand-crafted starter level **"The Crimson Conservatory"** in `js/sample.js`.
+  Five rooms (Greenhouse / Library / Hallway / Dining / Parlour), five
+  doorways, five solution suspects, and a hand-picked decoration set. The
+  sample is auto-loaded on first visit when `localStorage` is empty, and is
+  also offered as a **Load sample** button in the Levels modal (always
+  imports a fresh copy with a new id).
+- **Drag-and-drop suspect placement**. Roster tiles are now HTML5
+  draggables. Dropping onto an in-room cell calls `placeCharacterAt`, which
+  writes to `solution` in edit mode and `playerPlacement` in play mode.
+  Click-to-select-then-click remains as a fallback.
+
 ### Future / out of scope for v1
 - Clue system (text clues + logical deduction validator).
 - Uniqueness constraints à la Sudoku (each character once per row/column).
@@ -270,6 +282,8 @@ Each phase ends in a runnable, demoable state.
   of only rolling whole rooms).
 - A richer furniture-rolling weighting that picks "bed" only for bedroom,
   "piano" only for music rooms, etc. — requires room type tags.
+- Touch / mobile drag-and-drop (current HTML5 DnD works only on pointer
+  devices; tap-to-select still works on touch).
 
 ---
 

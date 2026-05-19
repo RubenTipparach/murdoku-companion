@@ -140,6 +140,20 @@ export function hasDoorway(x, y, side) {
   return k ? lvl.doorways.includes(k) : false;
 }
 
+// Place a character at (x,y) in whichever placement map the current mode
+// targets (solution in edit, playerPlacement in play). Returns true if the
+// placement happened. Used by both drag-and-drop and click-to-place flows.
+export function placeCharacterAt(x, y, charId) {
+  const lvl = activeLevel();
+  if (!lvl || !charId) return false;
+  if (!roomAt(x, y)) return false;
+  const k = key(x, y);
+  if (state.mode === 'edit') lvl.solution[k] = charId;
+  else lvl.playerPlacement[k] = charId;
+  lvl.updatedAt = Date.now();
+  return true;
+}
+
 export function deleteRoom(roomId) {
   const lvl = activeLevel();
   if (!lvl) return;

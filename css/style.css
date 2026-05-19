@@ -229,6 +229,11 @@ input:focus, textarea:focus { outline: 2px solid var(--accent); outline-offset: 
 }
 .cell.mismatch { box-shadow: 0 0 0 3px var(--bad) inset; }
 .cell.correct  { box-shadow: 0 0 0 3px var(--good) inset; }
+.cell.drag-over { outline: 2px dashed var(--accent-2); outline-offset: -2px; }
+
+/* Make portrait/img inside char-tile show the system drag cursor cleanly. */
+.char-tile { cursor: grab; }
+.char-tile:active { cursor: grabbing; }
 
 /* Doorway tool: edge picker overlays */
 .cell .edge-pick {
@@ -376,6 +381,7 @@ input:focus, textarea:focus { outline: 2px solid var(--accent); outline-offset: 
 .modal-inner h2 { margin: 0; font-size: 16px; }
 .modal-inner .close { background: transparent; border: none; font-size: 22px; line-height: 1; }
 .modal-body { padding: 14px; overflow: auto; }
+.modal-body > button { margin-right: 6px; }
 .levels-list {
   list-style: none;
   padding: 0;

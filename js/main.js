@@ -5,11 +5,13 @@ import {
   emptyLevel,
   activeLevel,
   rebuildCellCache,
+  placeCharacterAt,
 } from './state.js';
 import { loadLevels, saveLevels, loadActiveId, saveActiveId } from './storage.js';
 import { renderGrid } from './grid.js';
 import { loadCharacters, renderRoster } from './portraits.js';
 import { loadFurniture, normalizeLevel, rollAllRooms } from './decor.js';
+import { buildSampleLevel } from './sample.js';
 import {
   selectTool,
   createRoom,
@@ -141,6 +143,48 @@ function onRosterClick(ev) {
   rerender();
 }
 
+// ---------- Drag and drop ----------
+
+function onRosterDragStart(ev) {
+  const tile = ev.target.closest('.char-tile');
+  if (!tile) return;
+  const id = tile.dataset.charId;
+  if (!id) return;
+  // Firefox requires setData to actually start the drag.
+  ev.dataTransfer.setData('text/x-murdoku-character', id);
+  ev.dataTransfer.setData('text/plain', id);
+  ev.dataTransfer.effectAllowed = 'copy';
+}
+
+function onGridDragOver(ev) {
+  const cellEl = ev.target.closest('.cell');
+  if (!cellEl) return;
+  // Only accept drops over in-room cells.
+  if (!cellEl.classList.contains('in-room')) return;
+  ev.preventDefault();
+  ev.dataTransfer.dropEffect = 'copy';
+  if (!cellEl.classList.contains('drag-over')) cellEl.classList.add('drag-over');
+}
+
+function onGridDragLeave(ev) {
+  const cellEl = ev.target.closest('.cell');
+  if (cellEl) cellEl.classList.remove('drag-over');
+}
+
+function onGridDrop(ev) {
+  const cellEl = ev.target.closest('.cell');
+  if (!cellEl) return;
+  ev.preventDefault();
+  cellEl.classList.remove('drag-over');
+  const charId =
+    ev.dataTransfer.getData('text/x-murdoku-character') ||
+    ev.dataTransfer.getData('text/plain');
+  if (!charId) return;
+  const x = +cellEl.dataset.x;
+  const y = +cellEl.dataset.y;
+  if (placeCharacterAt(x, y, charId)) rerender();
+}
+
 // ---------- Persistence ----------
 
 function persist() {
@@ -148,9 +192,9 @@ function persist() {
   saveActiveId(state.activeId);
 }
 
-function ensureAtLeastOneLevel() {
+function ensureAtLeastOneLevel({ seedSample = false } = {}) {
   if (!state.levels.length) {
-    const lvl = emptyLevel();
+    const lvl = seedSample ? buildSampleLevel() : emptyLevel();
     state.levels.push(lvl);
     state.activeId = lvl.id;
     return;
@@ -158,6 +202,13 @@ function ensureAtLeastOneLevel() {
   if (!state.activeId || !state.levels.find((l) => l.id === state.activeId)) {
     state.activeId = state.levels[0].id;
   }
+}
+
+function loadSampleAsNewLevel() {
+  const lvl = buildSampleLevel();
+  state.levels.push(lvl);
+  state.activeId = lvl.id;
+  state.selectedRoomId = null;
 }
 
 // ---------- Levels modal ----------
@@ -232,7 +283,8 @@ function closeLevels() { levelsModal.classList.add('hidden'); }
 async function boot() {
   state.levels = loadLevels().map(normalizeLevel);
   state.activeId = loadActiveId();
-  ensureAtLeastOneLevel();
+  // Seed the sample level on first visit (no saved levels yet).
+  ensureAtLeastOneLevel({ seedSample: true });
 
   await Promise.all([loadCharacters(), loadFurniture()]);
 
@@ -270,6 +322,13 @@ async function boot() {
     state.levels.push(lvl);
     state.activeId = lvl.id;
     state.selectedRoomId = null;
+    persist();
+    rerender();
+    renderLevelsList();
+  });
+
+  $('#btn-load-sample').addEventListener('click', () => {
+    loadSampleAsNewLevel();
     persist();
     rerender();
     renderLevelsList();
@@ -364,10 +423,15 @@ async function boot() {
   // Grid event delegation.
   gridEl.addEventListener('click', onGridClick);
   gridEl.addEventListener('mousemove', onGridDrag);
+  gridEl.addEventListener('dragover', onGridDragOver);
+  gridEl.addEventListener('dragleave', onGridDragLeave);
+  gridEl.addEventListener('drop', onGridDrop);
 
   // Roster event delegation (for both edit and play roster containers).
   roster.addEventListener('click', onRosterClick);
   rosterPlay.addEventListener('click', onRosterClick);
+  roster.addEventListener('dragstart', onRosterDragStart);
+  rosterPlay.addEventListener('dragstart', onRosterDragStart);
 
   // Inter-module re-render trigger.
   document.addEventListener('murdoku:rerender', rerender);

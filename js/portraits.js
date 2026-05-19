@@ -20,8 +20,9 @@ export function renderRoster(container, { mode }) {
     const btn = document.createElement('button');
     btn.className = 'char-tile';
     btn.dataset.charId = char.id;
+    btn.draggable = true;
     btn.title = `${char.name}\n${char.description}`;
-    btn.innerHTML = `<img src="${char.portrait}" alt="${char.name}" />`;
+    btn.innerHTML = `<img src="${char.portrait}" alt="${char.name}" draggable="false" />`;
     if (state.selectedCharacterId === char.id) btn.classList.add('active');
     container.appendChild(btn);
   }
