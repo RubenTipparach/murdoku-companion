@@ -93,7 +93,6 @@
           <h2>Suspects</h2>
           <p class="hint">Tap a suspect to read their clue, then drop them into a room cell.</p>
           <div id="char-roster-play" class="char-roster"></div>
-          <div id="selected-clue" class="selected-clue hidden"></div>
 
           <div class="play-actions">
             <button id="btn-check">Check solution</button>
@@ -106,9 +105,10 @@
       </aside>
     </main>
 
-    <!-- Start menu modal -->
-    <div id="start-modal" class="modal hidden" role="dialog">
-      <div class="modal-inner start-inner">
+    <!-- Start screen — the entry point of the app. Not a modal; replaces
+         the game UI entirely until the user picks a level. -->
+    <div id="start-modal" class="start-screen hidden" role="dialog">
+      <div class="start-inner">
         <header>
           <h2>Murdoku</h2>
           <button class="close" data-close="start" id="start-close" hidden>×</button>
@@ -144,6 +144,9 @@
         </div>
       </div>
     </div>
+
+    <!-- Floating clue bubble — positioned at the selected suspect tile via JS. -->
+    <div id="selected-clue" class="selected-clue hidden" role="tooltip"></div>
 
     <!-- Win toast -->
     <div id="win-toast" class="toast hidden">

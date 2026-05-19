@@ -189,13 +189,13 @@ function renderClueEditor(container) {
   }
 }
 
-// Play mode: render a clue bubble for the currently-selected suspect.
-// Renders nothing (hidden) when no suspect is selected, or when the level
-// doesn't have a clue for them.
+// Play mode: render a floating clue bubble pointed at the currently-
+// selected suspect tile. Hidden when no suspect is selected or no clue
+// is available.
 function renderSelectedClue(container) {
   const lvl = activeLevel();
   const charId = state.selectedCharacterId;
-  if (!lvl || !charId) {
+  if (!lvl || !charId || state.mode !== 'play') {
     container.classList.add('hidden');
     container.innerHTML = '';
     return;
@@ -215,6 +215,36 @@ function renderSelectedClue(container) {
       <p class="clue-text">${escapeHtml(clueText)}</p>
     </div>
   `;
+  // Wait one frame so the bubble is measurable before positioning.
+  requestAnimationFrame(() => positionSelectedClue(charId));
+}
+
+// Anchor the clue bubble below the selected suspect tile, clamped to the
+// viewport, with the bubble's arrow pointing at the tile's center.
+function positionSelectedClue(charId) {
+  const container = selectedClue;
+  if (container.classList.contains('hidden')) return;
+  const tile = document.querySelector(
+    `#char-roster-play .char-tile[data-char-id="${charId}"]`,
+  );
+  if (!tile) return;
+  const rect = tile.getBoundingClientRect();
+  const bubbleWidth = Math.min(container.offsetWidth || 320, 360);
+  const tileCenter = rect.left + rect.width / 2;
+  const margin = 8;
+  let left = tileCenter - bubbleWidth / 2;
+  if (left < margin) left = margin;
+  if (left + bubbleWidth > window.innerWidth - margin) {
+    left = window.innerWidth - bubbleWidth - margin;
+  }
+  container.style.top = (rect.bottom + 10) + 'px';
+  container.style.left = left + 'px';
+  // Place the bubble's arrow so it points at the tile's actual center.
+  const arrowOffset = Math.max(
+    12,
+    Math.min(bubbleWidth - 26, tileCenter - left - 7),
+  );
+  container.style.setProperty('--arrow-x', arrowOffset + 'px');
 }
 
 // Repopulate the topbar level-select dropdown to mirror state.levels.
@@ -489,8 +519,14 @@ function openStartMenu({ closable } = { closable: true }) {
   const closeBtn = $('#start-close');
   if (closeBtn) closeBtn.hidden = !closable;
   startModal.classList.remove('hidden');
+  // Hide the game chrome entirely while the menu is up — the menu is the
+  // page now, not a popup over the game.
+  document.body.classList.add('menu-active');
 }
-function closeStartMenu() { startModal.classList.add('hidden'); }
+function closeStartMenu() {
+  startModal.classList.add('hidden');
+  document.body.classList.remove('menu-active');
+}
 
 function handleStartAction(action, opts = {}) {
   switch (action) {
@@ -731,6 +767,16 @@ async function boot() {
 
   // Inter-module re-render trigger.
   document.addEventListener('murdoku:rerender', rerender);
+
+  // Reposition the clue bubble when the page scrolls or resizes so it
+  // stays pinned to its tile.
+  const reposition = () => {
+    if (state.mode === 'play' && state.selectedCharacterId) {
+      positionSelectedClue(state.selectedCharacterId);
+    }
+  };
+  window.addEventListener('scroll', reposition, { passive: true });
+  window.addEventListener('resize', reposition);
 
   // Auto-save every 4s if something changed.
   let lastSerialized = '';

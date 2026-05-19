@@ -457,11 +457,14 @@ input:focus, textarea:focus { outline: 2px solid var(--accent); outline-offset: 
 .play-actions { display: flex; gap: 6px; margin: 10px 0; }
 .play-actions button { flex: 1; }
 
-/* The selected-suspect clue bubble. Lives below the play-mode roster, with
-   a little arrow pointing up at the tiles. */
+/* The selected-suspect clue bubble. Floats above the page UI and is
+   positioned by JS to point at the currently-selected suspect tile.
+   `--arrow-x` is the offset of the arrow inside the bubble — JS sets it
+   so the arrow always lines up with the tile that was clicked. */
 .selected-clue {
-  position: relative;
-  margin-top: 12px;
+  position: fixed;
+  z-index: 30;
+  max-width: 360px;
   padding: 10px 12px;
   background: var(--panel-2);
   border: 1px solid var(--accent);
@@ -470,13 +473,14 @@ input:focus, textarea:focus { outline: 2px solid var(--accent); outline-offset: 
   grid-template-columns: 40px 1fr;
   gap: 10px;
   align-items: start;
-  box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+  box-shadow: 0 12px 30px rgba(0,0,0,0.5);
+  --arrow-x: 24px;
 }
 .selected-clue::before {
   content: '';
   position: absolute;
   top: -8px;
-  left: 24px;
+  left: var(--arrow-x);
   width: 14px;
   height: 14px;
   background: var(--panel-2);
@@ -653,6 +657,57 @@ input:focus, textarea:focus { outline: 2px solid var(--accent); outline-offset: 
 .toast.hidden { display: none; }
 .toast.bad { border-color: var(--bad); }
 
+/* ------ Start screen (the app's entry page; NOT a modal overlay) ------ */
+.start-screen {
+  position: fixed;
+  inset: 0;
+  background: var(--bg);
+  z-index: 100;
+  overflow: auto;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+.start-screen .start-inner {
+  width: 100%;
+  max-width: 560px;
+  background: var(--panel);
+  border-radius: 10px;
+  display: flex;
+  flex-direction: column;
+}
+.start-screen header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 18px;
+  border-bottom: 1px solid #4a416c;
+}
+.start-screen h2 {
+  margin: 0;
+  font-size: 22px;
+  letter-spacing: 1px;
+  color: var(--accent-2);
+}
+.start-screen .close {
+  background: transparent;
+  border: none;
+  font-size: 24px;
+  line-height: 1;
+  color: var(--ink-dim);
+}
+.start-screen .modal-body { padding: 16px 18px 20px; }
+
+/* When the start screen is visible, hide the rest of the app entirely so
+   nothing leaks through. The screen itself is positioned and stacked
+   above everything else, but hiding the underlying chrome keeps any
+   stacking-context surprises (sticky topbar, etc.) from showing. */
+body.menu-active > .topbar,
+body.menu-active > .layout {
+  display: none;
+}
+
 /* Start menu section heading */
 .start-section {
   margin: 14px 0 6px;
@@ -661,6 +716,7 @@ input:focus, textarea:focus { outline: 2px solid var(--accent); outline-offset: 
   text-transform: uppercase;
   color: var(--ink-dim);
 }
+.start-section:first-of-type { margin-top: 0; }
 
 /* Character description under the clue */
 .clue-row .char-desc {
