@@ -10,6 +10,7 @@ import {
   deleteRoom,
   key,
 } from './state.js';
+import { rollRoom } from './decor.js';
 
 export function selectTool(tool) {
   state.tool = tool;
@@ -113,6 +114,16 @@ export function renderRoomList(container) {
       document.dispatchEvent(new CustomEvent('murdoku:rerender'));
     });
     li.appendChild(pick);
+
+    const roll = document.createElement('button');
+    roll.className = 'icon';
+    roll.textContent = '🎲';
+    roll.title = 'Roll new tile pattern + furniture for this room';
+    roll.addEventListener('click', () => {
+      rollRoom(room.id);
+      document.dispatchEvent(new CustomEvent('murdoku:rerender'));
+    });
+    li.appendChild(roll);
 
     const del = document.createElement('button');
     del.className = 'icon danger';
