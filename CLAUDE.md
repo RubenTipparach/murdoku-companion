@@ -80,15 +80,41 @@ Disallowed:
   columns to the right"). Players shouldn't have to count squares —
   use adjacency / diagonal / same-row / same-column instead.
 
-### Disambiguating duplicate furniture.
+### Embrace ambiguity. Do not over-specify duplicate furniture.
 
-When the same furniture (chair, plant, bookshelf, …) appears multiple
-times, do NOT lean on cell-counting to identify the right one. Either:
-- Refer to a unique neighbor: "the chair next to the piano".
-- Refer to another suspect: "the bookshelf behind Mortimer".
-- Or trust the row/column uniqueness rule — the player will eliminate
-  candidates because every suspect occupies a different row and a
-  different column.
+This is the heart of the puzzle. When the same furniture (chair, plant,
+dresser, ...) appears multiple times, do NOT tell the player which one:
+
+❌ "Hask was beside a dresser, the one surrounded by storage crates,
+   not the one beside the bed."
+❌ "Crowe was at the bookshelf furthest from the window."
+❌ "Yew was at the plant nearest the door."
+
+Leave the clue ambiguous on its own:
+
+✅ "Hask was beside a dresser."
+✅ "Crowe was at a bookshelf."
+✅ "Yew was tending a potted plant."
+
+The player resolves the ambiguity by applying the puzzle rules to the
+OTHER suspects (every suspect on a unique row and column, killer alone
+with victim). Ambiguity that the player has to LOGIC their way out of
+is the whole point of the game. Spoiling it with "the one near X" makes
+the puzzle trivial.
+
+When to refer to a specific furniture instance:
+- The piece is unique on the board ("the only piano").
+- The disambiguator is another suspect ("the bookshelf behind Mortimer"),
+  not a coordinate or another piece of furniture.
+
+### Punctuation: no em-dashes (—).
+
+Replace em-dashes with a comma, period, or parentheses. They render
+inconsistently across fonts and read oddly in short clues.
+
+❌ "Crowe was at a bookshelf — the only one in the room."
+✅ "Crowe was at a bookshelf, the only one in the room."
+✅ "Crowe was at the only bookshelf in the room."
 
 ### Furniture for clue anchors must be unique or disambiguated.
 

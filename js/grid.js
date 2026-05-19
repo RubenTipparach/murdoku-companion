@@ -172,22 +172,23 @@ export function renderGrid(container, handlers) {
         }
       }
 
-      // Row/col X-ray marker. Only shown when the toggle is on, and only
-      // on cells where the row or column is occupied by some other
-      // placement. Cells with collisions (two suspects sharing the row
-      // OR the column) get a red X.
+      // Row/col conflict marker. Only shown when the toggle is on. We
+      // ONLY mark the placed-character cells that are themselves in
+      // conflict (share a row or column with another placed suspect),
+      // with a bright red X drawn on top of the portrait. Non-conflict
+      // suspects and empty cells get nothing — silent validation, only
+      // the rule violations light up.
       if (state.showRowColMarks) {
-        const rowList = rowsOccupied.get(y) || [];
-        const colList = colsOccupied.get(x) || [];
-        const inRow = rowList.length > 0;
-        const inCol = colList.length > 0;
-        const rowConflict = rowList.length > 1;
-        const colConflict = colList.length > 1;
-        if (inRow || inCol) {
-          const mark = document.createElement('div');
-          mark.className = 'rowcol-x' + (rowConflict || colConflict ? ' conflict' : '');
-          mark.textContent = '✕';
-          cell.appendChild(mark);
+        const k = key(x, y);
+        if (placements[k]) {
+          const rowList = rowsOccupied.get(y) || [];
+          const colList = colsOccupied.get(x) || [];
+          if (rowList.length > 1 || colList.length > 1) {
+            const mark = document.createElement('div');
+            mark.className = 'rowcol-x conflict';
+            mark.textContent = '✕';
+            cell.appendChild(mark);
+          }
         }
       }
 
