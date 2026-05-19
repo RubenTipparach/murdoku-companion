@@ -10,22 +10,10 @@
 const CONSERVATORY = {
   id: 'lvl_sample_conservatory',
   name: 'The Crimson Conservatory',
+  difficulty: 'tutorial',
   description:
     'Lady Wraithmoor is dead among her orchids. Five guests were in the ' +
-    'house tonight, and each one swears they were elsewhere.\n\n' +
-    'HOW TO PLAY\n' +
-    'Drag each suspect into the cell where they actually stood at the ' +
-    'moment of the murder, then mark one of them as the killer. The ' +
-    'Check button unlocks once every suspect is placed and a killer is ' +
-    'named.\n\n' +
-    'THE PUZZLE RULES\n' +
-    '• No two suspects share a row or a column. Everyone is in a unique ' +
-    'row and a unique column.\n' +
-    '• The victim was alone in a room with the killer. Every other ' +
-    'suspect was in a different room.\n' +
-    '• Clues use furniture and relative position only, never room names. ' +
-    'Work out where each suspect stood, then whoever ends up in the ' +
-    'victim\'s room is the killer.',
+    'house tonight, and each one swears they were elsewhere.',
   rooms: [
     { id: 'r1', name: 'Greenhouse', description: 'Glass walls, humid, smells of orchids.',
       color: '#7bc48f', tilePattern: 'square',
@@ -85,6 +73,7 @@ const CONSERVATORY = {
 const LIGHTHOUSE = {
   id: 'lvl_sample_lighthouse',
   name: 'Midnight at the Lighthouse',
+  difficulty: 'gentle',
   description:
     'The keeper of Black Cape Light is dead. Three others were on the ' +
     'rock tonight. Place each one and name the killer.',
@@ -134,6 +123,7 @@ const LIGHTHOUSE = {
 const TEA_AND_TREACHERY = {
   id: 'lvl_sample_tea',
   name: 'Tea and Treachery',
+  difficulty: 'gentle',
   description:
     'A medium dies mid-séance. Two guests were in the house. A gentle ' +
     'first case for learning the rules.',
@@ -175,6 +165,7 @@ const TEA_AND_TREACHERY = {
 const BOOKSELLERS_LOFT = {
   id: 'lvl_sample_loft',
   name: "The Bookseller's Loft",
+  difficulty: 'standard',
   description:
     'A reclusive bookseller is dead in his own shop. Five suspects were ' +
     'in the building tonight.',
@@ -232,6 +223,7 @@ const BOOKSELLERS_LOFT = {
 const MAGISTRATES_STUDY = {
   id: 'lvl_sample_magistrate',
   name: "The Magistrate's Study",
+  difficulty: 'standard',
   description:
     'Colonel Hask, a retired magistrate, is dead in his own house. Four ' +
     'guests were under the roof tonight. Place them, then name the one ' +
@@ -301,6 +293,7 @@ const MAGISTRATES_STUDY = {
 const FERNS_AND_FELONIES = {
   id: 'lvl_sample_ferns',
   name: 'Ferns and Felonies',
+  difficulty: 'gentle',
   description:
     'A botanist is found dead among her own potted plants. Three guests ' +
     'were visiting tonight.',
@@ -360,6 +353,7 @@ const FERNS_AND_FELONIES = {
 const ATELIER = {
   id: 'lvl_sample_atelier',
   name: 'The Atelier',
+  difficulty: 'tricky',
   description:
     'A society photographer is dead in his studio. Four guests were in ' +
     'the building. Paintings cover every wall, so use the rule of unique ' +
@@ -427,6 +421,7 @@ const COASTAL_HOTEL = {
   id: 'lvl_sample_hotel',
   name: 'The Coastal Hotel',
   size: 12,
+  difficulty: 'tricky',
   description:
     'Captain Ardent is dead in his hotel suite. Six other guests were ' +
     'staying tonight. A larger case across twelve rooms and twelve rows.',
@@ -536,6 +531,7 @@ const SPEAKEASY = {
   id: 'lvl_sample_speakeasy',
   name: 'The Speakeasy',
   size: 12,
+  difficulty: 'tricky',
   description:
     'Reverend Penn is dead on the stage of the back-room speakeasy. ' +
     'Five others were in the establishment.',
@@ -649,6 +645,7 @@ export const SAMPLES = RAW.map((s) => ({
   key: s.id,
   name: s.name,
   description: s.description,
+  difficulty: s.difficulty || null,
   build: () => {
     const lvl = JSON.parse(JSON.stringify(s));
     lvl.id = 'lvl_' + Math.random().toString(36).slice(2, 8);

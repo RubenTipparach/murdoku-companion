@@ -96,6 +96,7 @@ export function normalizeLevel(lvl) {
   if (typeof lvl.victim === 'undefined') lvl.victim = null;
   if (typeof lvl.killerSolution === 'undefined') lvl.killerSolution = null;
   if (typeof lvl.playerKiller === 'undefined') lvl.playerKiller = null;
+  if (typeof lvl.difficulty !== 'string') lvl.difficulty = null;
   for (const room of lvl.rooms) {
     if (!room.tilePattern) room.tilePattern = 'solid';
   }

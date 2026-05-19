@@ -14,7 +14,23 @@ one of whom is the **victim** 🪦 and one of whom is the **killer** 🔪.
 2. **Killer alone with victim.** The killer was in the same room as the
    victim, and nobody else was in that room. Every other suspect was in
    a different room from the victim.
-3. **Win condition.** The player wins when (a) every suspect is placed
+3. **Suspects don't stand on solid furniture.** A suspect can occupy
+   a cell that holds furniture they would *sit in, lie on, or soak in*
+   (chair, armchair, sofa, bed, rug, and bathroom fixtures like tub,
+   shower, toilet when those ship). They CANNOT occupy a cell that
+   holds furniture they would have to stand on top of: table, dresser,
+   bookshelf, safe, fireplace, stove, gramophone, typewriter, piano,
+   plant, floor lamp, standing clock. The piano bench, the typewriter
+   chair, the dressing-table stool are conceptually in the *adjacent*
+   cell.
+   - Wall-mounted decoration (painting, mirror, hanging clock) is
+     non-blocking. The cell underneath stays free; a suspect standing
+     there is standing *in front of* the painting, not on it.
+   - This is both an authoring rule (don't place a suspect on a
+     blocking-furniture cell in `solution`) and a player rule (the
+     engine should refuse drops on blocking-furniture cells, follow-up
+     work).
+4. **Win condition.** The player wins when (a) every suspect is placed
    in their exact correct cell, AND (b) the player has marked the killer
    with 🔪.
 
@@ -80,6 +96,46 @@ Disallowed:
   columns to the right"). Players shouldn't have to count squares , 
   use adjacency / diagonal / same-row / same-column instead.
 
+### Mind the prepositions, "beside" never means "on top of".
+
+Per canonical rule 3, a suspect's cell is either the same cell as
+the furniture (only for sit/lie/soak furniture) or an *adjacent*
+cell. Clue prepositions must reflect that. Get this wrong and the
+clue contradicts the solution.
+
+**Adjacency words**, these put the suspect in a cell next to the
+anchor, never on the anchor's cell:
+
+- "beside …", "next to …", "directly above/below/left/right of …",
+  "diagonally adjacent to …", "between … and …", "flanked by …".
+
+So "beside the dresser" means the suspect's cell is *adjacent to* the
+dresser cell. Never write "beside the dresser" and then place the
+suspect on the dresser cell, and never use "beside" as a softer way
+to say "on".
+
+**On-cell words**, these put the suspect on the same cell as the
+furniture, and so are only valid for sit/lie/soak furniture:
+
+- "on the sofa", "in the armchair", "in the only bed", "on a rug",
+  "seated in a chair", "soaking in the tub".
+
+**"At" is the tricky one.** "At" usually means the suspect is *in
+front of, but not on*, the anchor, which makes it adjacency by
+default. So "at a table", "at the keys of the piano", "at the
+typewriter", "at the only safe", "at a bookshelf" all place the
+suspect in an adjacent cell (sitting at the chair beside the table,
+on the piano bench, in the chair at the desk, etc.). Never place a
+suspect on a `table`/`piano`/`typewriter`/`safe`/`bookshelf` cell in
+the solution and then say "at" in the clue, the cell IS the
+furniture, the suspect needs to be next door.
+
+❌ Solution puts char-01 on a `table` cell with clue "slumped at a
+   table" (rule 3 violation, the table is the cell).
+✅ Solution puts char-01 in a chair-cell beside a `table`-cell with
+   clue "slumped at a table" (suspect occupies the chair, the table
+   is the adjacent anchor).
+
 ### Embrace ambiguity. Do not over-specify duplicate furniture.
 
 This is the heart of the puzzle. When the same furniture (chair, plant,
@@ -140,11 +196,28 @@ When a furniture type appears multiple times, the clue must disambiguate
 via something else: "the bookshelf with a lamp beside it", "the dresser
 in the storage area (not the one in the bedroom)".
 
-### Sample 1's description embeds the rules for new players.
+### Case descriptions are pure flavour.
 
-The description of `lvl_sample_conservatory` walks the player through
-the rules. Other sample descriptions are shorter and assume the rules
-are known.
+Never embed the puzzle rules in a level's `description`. The rules
+live in the Help modal (the ❓ button on the start-menu footer and in
+the topbar), which is reachable from every screen. A case description
+should set the scene in one or two sentences and stop there. Tutorial
+levels are no exception, a new player is one click away from the rules.
+
+### Every shipped sample carries a `difficulty` tier.
+
+Allowed values: `'tutorial' | 'gentle' | 'standard' | 'tricky' |
+'expert' | 'fiendish'`. The chip renders on the start-menu sample
+card and in the case-file header. Use `tutorial` only for a single
+on-ramp level. Tiering rough rubric:
+- **tutorial**: one shipped level. Smallest cast, most generous clues.
+- **gentle**: 3-4 suspects, every anchor is unique furniture.
+- **standard**: 5 suspects, one or two duplicate furniture pieces.
+- **tricky**: 6-7 suspects, twin rooms or duplicated anchors force
+  row/column deduction. Larger 12x12 maps belong here by default.
+- **expert**: 8+ suspects, relational chains, near-empty unique
+  anchors. Optional special-character cards begin here.
+- **fiendish**: full row/column saturation, multiple cards in play.
 
 ### Check Solution highlighting, only highlight what the player placed.
 
