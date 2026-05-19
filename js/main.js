@@ -520,12 +520,23 @@ function openStartMenu({ closable } = { closable: true }) {
   if (closeBtn) closeBtn.hidden = !closable;
   startModal.classList.remove('hidden');
   // Hide the game chrome entirely while the menu is up — the menu is the
-  // page now, not a popup over the game.
+  // page now, not a popup over the game. Belt-and-suspenders: do this
+  // both via a body class (CSS does the hiding) and directly via inline
+  // style, so a stale stylesheet can't accidentally leave the chrome
+  // visible behind the menu.
   document.body.classList.add('menu-active');
+  const topbar = document.querySelector('.topbar');
+  const layout = document.querySelector('.layout');
+  if (topbar) topbar.style.display = 'none';
+  if (layout) layout.style.display = 'none';
 }
 function closeStartMenu() {
   startModal.classList.add('hidden');
   document.body.classList.remove('menu-active');
+  const topbar = document.querySelector('.topbar');
+  const layout = document.querySelector('.layout');
+  if (topbar) topbar.style.display = '';
+  if (layout) layout.style.display = '';
 }
 
 function handleStartAction(action, opts = {}) {
@@ -793,6 +804,17 @@ async function boot() {
   // pick something before the editor is reachable.
   setMode('edit'); // baseline so the rest of the chrome paints once
   openStartMenu({ closable: hasLevels });
+
+  // Mobile browsers aggressively restore the page from the back-forward
+  // cache (bfcache) when the user returns to the tab. boot() does NOT run
+  // again in that case — script state is restored as-is — so the start
+  // screen would not reappear. Re-open it on every bfcache restore so
+  // the menu really is the first thing every visit.
+  window.addEventListener('pageshow', (ev) => {
+    if (ev.persisted) {
+      openStartMenu({ closable: state.levels.length > 0 });
+    }
+  });
 }
 
 let flashTimer = null;
