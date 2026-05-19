@@ -8,6 +8,7 @@ import {
   roomAt,
   toggleDoorway,
   deleteRoom,
+  placeCharacterAt,
   key,
 } from './state.js';
 import { rollRoom } from './decor.js';
@@ -55,8 +56,7 @@ export function handleCellClickEdit(x, y, sideOpt) {
       break;
     }
     case 'solution': {
-      const room = roomAt(x, y);
-      if (!room) return; // can only place solution inside a room
+      if (!roomAt(x, y)) return;
       const k = key(x, y);
       const current = lvl.solution[k];
       const sel = state.selectedCharacterId;
@@ -68,10 +68,11 @@ export function handleCellClickEdit(x, y, sideOpt) {
       if (current === sel) {
         // Click same character on same cell to remove.
         delete lvl.solution[k];
+        lvl.updatedAt = Date.now();
       } else {
-        lvl.solution[k] = sel;
+        // placeCharacterAt enforces the one-cell-per-character rule.
+        placeCharacterAt(x, y, sel);
       }
-      lvl.updatedAt = Date.now();
       break;
     }
   }

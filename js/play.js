@@ -1,11 +1,10 @@
 // Play-mode handlers and win check.
 
-import { state, activeLevel, key, roomAt } from './state.js';
+import { state, activeLevel, key, roomAt, placeCharacterAt } from './state.js';
 
 export function handleCellClickPlay(x, y) {
   const lvl = activeLevel();
   if (!lvl) return;
-  // Can't place outside a room.
   if (!roomAt(x, y)) return;
 
   const k = key(x, y);
@@ -17,10 +16,12 @@ export function handleCellClickPlay(x, y) {
   }
   if (current === sel) {
     delete lvl.playerPlacement[k];
+    lvl.updatedAt = Date.now();
   } else {
-    lvl.playerPlacement[k] = sel;
+    // placeCharacterAt enforces the one-cell-per-character rule so the
+    // suspect "moves" from their previous cell to this one.
+    placeCharacterAt(x, y, sel);
   }
-  lvl.updatedAt = Date.now();
 }
 
 export function checkSolution() {

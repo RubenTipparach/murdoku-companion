@@ -88,6 +88,7 @@ export function rollAllRooms() {
 export function normalizeLevel(lvl) {
   if (!lvl) return lvl;
   if (!lvl.decorations || typeof lvl.decorations !== 'object') lvl.decorations = {};
+  if (!lvl.clues || typeof lvl.clues !== 'object') lvl.clues = {};
   if (!Array.isArray(lvl.rooms)) lvl.rooms = [];
   for (const room of lvl.rooms) {
     if (!room.tilePattern) room.tilePattern = 'solid';

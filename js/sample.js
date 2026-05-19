@@ -1,17 +1,17 @@
-// A pre-built starter level — "The Crimson Conservatory" — used as the
-// first-run example when localStorage is empty, and also offered from the
-// Levels modal via "Load sample".
-//
-// Kept as a literal object (not JSON) so it's easy to read and tweak in
-// place. `id` is reassigned on import so duplicates don't collide.
+// A pre-built starter level — "The Crimson Conservatory" — offered from
+// the start menu. Six suspects (including the victim), one solution cell
+// each, and a relational clue per suspect that references furniture and
+// other suspects but never names rooms directly.
 
 export const SAMPLE_LEVEL = {
   id: 'lvl_starter',
   name: 'The Crimson Conservatory',
   description:
-    'A reclusive heiress is found dead among her orchids. Five guests were ' +
-    'in the house tonight — each one swears they were elsewhere. Reconstruct ' +
-    'who was actually where at the moment of the murder.',
+    'Lady Wraithmoor is dead among her orchids. Five guests were in the ' +
+    'house tonight, and every one of them swears they were elsewhere. The ' +
+    'clues below place each person beside a piece of furniture, or in the ' +
+    'same room as someone else. Drag each suspect to the cell where they ' +
+    'actually stood at the moment of the murder.',
   rooms: [
     {
       id: 'room_greenhouse',
@@ -77,38 +77,68 @@ export const SAMPLE_LEVEL = {
     'h:4,5', // Hallway ↔ Parlour
     'h:3,5', // Library ↔ Parlour
   ],
+  // One placement per suspect; each clue below pins to exactly one cell
+  // when combined with the room layout and the other clues.
   solution: {
-    '4,1': 'char-01', // Lady Eveline Wraithmoor — found here
-    '2,4': 'char-10', // Professor Crowe — researching
-    '0,5': 'char-03', // Dr. Marisol Quint — reading
-    '6,4': 'char-06', // Mr. Glover (the butler) — clearing
-    '4,7': 'char-04', // Reverend Penn — at the piano
+    '3,2': 'char-01', // Eveline — at the orchid table in the greenhouse
+    '1,3': 'char-10', // Crowe — at the bookshelf
+    '1,5': 'char-03', // Marisol — at the lamp, opposite Crowe
+    '7,4': 'char-06', // Glover — at the wine table in the dining room
+    '5,8': 'char-04', // Penn — at the piano
+    '6,8': 'char-15', // Yew — at the potted plant in the parlour
   },
   playerPlacement: {},
   decorations: {
+    // Greenhouse: plants flanking a single table.
     '2,0': 'plant',
     '5,0': 'plant',
     '3,2': 'table',
-    '0,3': 'bookshelf',
+    // Library: one bookshelf so "at the bookshelf" is unambiguous, plus
+    // an armchair and a lamp on opposite sides of the room.
     '1,3': 'bookshelf',
     '3,4': 'armchair',
     '1,5': 'lamp',
+    // Hallway: a rug, nothing else.
     '4,4': 'rug',
+    // Dining: a table flanked by chairs, a painting on the wall side.
     '5,3': 'painting',
+    '7,3': 'chair',
     '7,4': 'table',
     '8,5': 'chair',
-    '7,3': 'chair',
+    // Parlour: sofa, piano, painting, lamp, and one potted plant.
     '2,6': 'sofa',
-    '5,8': 'piano',
     '6,6': 'painting',
     '3,8': 'lamp',
+    '5,8': 'piano',
     '6,8': 'plant',
+  },
+  clues: {
+    'char-01':
+      'Lady Wraithmoor was found slumped at a table among the potted ' +
+      'orchids — the only table in the house surrounded by plants.',
+    'char-03':
+      'Dr. Quint was reading by lamplight, in a room walled with books. ' +
+      'She and Professor Crowe were on opposite sides of the same room.',
+    'char-04':
+      'The reverend was at the keys of a piano when the lights went out.',
+    'char-06':
+      'The butler stood at the wine table, flanked on either side by ' +
+      'dining chairs — the only table set for dinner.',
+    'char-10':
+      'Professor Crowe was at a bookshelf, journal open. Dr. Quint was ' +
+      'across the room from him.',
+    'char-15':
+      'The gardener was tending a potted plant. She shared the room with ' +
+      'the reverend at the piano.',
   },
   createdAt: 0,
   updatedAt: 0,
 };
 
-// Build a fresh sample-level instance with a unique id and current timestamps.
+// Which six characters appear in the sample. Used by the play UI to scope
+// the visible roster down from all 20 to just the suspects in this case.
+export const SAMPLE_SUSPECTS = ['char-01', 'char-03', 'char-04', 'char-06', 'char-10', 'char-15'];
+
 export function buildSampleLevel() {
   const lvl = JSON.parse(JSON.stringify(SAMPLE_LEVEL));
   lvl.id = 'lvl_' + Math.random().toString(36).slice(2, 8);

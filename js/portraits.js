@@ -14,9 +14,22 @@ export async function loadCharacters() {
   }
 }
 
-export function renderRoster(container, { mode }) {
+// Render the suspect roster. Pass `filterIds` to scope the roster down to
+// only the characters used by the active level — Play mode uses this so the
+// player doesn't see twenty distractors when the case has six suspects.
+export function renderRoster(container, { filterIds = null } = {}) {
   container.innerHTML = '';
-  for (const char of state.characters) {
+  const list = filterIds
+    ? state.characters.filter((c) => filterIds.includes(c.id))
+    : state.characters;
+  if (!list.length) {
+    const empty = document.createElement('p');
+    empty.className = 'hint';
+    empty.textContent = 'No suspects to place yet.';
+    container.appendChild(empty);
+    return;
+  }
+  for (const char of list) {
     const btn = document.createElement('button');
     btn.className = 'char-tile';
     btn.dataset.charId = char.id;

@@ -39,8 +39,11 @@ const roomList     = $('#room-list');
 const roomListPlay = $('#room-list-play');
 const roster       = $('#char-roster');
 const rosterPlay   = $('#char-roster-play');
+const clueEditorEl = $('#clue-editor');
+const clueListEl   = $('#clue-list');
 const modeEditBtn  = $('#mode-edit');
 const modePlayBtn  = $('#mode-play');
+const startModal   = $('#start-modal');
 const levelsModal  = $('#levels-modal');
 const levelsListEl = $('#levels-list');
 const winToast     = $('#win-toast');
@@ -67,19 +70,129 @@ function setStatus(msg) {
 // ---------- Render ----------
 
 function rerender() {
+  // FLIP: snapshot portrait positions before the DOM is rebuilt so we can
+  // animate any suspect that moved to a new cell.
+  const oldPositions = new Map();
+  for (const p of gridEl.querySelectorAll('.portrait[data-char-id]')) {
+    oldPositions.set(p.dataset.charId, p.getBoundingClientRect());
+  }
+
   rebuildCellCache();
   renderGrid(gridEl);
+  const lvl = activeLevel();
   if (state.mode === 'edit') {
     renderRoomList(roomList);
-    renderRoster(roster, { mode: 'edit' });
+    renderRoster(roster, {});
+    renderClueEditor(clueEditorEl);
   } else {
     renderRoomListReadonly(roomListPlay);
-    renderRoster(rosterPlay, { mode: 'play' });
+    // In play mode only show suspects who actually appear in the level's
+    // solution — no point cluttering the roster with people the case never
+    // names. Derived live so it picks up edits.
+    const suspectIds = lvl ? [...new Set(Object.values(lvl.solution))] : [];
+    renderRoster(rosterPlay, { filterIds: suspectIds });
+    renderClueList(clueListEl);
   }
-  const lvl = activeLevel();
   nameInput.value = lvl ? lvl.name : '';
   descInput.value = lvl ? lvl.description : '';
+  // Lock metadata fields in play mode so a player can't accidentally
+  // rename / re-describe the case.
+  const readOnly = state.mode === 'play';
+  nameInput.readOnly = readOnly;
+  descInput.readOnly = readOnly;
   updateStatus();
+
+  // FLIP "play" step: for each portrait that existed before, translate it
+  // back to its old position with no transition, then drop the transform
+  // so the CSS transition slides it to the new spot.
+  requestAnimationFrame(() => {
+    for (const p of gridEl.querySelectorAll('.portrait[data-char-id]')) {
+      const oldRect = oldPositions.get(p.dataset.charId);
+      if (!oldRect) continue;
+      const newRect = p.getBoundingClientRect();
+      const dx = oldRect.left - newRect.left;
+      const dy = oldRect.top - newRect.top;
+      if (dx === 0 && dy === 0) continue;
+      p.style.transition = 'none';
+      p.style.transform = `translate(${dx}px, ${dy}px)`;
+      // Force reflow so the browser registers the displaced start state.
+      p.getBoundingClientRect();
+      p.style.transition = '';
+      p.style.transform = '';
+    }
+  });
+}
+
+// ---------- Clue rendering ----------
+
+function renderClueEditor(container) {
+  container.innerHTML = '';
+  const lvl = activeLevel();
+  if (!lvl) return;
+  const placedIds = [...new Set(Object.values(lvl.solution))];
+  if (!placedIds.length) {
+    const empty = document.createElement('p');
+    empty.className = 'hint';
+    empty.textContent = 'No suspects placed in the solution yet.';
+    container.appendChild(empty);
+    return;
+  }
+  for (const charId of placedIds) {
+    const char = state.characters.find((c) => c.id === charId);
+    if (!char) continue;
+    const row = document.createElement('div');
+    row.className = 'clue-row';
+    row.innerHTML = `
+      <img src="${char.portrait}" alt="${char.name}" />
+      <div class="clue-body">
+        <strong>${char.name}</strong>
+        <textarea rows="2" placeholder="e.g. Was at the piano in the same room as Yew."></textarea>
+      </div>
+    `;
+    const ta = row.querySelector('textarea');
+    ta.value = lvl.clues[charId] || '';
+    ta.addEventListener('input', () => {
+      lvl.clues[charId] = ta.value;
+      lvl.updatedAt = Date.now();
+    });
+    container.appendChild(row);
+  }
+}
+
+function renderClueList(container) {
+  container.innerHTML = '';
+  const lvl = activeLevel();
+  if (!lvl) return;
+  const suspectIds = [...new Set(Object.values(lvl.solution))];
+  if (!suspectIds.length) {
+    const empty = document.createElement('p');
+    empty.className = 'hint';
+    empty.textContent = 'This level has no suspects to deduce yet.';
+    container.appendChild(empty);
+    return;
+  }
+  for (const charId of suspectIds) {
+    const char = state.characters.find((c) => c.id === charId);
+    if (!char) continue;
+    const row = document.createElement('div');
+    row.className = 'clue-row';
+    const clueText = lvl.clues[charId] || '(No clue written for this suspect.)';
+    row.innerHTML = `
+      <img src="${char.portrait}" alt="${char.name}" />
+      <div class="clue-body">
+        <strong>${char.name}</strong>
+        <p>${escapeHtml(clueText)}</p>
+      </div>
+    `;
+    container.appendChild(row);
+  }
+}
+
+function escapeHtml(s) {
+  return String(s)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
 }
 
 function updateStatus() {
@@ -278,13 +391,49 @@ function openLevels() {
 }
 function closeLevels() { levelsModal.classList.add('hidden'); }
 
+// ---------- Start menu ----------
+
+function openStartMenu({ closable } = { closable: true }) {
+  const closeBtn = $('#start-close');
+  if (closeBtn) closeBtn.hidden = !closable;
+  startModal.classList.remove('hidden');
+}
+function closeStartMenu() { startModal.classList.add('hidden'); }
+
+function handleStartAction(action) {
+  switch (action) {
+    case 'play-sample': {
+      loadSampleAsNewLevel();
+      persist();
+      setMode('play');
+      break;
+    }
+    case 'edit-mode': {
+      // If we have no levels yet, create a blank one to give the author a
+      // canvas to start on.
+      if (!state.levels.length) {
+        const lvl = emptyLevel();
+        state.levels.push(lvl);
+        state.activeId = lvl.id;
+      }
+      persist();
+      setMode('edit');
+      break;
+    }
+  }
+  closeStartMenu();
+  rerender();
+}
+
 // ---------- Boot ----------
 
 async function boot() {
   state.levels = loadLevels().map(normalizeLevel);
   state.activeId = loadActiveId();
-  // Seed the sample level on first visit (no saved levels yet).
-  ensureAtLeastOneLevel({ seedSample: true });
+  // First-visit users hit the start menu instead of auto-loading the sample,
+  // so they aren't spoiled by seeing the solution in edit mode.
+  const firstVisit = state.levels.length === 0;
+  if (!firstVisit) ensureAtLeastOneLevel();
 
   await Promise.all([loadCharacters(), loadFurniture()]);
 
@@ -316,6 +465,18 @@ async function boot() {
   levelsModal.addEventListener('click', (e) => {
     if (e.target === levelsModal) closeLevels();
   });
+
+  // Start menu wiring.
+  $('#btn-menu').addEventListener('click', () => openStartMenu({ closable: true }));
+  for (const c of document.querySelectorAll('[data-close="start"]')) c.addEventListener('click', closeStartMenu);
+  startModal.addEventListener('click', (e) => {
+    // Backdrop click closes only when the X is visible (i.e. not on first
+    // visit, where we want the user to make a real choice).
+    if (e.target === startModal && !$('#start-close').hidden) closeStartMenu();
+  });
+  for (const card of document.querySelectorAll('.start-card')) {
+    card.addEventListener('click', () => handleStartAction(card.dataset.action));
+  }
 
   $('#btn-new-level').addEventListener('click', () => {
     const lvl = emptyLevel();
@@ -446,7 +607,14 @@ async function boot() {
     }
   }, 4000);
 
-  setMode('edit');
+  // First-visit users see the start menu (not closable — they must pick).
+  // Returning users land in edit mode on their last-active level.
+  if (firstVisit) {
+    setMode('edit'); // initial paint will be hidden behind the modal
+    openStartMenu({ closable: false });
+  } else {
+    setMode('edit');
+  }
 }
 
 let flashTimer = null;

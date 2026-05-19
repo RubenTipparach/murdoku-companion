@@ -260,17 +260,42 @@ Each phase ends in a runnable, demoable state.
 - **Shared lib.** PNG encoding, CRC32, the pixel canvas, and the seeded
   RNG live in `scripts/lib/pixel.js`. Both art generators import from it.
 
-### Phase 8 — Starter level + drag-and-drop *(this branch)*
+### Phase 8 — Starter level + drag-and-drop
 - Hand-crafted starter level **"The Crimson Conservatory"** in `js/sample.js`.
-  Five rooms (Greenhouse / Library / Hallway / Dining / Parlour), five
-  doorways, five solution suspects, and a hand-picked decoration set. The
-  sample is auto-loaded on first visit when `localStorage` is empty, and is
-  also offered as a **Load sample** button in the Levels modal (always
-  imports a fresh copy with a new id).
-- **Drag-and-drop suspect placement**. Roster tiles are now HTML5
-  draggables. Dropping onto an in-room cell calls `placeCharacterAt`, which
-  writes to `solution` in edit mode and `playerPlacement` in play mode.
-  Click-to-select-then-click remains as a fallback.
+- **Drag-and-drop suspect placement**. Roster tiles are HTML5 draggables;
+  dropping onto an in-room cell calls `placeCharacterAt`. Click-to-select-
+  then-click remains as a fallback.
+- Sample is exposed via the Levels modal (**Load sample**) — always imports
+  a fresh copy with a new id.
+
+### Phase 9 — Clues, start menu, one-cell rule *(this branch)*
+- **Start menu** modal on first visit (no closable X) asks **Play the
+  sample mystery** vs **Create your own house** — so players are never
+  spoiled by landing in edit mode on a level with a visible solution. A
+  topbar **Menu** button re-opens the same modal anytime.
+- **Per-character clues**. Level model gains `clues: { [charId]: string }`.
+  In Edit mode a clue editor lists every suspect currently placed in the
+  solution and offers a textarea for each. In Play mode a clues panel
+  renders portrait + name + clue text for each suspect.
+- **Relational clue language.** The sample's clues reference furniture
+  ("at the orchid table", "at the keys of a piano") and other suspects
+  ("across the room from Dr. Quint") but never name a room directly. Each
+  clue uniquely identifies a single cell when combined with the others.
+- **Filtered Play roster.** Play mode only shows characters who actually
+  appear in this case (`new Set(values(solution))`), not all 20 portraits.
+- **One suspect, one cell.** `placeCharacterAt` now removes the character
+  from any previous cell before writing the new one. Click-handlers in
+  edit and play both route through it. A re-placement therefore *moves*
+  rather than duplicates.
+- **FLIP move animation.** `rerender()` snapshots portrait positions
+  before the DOM is rebuilt, then translates each portrait back to its
+  prior position with `transition: none`, forces a reflow, and lets the
+  CSS `transform` transition slide it home. So a suspect literally walks
+  from their old cell to the new one when you re-place them.
+- **Locked metadata in Play mode.** The level name and description are
+  read-only in Play mode so a player can't accidentally rewrite the case.
+- **Wrap room labels.** Long room names ("Dining Room") now wrap on
+  multiple lines instead of truncating with an ellipsis.
 
 ### Future / out of scope for v1
 - Clue system (text clues + logical deduction validator).
