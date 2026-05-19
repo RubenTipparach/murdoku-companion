@@ -172,23 +172,29 @@ export function renderGrid(container, handlers) {
         }
       }
 
-      // Row/col conflict marker. Only shown when the toggle is on. We
-      // ONLY mark the placed-character cells that are themselves in
-      // conflict (share a row or column with another placed suspect),
-      // with a bright red X drawn on top of the portrait. Non-conflict
-      // suspects and empty cells get nothing, silent validation, only
-      // the rule violations light up.
+      // Row/col toggle markers.
+      // Placed suspects whose row or column collides with another placed
+      //   suspect get a bright red X on top of their portrait. Empty
+      //   cells in an occupied row or column get a faint accent X so
+      //   the toggle visibly does something even when the layout has no
+      //   conflicts. Valid placed suspects get NOTHING on top of them.
       if (state.showRowColMarks) {
         const k = key(x, y);
-        if (placements[k]) {
-          const rowList = rowsOccupied.get(y) || [];
-          const colList = colsOccupied.get(x) || [];
+        const placed = placements[k];
+        const rowList = rowsOccupied.get(y) || [];
+        const colList = colsOccupied.get(x) || [];
+        if (placed) {
           if (rowList.length > 1 || colList.length > 1) {
             const mark = document.createElement('div');
             mark.className = 'rowcol-x conflict';
             mark.textContent = '✕';
             cell.appendChild(mark);
           }
+        } else if (rowList.length > 0 || colList.length > 0) {
+          const mark = document.createElement('div');
+          mark.className = 'rowcol-x faint';
+          mark.textContent = '✕';
+          cell.appendChild(mark);
         }
       }
 
