@@ -7,13 +7,18 @@ import { createHash } from 'node:crypto';
 import { db, nowMs } from './db.js';
 
 const PORT = Number(process.env.PORT) || 8080;
-const SERVER_SALT = process.env.SERVER_SALT;
+// SERVER_SALT is what makes stored token hashes useless if the sqlite
+// file leaks. We fall back to a known default so the server still
+// boots in unconfigured environments (local dev, first Fly deploy),
+// but anything public-facing should set a real one via
+// `fly secrets set SERVER_SALT=...`. Setting it later invalidates
+// every token minted under the default, which is fine pre-launch.
+const SERVER_SALT = process.env.SERVER_SALT || 'murdoku-dev-salt';
 const ADMIN_USER = process.env.ADMIN_USER;
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD;
 
-if (!SERVER_SALT) {
-  console.error('Missing SERVER_SALT. Set it via `fly secrets set SERVER_SALT=...`');
-  process.exit(1);
+if (!process.env.SERVER_SALT) {
+  console.warn('SERVER_SALT not set, using insecure default. Set it via `fly secrets set SERVER_SALT=...` before going public.');
 }
 
 // ----- Config / constants -----
