@@ -140,11 +140,28 @@ When a furniture type appears multiple times, the clue must disambiguate
 via something else: "the bookshelf with a lamp beside it", "the dresser
 in the storage area (not the one in the bedroom)".
 
-### Sample 1's description embeds the rules for new players.
+### Case descriptions are pure flavour.
 
-The description of `lvl_sample_conservatory` walks the player through
-the rules. Other sample descriptions are shorter and assume the rules
-are known.
+Never embed the puzzle rules in a level's `description`. The rules
+live in the Help modal (the ❓ button on the start-menu footer and in
+the topbar), which is reachable from every screen. A case description
+should set the scene in one or two sentences and stop there. Tutorial
+levels are no exception, a new player is one click away from the rules.
+
+### Every shipped sample carries a `difficulty` tier.
+
+Allowed values: `'tutorial' | 'gentle' | 'standard' | 'tricky' |
+'expert' | 'fiendish'`. The chip renders on the start-menu sample
+card and in the case-file header. Use `tutorial` only for a single
+on-ramp level. Tiering rough rubric:
+- **tutorial**: one shipped level. Smallest cast, most generous clues.
+- **gentle**: 3-4 suspects, every anchor is unique furniture.
+- **standard**: 5 suspects, one or two duplicate furniture pieces.
+- **tricky**: 6-7 suspects, twin rooms or duplicated anchors force
+  row/column deduction. Larger 12x12 maps belong here by default.
+- **expert**: 8+ suspects, relational chains, near-empty unique
+  anchors. Optional special-character cards begin here.
+- **fiendish**: full row/column saturation, multiple cards in play.
 
 ### Check Solution highlighting, only highlight what the player placed.
 

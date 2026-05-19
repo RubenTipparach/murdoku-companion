@@ -59,6 +59,16 @@ const sampleBanner = $('#sample-banner');
 const metaTextarea = $('#level-description');
 const metaReadonly = $('#meta-readonly');
 const metaHeading  = $('#meta-heading');
+const difficultyChip = $('#difficulty-chip');
+
+const DIFFICULTY_LABELS = {
+  tutorial: 'Tutorial',
+  gentle: 'Gentle',
+  standard: 'Standard',
+  tricky: 'Tricky',
+  expert: 'Expert',
+  fiendish: 'Fiendish',
+};
 
 // ---------- Mode / tool switching ----------
 
@@ -126,6 +136,15 @@ function rerender() {
     metaReadonly.classList.add('hidden');
     metaTextarea.readOnly = isSample;
     metaHeading.textContent = 'Level description';
+  }
+
+  const diff = lvl && lvl.difficulty;
+  if (diff && DIFFICULTY_LABELS[diff]) {
+    difficultyChip.textContent = DIFFICULTY_LABELS[diff];
+    difficultyChip.className = `difficulty-chip diff-${diff}`;
+  } else {
+    difficultyChip.className = 'difficulty-chip hidden';
+    difficultyChip.textContent = '';
   }
 
   // Sample banner sits above the grid in edit mode only.
@@ -458,8 +477,11 @@ function renderStartSamples() {
     card.dataset.action = 'play-sample';
     card.dataset.sampleKey = s.key;
     const icon = done ? '✅' : '🔍';
+    const chip = s.difficulty && DIFFICULTY_LABELS[s.difficulty]
+      ? `<span class="difficulty-chip diff-${s.difficulty}">${DIFFICULTY_LABELS[s.difficulty]}</span>`
+      : '';
     card.innerHTML = `
-      <h3>${icon} ${escapeHtml(s.name)}</h3>
+      <h3>${icon} ${escapeHtml(s.name)} ${chip}</h3>
       <p>${escapeHtml(s.description)}</p>
     `;
     startSamples.appendChild(card);
