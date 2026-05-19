@@ -9,6 +9,7 @@ import {
   hasDoorway,
   edgeKey,
 } from './state.js';
+import { findFurniture } from './decor.js';
 
 const SIDES = ['top', 'right', 'bottom', 'left'];
 
@@ -69,8 +70,24 @@ export function renderGrid(container, handlers) {
       if (room) {
         cell.classList.add('in-room');
         cell.style.setProperty('--room-color', room.color);
+        if (room.tilePattern && room.tilePattern !== 'solid') {
+          cell.classList.add(`tile-${room.tilePattern}`);
+        }
       } else {
         cell.classList.add('outside');
+      }
+
+      // Furniture decoration (rendered behind the portrait layer).
+      const decoId = lvl.decorations && lvl.decorations[key(x, y)];
+      if (room && decoId) {
+        const f = findFurniture(decoId);
+        if (f) {
+          const dec = document.createElement('div');
+          dec.className = 'furniture';
+          dec.style.backgroundImage = `url('${f.sprite}')`;
+          dec.title = f.name;
+          cell.appendChild(dec);
+        }
       }
 
       // Walls and doorways.

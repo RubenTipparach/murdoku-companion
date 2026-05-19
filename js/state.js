@@ -30,6 +30,7 @@ export function emptyLevel(name = 'Untitled house') {
     doorways: [],
     solution: {},
     playerPlacement: {},
+    decorations: {},
     createdAt: now,
     updatedAt: now,
   };
@@ -41,6 +42,7 @@ export function newRoom() {
     name: 'Room',
     description: '',
     color: nextRoomColor(),
+    tilePattern: 'solid',
     cells: [],
   };
 }
@@ -91,11 +93,14 @@ export function setCellRoom(x, y, roomId) {
   for (const room of lvl.rooms) {
     room.cells = room.cells.filter(([cx, cy]) => !(cx === x && cy === y));
   }
-  // Remove any solution placement that no longer sits in a room.
-  if (lvl.solution[k] && !roomId) delete lvl.solution[k];
-  if (lvl.playerPlacement[k] && !roomId) delete lvl.playerPlacement[k];
-  // Drop doorways whose adjacent cell is no longer relevant. Doorways become
-  // stale silently — they just won't render if there's no wall there anymore.
+  // When a cell stops being in a room, drop anything anchored to it.
+  if (!roomId) {
+    if (lvl.solution[k]) delete lvl.solution[k];
+    if (lvl.playerPlacement[k]) delete lvl.playerPlacement[k];
+    if (lvl.decorations && lvl.decorations[k]) delete lvl.decorations[k];
+  }
+  // Doorways become stale silently — they just won't render if there's no
+  // wall there anymore.
   if (roomId) {
     const room = lvl.rooms.find((r) => r.id === roomId);
     if (room) room.cells.push([x, y]);
@@ -140,11 +145,12 @@ export function deleteRoom(roomId) {
   if (!lvl) return;
   const room = lvl.rooms.find((r) => r.id === roomId);
   if (!room) return;
-  // Drop any solution/player placements in that room's cells.
+  // Drop any solution/player placements and decorations in that room's cells.
   for (const [x, y] of room.cells) {
     const k = key(x, y);
     delete lvl.solution[k];
     delete lvl.playerPlacement[k];
+    if (lvl.decorations) delete lvl.decorations[k];
   }
   lvl.rooms = lvl.rooms.filter((r) => r.id !== roomId);
   if (state.selectedRoomId === roomId) state.selectedRoomId = null;

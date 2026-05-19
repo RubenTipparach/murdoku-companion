@@ -1,0 +1,62 @@
+[
+  {
+    "id": "chair",
+    "name": "Chair",
+    "sprite": "assets/furniture/chair.png"
+  },
+  {
+    "id": "armchair",
+    "name": "Armchair",
+    "sprite": "assets/furniture/armchair.png"
+  },
+  {
+    "id": "sofa",
+    "name": "Sofa",
+    "sprite": "assets/furniture/sofa.png"
+  },
+  {
+    "id": "bed",
+    "name": "Bed",
+    "sprite": "assets/furniture/bed.png"
+  },
+  {
+    "id": "table",
+    "name": "Table",
+    "sprite": "assets/furniture/table.png"
+  },
+  {
+    "id": "dresser",
+    "name": "Dresser",
+    "sprite": "assets/furniture/dresser.png"
+  },
+  {
+    "id": "bookshelf",
+    "name": "Bookshelf",
+    "sprite": "assets/furniture/bookshelf.png"
+  },
+  {
+    "id": "piano",
+    "name": "Piano",
+    "sprite": "assets/furniture/piano.png"
+  },
+  {
+    "id": "lamp",
+    "name": "Floor lamp",
+    "sprite": "assets/furniture/lamp.png"
+  },
+  {
+    "id": "plant",
+    "name": "Potted plant",
+    "sprite": "assets/furniture/plant.png"
+  },
+  {
+    "id": "painting",
+    "name": "Wall painting",
+    "sprite": "assets/furniture/painting.png"
+  },
+  {
+    "id": "rug",
+    "name": "Patterned rug",
+    "sprite": "assets/furniture/rug.png"
+  }
+]

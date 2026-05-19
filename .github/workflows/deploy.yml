@@ -31,11 +31,14 @@ jobs:
         with:
           node-version: '20'
 
-      # The portrait PNGs are committed, but we regenerate them on every
-      # deploy so that updates to the generator script propagate without a
-      # separate "regenerate art" commit.
+      # The portrait + furniture PNGs are committed, but we regenerate them
+      # on every deploy so that updates to the generators propagate without
+      # a separate "regenerate art" commit.
       - name: Regenerate portraits
         run: node scripts/generate-portraits.js
+
+      - name: Regenerate furniture
+        run: node scripts/generate-furniture.js
 
       - name: Configure Pages
         uses: actions/configure-pages@v5

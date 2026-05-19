@@ -9,6 +9,7 @@ import {
 import { loadLevels, saveLevels, loadActiveId, saveActiveId } from './storage.js';
 import { renderGrid } from './grid.js';
 import { loadCharacters, renderRoster } from './portraits.js';
+import { loadFurniture, normalizeLevel, rollAllRooms } from './decor.js';
 import {
   selectTool,
   createRoom,
@@ -229,11 +230,11 @@ function closeLevels() { levelsModal.classList.add('hidden'); }
 // ---------- Boot ----------
 
 async function boot() {
-  state.levels = loadLevels();
+  state.levels = loadLevels().map(normalizeLevel);
   state.activeId = loadActiveId();
   ensureAtLeastOneLevel();
 
-  await loadCharacters();
+  await Promise.all([loadCharacters(), loadFurniture()]);
 
   // Tool button delegation.
   for (const btn of document.querySelectorAll('.tool')) {
@@ -245,6 +246,11 @@ async function boot() {
 
   $('#btn-new-room').addEventListener('click', () => {
     createRoom();
+    rerender();
+  });
+
+  $('#btn-roll-all').addEventListener('click', () => {
+    rollAllRooms();
     rerender();
   });
 
@@ -289,7 +295,7 @@ async function boot() {
     if (!file) return;
     try {
       const text = await file.text();
-      const lvl = JSON.parse(text);
+      const lvl = normalizeLevel(JSON.parse(text));
       if (!lvl || !lvl.id || !Array.isArray(lvl.rooms)) throw new Error('not a level');
       // If id collides, regenerate.
       if (state.levels.some((l) => l.id === lvl.id)) {
