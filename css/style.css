@@ -77,20 +77,42 @@ input:focus, textarea:focus { outline: 2px solid var(--accent); outline-offset: 
 }
 .topbar .mode-toggle {
   display: inline-flex;
+  gap: 4px;
   background: var(--panel-2);
-  border-radius: 6px;
-  padding: 2px;
+  border-radius: 8px;
+  padding: 3px;
 }
 .topbar .mode-toggle button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   border: none;
   background: transparent;
   padding: 6px 14px;
   font-weight: 600;
+  border-radius: 5px;
+  color: var(--ink-dim);
+  transition: background-color 0.12s ease, color 0.12s ease;
+}
+.topbar .mode-toggle button:hover {
+  background: rgba(192, 132, 252, 0.10);
+  color: var(--ink);
 }
 .topbar .mode-toggle button.active {
   background: var(--accent);
   color: #1c1330;
-  border-radius: 4px;
+}
+.topbar .mode-toggle .mode-icon {
+  font-size: 13px;
+  display: inline-block;
+  line-height: 1;
+}
+.topbar .mode-toggle .mode-icon.play {
+  color: var(--good);
+  font-size: 11px;
+}
+.topbar .mode-toggle button.active .mode-icon.play {
+  color: #1c1330;
 }
 .topbar-actions { display: flex; gap: 6px; flex-wrap: wrap; margin-left: auto; }
 
@@ -1003,6 +1025,7 @@ body:has(> #start-modal.start-screen:not(.hidden)) > .layout {
   border: 1px solid #4a416c;
   border-radius: 8px;
   padding: 10px 12px;
+  flex-wrap: wrap;
 }
 .profile-info {
   flex: 1;
@@ -1010,6 +1033,7 @@ body:has(> #start-modal.start-screen:not(.hidden)) > .layout {
   gap: 8px;
   align-items: center;
   flex-wrap: wrap;
+  min-width: 0;
 }
 .profile-icon {
   font-size: 18px;
@@ -1022,9 +1046,92 @@ body:has(> #start-modal.start-screen:not(.hidden)) > .layout {
   font-size: 11px;
   color: var(--ink-dim);
 }
+.profile-claim-pending {
+  font-size: 10px;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  padding: 2px 6px;
+  border-radius: 3px;
+  font-weight: 600;
+}
+.profile-claim-pending.claimed {
+  color: var(--good);
+  background: rgba(110, 231, 183, 0.10);
+  border: 1px solid rgba(110, 231, 183, 0.35);
+}
+.profile-claim-pending.claiming,
+.profile-claim-pending.unknown {
+  color: var(--warn);
+  background: rgba(252, 211, 77, 0.10);
+  border: 1px solid rgba(252, 211, 77, 0.30);
+}
+.profile-claim-pending.local-only {
+  color: var(--ink-dim);
+  background: var(--bg-2);
+  border: 1px solid #4a416c;
+}
+.profile-actions {
+  display: flex;
+  gap: 6px;
+}
+.profile-switch,
 .profile-signout {
   font-size: 11px;
   padding: 4px 10px;
+}
+
+/* Sign-in picker: a stack of cards, one per known profile, plus
+   a + New profile card. Shown when signed out but profiles exist
+   on this device. */
+.profile-picker h3 {
+  margin: 0 0 6px;
+  font-size: 15px;
+  color: var(--accent-2);
+}
+.profile-picker .hint {
+  margin: 0 0 10px;
+  font-size: 12px;
+  color: var(--ink-dim);
+  line-height: 1.45;
+}
+.profile-pick-card h3,
+.new-profile-card h3 {
+  margin: 0 0 4px;
+  font-size: 14px;
+  color: var(--ink);
+}
+.profile-pick-card p,
+.new-profile-card p {
+  margin: 0;
+  font-size: 11px;
+  color: var(--ink-dim);
+}
+.new-profile-card {
+  border-style: dashed;
+  background: transparent;
+}
+
+/* "Back to sign-in" link on the create form when other profiles exist. */
+.profile-back {
+  margin-top: 10px;
+  font-size: 11px;
+  background: transparent;
+  border: 1px solid #4a416c;
+  color: var(--ink-dim);
+}
+.profile-back:hover { background: var(--panel-2); color: var(--ink); }
+
+/* Server-unreachable banner. Sits between the profile row and the
+   gated sections; only visible when state.serverReachable === false. */
+.server-banner {
+  background: rgba(252, 211, 77, 0.10);
+  border: 1px solid rgba(252, 211, 77, 0.30);
+  color: var(--warn);
+  font-size: 12px;
+  padding: 8px 12px;
+  border-radius: 6px;
+  margin: 0 0 14px;
+  line-height: 1.45;
 }
 
 /* Gated sections hidden via .hidden when no profile is present. */

@@ -4,6 +4,7 @@ import {
   state,
   emptyLevel,
   activeLevel,
+  activeProfile,
   rebuildCellCache,
   placeCharacterAt,
   cloneActiveLevel,
@@ -11,8 +12,11 @@ import {
 import {
   loadLevels, saveLevels, loadActiveId, saveActiveId,
   loadCompletedSamples, saveCompletedSamples,
-  loadProfile, saveProfile,
+  loadProfiles, saveProfiles,
+  loadActiveProfileName, saveActiveProfileName,
+  generateToken,
 } from './storage.js';
+import { apiAvailable, probeServer, claimProfile } from './api.js';
 import { renderGrid } from './grid.js';
 import { loadCharacters, renderRoster } from './portraits.js';
 import { loadFurniture, normalizeLevel, rollAllRooms } from './decor.js';
@@ -487,72 +491,269 @@ function loadSampleAsNewLevel(sampleKey) {
   state.selectedRoomId = null;
 }
 
-// Render the profile row at the top of the start menu. Two states:
-//  - No profile: creation form with a name input and a hint about the
-//    Phase 12 server claim. Gated sections below stay hidden.
-//  - Profile present: name chip with a sign-out affordance. Gated
-//    sections become visible.
+// Render the profile row at the top of the start menu. Three states:
+//   1. Active profile: name chip + Switch + Sign out. Gated sections
+//      below become visible.
+//   2. Profiles exist on this device but none is active: sign-in
+//      picker with one card per known profile, plus a + New profile
+//      card. Gated sections stay hidden.
+//   3. No profiles on this device (or user clicked + New profile):
+//      creation form. Gated sections stay hidden.
+//
+// Tokens are generated client-side at creation and persisted in
+// localStorage so the player can sign back in after signing out.
 function renderStartProfile() {
-  if (!state.profile) {
+  const active = activeProfile();
+  if (active) {
+    startGated.classList.remove('hidden');
+    renderActiveProfileBar(active);
+  } else if (state.profiles.length > 0 && state.menuView !== 'create') {
     startGated.classList.add('hidden');
-    startProfile.innerHTML = `
-      <div class="profile-create">
-        <h3>Pick a name to play</h3>
-        <p class="hint">Your name will be public on shared levels and leaderboards once the Murdoku server ships. Don't use your real name if you'd rather stay anonymous. For now this is just a local handle, stored on this device.</p>
-        <form id="profile-create-form" autocomplete="off">
-          <input id="profile-name-input" type="text" placeholder="e.g. inspector_grim" autocomplete="off" maxlength="20" spellcheck="false" />
-          <button type="submit">Create profile</button>
-        </form>
-        <p id="profile-error" class="profile-error hidden"></p>
-      </div>
-    `;
-    const form = startProfile.querySelector('#profile-create-form');
-    const input = startProfile.querySelector('#profile-name-input');
-    const errEl = startProfile.querySelector('#profile-error');
-    form.addEventListener('submit', (ev) => {
-      ev.preventDefault();
-      const name = input.value.trim();
-      const err = validateProfileName(name);
-      if (err) {
-        errEl.textContent = err;
-        errEl.classList.remove('hidden');
-        return;
-      }
-      state.profile = { name, createdAt: Date.now() };
-      saveProfile(state.profile);
-      renderStartMenu();
-    });
-    requestAnimationFrame(() => input.focus());
-    return;
+    renderProfilePicker();
+  } else {
+    startGated.classList.add('hidden');
+    renderProfileCreateForm();
   }
-  startGated.classList.remove('hidden');
+}
+
+function renderActiveProfileBar(profile) {
+  let chip = '';
+  if (!profile.claimed) {
+    if (state.serverReachable === true) {
+      chip = '<span class="profile-claim-pending claiming">claiming…</span>';
+    } else if (state.serverReachable === false) {
+      chip = '<span class="profile-claim-pending local-only">local only</span>';
+    } else {
+      chip = '<span class="profile-claim-pending unknown">checking…</span>';
+    }
+  } else {
+    chip = '<span class="profile-claim-pending claimed">claimed</span>';
+  }
   startProfile.innerHTML = `
     <div class="profile-active">
       <div class="profile-info">
         <span class="profile-icon">🪪</span>
-        <span class="profile-name">@${escapeHtml(state.profile.name)}</span>
-        <span class="profile-hint">Local profile, server sync ships in Phase 12.</span>
+        <span class="profile-name">@${escapeHtml(profile.name)}</span>
+        ${chip}
       </div>
-      <button id="btn-sign-out" class="profile-signout">Sign out</button>
+      <div class="profile-actions">
+        <button id="btn-switch-profile" class="profile-switch" title="Sign out and pick a different profile">Switch</button>
+        <button id="btn-sign-out" class="profile-signout" title="Sign out. Your profile stays on this device.">Sign out</button>
+      </div>
     </div>
   `;
-  startProfile.querySelector('#btn-sign-out').addEventListener('click', () => {
-    if (!confirm(`Sign out of @${state.profile.name}? Your levels stay on this device. You can create a new profile after.`)) return;
-    state.profile = null;
-    saveProfile(null);
+  startProfile.querySelector('#btn-switch-profile').addEventListener('click', () => {
+    state.activeProfileName = null;
+    saveActiveProfileName(null);
+    state.menuView = 'main';
     renderStartMenu();
   });
+  startProfile.querySelector('#btn-sign-out').addEventListener('click', () => {
+    if (!confirm(`Sign out of @${profile.name}? Your profile stays on this device so you can sign back in later.`)) return;
+    state.activeProfileName = null;
+    saveActiveProfileName(null);
+    state.menuView = 'main';
+    renderStartMenu();
+  });
+}
+
+function renderProfilePicker() {
+  const cards = state.profiles.map((p) => {
+    const last = p.lastSeenAt
+      ? new Date(p.lastSeenAt).toLocaleDateString()
+      : 'never';
+    const status = p.claimed ? 'claimed on server' : 'local only';
+    return `
+      <button class="start-card profile-pick-card" data-action="pick-profile" data-profile-name="${escapeHtml(p.name)}">
+        <h3>🪪 @${escapeHtml(p.name)}</h3>
+        <p>Last seen ${last} · ${status}</p>
+      </button>
+    `;
+  }).join('');
+  startProfile.innerHTML = `
+    <div class="profile-picker">
+      <h3>Sign in</h3>
+      <p class="hint">Pick a profile to continue, or create a new one. Profiles never leave this device unless you sync them to the server.</p>
+      <div class="start-cards">
+        ${cards}
+        <button class="start-card new-profile-card" data-action="show-create-profile">
+          <h3>+ New profile</h3>
+          <p>Create another profile on this device.</p>
+        </button>
+      </div>
+    </div>
+  `;
+}
+
+function renderProfileCreateForm() {
+  const hasOthers = state.profiles.length > 0;
+  startProfile.innerHTML = `
+    <div class="profile-create">
+      <h3>${hasOthers ? 'Create a new profile' : 'Pick a name to play'}</h3>
+      <p class="hint">Your name will be public on shared levels and leaderboards. Don't use your real name if you'd rather stay anonymous. A 32-byte secret is generated on this device and stored next to your name so you can sign back in.</p>
+      <form id="profile-create-form" autocomplete="off">
+        <input id="profile-name-input" type="text" placeholder="e.g. inspector_grim" autocomplete="off" maxlength="20" spellcheck="false" />
+        <button type="submit">Create profile</button>
+      </form>
+      ${hasOthers ? '<button id="btn-back-to-picker" class="profile-back">Back to sign-in</button>' : ''}
+      <p id="profile-error" class="profile-error hidden"></p>
+    </div>
+  `;
+  const form = startProfile.querySelector('#profile-create-form');
+  const input = startProfile.querySelector('#profile-name-input');
+  const errEl = startProfile.querySelector('#profile-error');
+  form.addEventListener('submit', (ev) => {
+    ev.preventDefault();
+    const name = input.value.trim();
+    const err = validateProfileName(name);
+    if (err) {
+      errEl.textContent = err;
+      errEl.classList.remove('hidden');
+      return;
+    }
+    if (state.profiles.some((p) => p.name.toLowerCase() === name.toLowerCase())) {
+      errEl.textContent = 'You already have a profile with that name on this device.';
+      errEl.classList.remove('hidden');
+      return;
+    }
+    const profile = {
+      name,
+      token: generateToken(),
+      createdAt: Date.now(),
+      lastSeenAt: Date.now(),
+      claimed: false,
+    };
+    state.profiles.push(profile);
+    state.activeProfileName = profile.name;
+    state.menuView = 'main';
+    saveProfiles(state.profiles);
+    saveActiveProfileName(profile.name);
+    renderStartMenu();
+    // Server claim happens in the background; UI is already responsive.
+    runServerClaim(profile);
+  });
+  if (hasOthers) {
+    startProfile.querySelector('#btn-back-to-picker').addEventListener('click', () => {
+      state.menuView = 'main';
+      renderStartMenu();
+    });
+  }
+  requestAnimationFrame(() => input.focus());
+}
+
+// Attempt to claim the profile on the API. Updates `claimed` and the
+// active-profile bar when the response lands; falls back to the retry
+// loop on transport failure so the next reachable probe re-runs the
+// claim. Name-collision surfaces to the user via alert.
+async function runServerClaim(profile) {
+  if (!apiAvailable()) return;
+  if (activeProfile() && activeProfile().name === profile.name) {
+    renderActiveProfileBar(profile);
+  }
+  let result;
+  try {
+    result = await claimProfile(profile.name, profile.token);
+  } catch {
+    onServerUnreachable();
+    return;
+  }
+  if (result.status === 0) {
+    // Transport-level failure (CORS, DNS, offline). Treat as unreachable.
+    onServerUnreachable();
+    return;
+  }
+  state.serverReachable = true;
+  if (result.ok) {
+    profile.claimed = true;
+    saveProfiles(state.profiles);
+  } else if (result.nameTaken) {
+    alert(
+      `The name @${profile.name} is already claimed on the server. ` +
+      `Your local progress stays under this name on this device, but ` +
+      `leaderboards will not show it. Pick a different name when you ` +
+      `next sign up.`
+    );
+  }
+  renderServerBanner();
+  if (activeProfile() && activeProfile().name === profile.name) {
+    renderActiveProfileBar(profile);
+  }
+}
+
+// Server connectivity loop. Probes the API on boot; if unreachable,
+// retries every 10s until it succeeds. Once reachable, the loop stops.
+// A future enhancement can re-arm the loop on a failed in-flight call
+// to detect mid-session outages; for now any claim/RPC failure also
+// re-arms via onServerUnreachable.
+const SERVER_RETRY_MS = 10_000;
+let serverRetryTimer = null;
+
+function startServerLoop() {
+  if (!apiAvailable()) {
+    state.serverReachable = false;
+    renderServerBanner();
+    return;
+  }
+  attemptProbe();
+}
+
+async function attemptProbe() {
+  let ok;
+  try {
+    ok = await probeServer();
+  } catch {
+    ok = false;
+  }
+  if (ok) onServerReachable();
+  else onServerUnreachable();
+}
+
+function onServerReachable() {
+  const wasReachable = state.serverReachable === true;
+  state.serverReachable = true;
+  if (serverRetryTimer) {
+    clearTimeout(serverRetryTimer);
+    serverRetryTimer = null;
+  }
+  renderServerBanner();
+  const cur = activeProfile();
+  if (cur) renderActiveProfileBar(cur);
+  // Auto-claim an unclaimed signed-in profile the moment the server
+  // becomes reachable. Skipped on transitions from already-reachable
+  // so we don't loop on a stuck name-taken collision.
+  if (!wasReachable && cur && !cur.claimed) runServerClaim(cur);
+}
+
+function onServerUnreachable() {
+  state.serverReachable = false;
+  renderServerBanner();
+  const cur = activeProfile();
+  if (cur) renderActiveProfileBar(cur);
+  if (serverRetryTimer) clearTimeout(serverRetryTimer);
+  serverRetryTimer = setTimeout(attemptProbe, SERVER_RETRY_MS);
 }
 
 // Render every dynamic section of the start menu. Cheap, called whenever
 // any of profile / filter / completion state changes.
 function renderStartMenu() {
   renderStartProfile();
-  if (!state.profile) return; // gated sections stay empty + hidden
+  if (!activeProfile()) return; // gated sections stay empty + hidden
   renderStartContinue();
   renderStartFilterTabs();
   renderStartLibrary();
   renderStartAuthored();
+  renderServerBanner();
+}
+
+function renderServerBanner() {
+  const el = $('#server-banner');
+  if (!el) return;
+  if (state.serverReachable === false) {
+    el.classList.remove('hidden');
+    el.textContent = 'Server unreachable. Playing locally. Sharing and leaderboards are disabled until the server responds again.';
+  } else {
+    el.classList.add('hidden');
+  }
 }
 
 function renderStartContinue() {
@@ -787,10 +988,30 @@ function closeStartMenu() {
 }
 
 function handleStartAction(action, opts = {}) {
-  // Every play / author action requires a profile. The profile creation
-  // form lives in the same menu, so a missing profile just means we
-  // don't leave; the form is already in front of the user.
-  if (!state.profile) return;
+  // Profile-management actions work without an active profile.
+  if (action === 'pick-profile') {
+    const name = opts.profileName;
+    const p = state.profiles.find((pp) => pp.name === name);
+    if (!p) return;
+    p.lastSeenAt = Date.now();
+    state.activeProfileName = p.name;
+    state.menuView = 'main';
+    saveProfiles(state.profiles);
+    saveActiveProfileName(p.name);
+    // If the chosen profile hasn't been claimed yet, attempt now.
+    if (!p.claimed) runServerClaim(p);
+    renderStartMenu();
+    return;
+  }
+  if (action === 'show-create-profile') {
+    state.menuView = 'create';
+    renderStartMenu();
+    return;
+  }
+  // Every play / author action requires an active profile. The profile
+  // UI lives in the same menu, so a missing profile just means we
+  // don't leave; the form / picker is already in front of the user.
+  if (!activeProfile()) return;
   switch (action) {
     case 'play-sample': {
       loadSampleAsNewLevel(opts.sampleKey);
@@ -839,7 +1060,23 @@ async function boot() {
   state.levels = loadLevels().map(normalizeLevel);
   state.activeId = loadActiveId();
   state.completedSamples = new Set(loadCompletedSamples());
-  state.profile = loadProfile();
+  state.profiles = loadProfiles();
+  state.activeProfileName = loadActiveProfileName();
+  // Verify the stored active-profile name still matches an entry.
+  if (state.activeProfileName && !state.profiles.find((p) => p.name === state.activeProfileName)) {
+    state.activeProfileName = null;
+    saveActiveProfileName(null);
+  }
+  // Bump lastSeenAt on the active profile for the picker UI.
+  const ap = activeProfile();
+  if (ap) {
+    ap.lastSeenAt = Date.now();
+    saveProfiles(state.profiles);
+  }
+  // Kick off the server connectivity loop. Probes once on boot, then
+  // retries every 10 seconds while offline so the client recovers
+  // automatically when the server comes back.
+  startServerLoop();
   // We *never* auto-load a level on boot. The start menu is always the
   // first thing the user sees, even on returning visits. If there's a
   // previously-active level it's reachable via the menu's Continue card.
@@ -947,7 +1184,9 @@ async function boot() {
       localStorage.removeItem('murdoku.levels');
       localStorage.removeItem('murdoku.activeId');
       localStorage.removeItem('murdoku.completedSamples');
-      localStorage.removeItem('murdoku.profile');
+      localStorage.removeItem('murdoku.profiles');
+      localStorage.removeItem('murdoku.activeProfileName');
+      localStorage.removeItem('murdoku.profile'); // legacy Phase 11 key
     } catch {}
     // Reload to start clean, boot() will run again with empty state.
     location.reload();
