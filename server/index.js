@@ -3,8 +3,9 @@
 
 import express from 'express';
 import cors from 'cors';
-import { createHash } from 'node:crypto';
+import { createHash, randomBytes } from 'node:crypto';
 import { db, nowMs } from './db.js';
+import { validateLevel } from './validator.js';
 
 const PORT = Number(process.env.PORT) || 8080;
 
@@ -148,48 +149,318 @@ app.get('/profiles/me', requireProfile, (req, res) => {
   res.json({ id: req.profile.id, name: req.profile.name });
 });
 
+// ----- Shared levels -----
+
+// 8 base32 chars; ~40 bits of entropy is plenty for a shareable
+// puzzle code. Crockford alphabet drops I/L/O/U to stay copy-friendly.
+const CODE_ALPHABET = '0123456789abcdefghjkmnpqrstvwxyz';
+function generateLevelCode() {
+  const bytes = randomBytes(8);
+  let out = '';
+  for (let i = 0; i < 8; i++) out += CODE_ALPHABET[bytes[i] % 32];
+  return out;
+}
+
+// Author shares a puzzle. The full level payload is validated server-
+// side via the same module the client uses, so a tampered request
+// can't smuggle in an invalid level. Returns the generated code +
+// public URL for the share modal.
+app.post('/levels', requireProfile, (req, res) => {
+  const level = req.body && req.body.level;
+  if (!level || typeof level !== 'object') {
+    return res.status(400).json({ error: 'missing_level' });
+  }
+  const v = validateLevel(level);
+  if (!v.ok) {
+    return res.status(422).json({ error: 'invalid_level', details: v.errors });
+  }
+  const payload = JSON.stringify(level);
+  if (payload.length > 200_000) {
+    return res.status(413).json({ error: 'level_too_large' });
+  }
+  const now = nowMs();
+  // Retry on the (astronomically unlikely) code collision.
+  let code, info;
+  for (let attempt = 0; attempt < 5; attempt++) {
+    code = generateLevelCode();
+    try {
+      info = db
+        .prepare(
+          `INSERT INTO levels (code, owner_id, name, payload, created_at, updated_at)
+           VALUES (?, ?, ?, ?, ?, ?)`
+        )
+        .run(code, req.profile.id, String(level.name || 'Untitled house'), payload, now, now);
+      break;
+    } catch (err) {
+      if (err && err.code === 'SQLITE_CONSTRAINT_UNIQUE') continue;
+      throw err;
+    }
+  }
+  if (!info) return res.status(500).json({ error: 'code_collision' });
+  return res.status(201).json({ ok: true, code, id: info.lastInsertRowid });
+});
+
+// Fetch a shared puzzle. Public: anyone can pull a level by code.
+// The owner's display name is denormalized in so the client can show
+// "Authored by @X" without a second lookup.
+app.get('/levels/:code', (req, res) => {
+  const code = String(req.params.code || '').toLowerCase();
+  const row = db
+    .prepare(
+      `SELECT l.code, l.name, l.payload, l.plays_count, l.created_at,
+              l.owner_id, p.name AS owner_name
+       FROM levels l
+       JOIN profiles p ON p.id = l.owner_id
+       WHERE l.code = ?`
+    )
+    .get(code);
+  if (!row) return res.status(404).json({ error: 'not_found' });
+  let level;
+  try {
+    level = JSON.parse(row.payload);
+  } catch {
+    return res.status(500).json({ error: 'corrupt_payload' });
+  }
+  res.json({
+    code: row.code,
+    name: row.name,
+    ownerName: row.owner_name,
+    ownerId: row.owner_id,
+    playsCount: row.plays_count,
+    createdAt: row.created_at,
+    level,
+  });
+});
+
+// Bump the plays counter. Called once when a player opens a shared
+// puzzle for the first time (idempotency is on the client, the
+// server just increments). Anonymous; no auth gate.
+app.post('/levels/:code/plays', (req, res) => {
+  const code = String(req.params.code || '').toLowerCase();
+  const info = db
+    .prepare('UPDATE levels SET plays_count = plays_count + 1 WHERE code = ?')
+    .run(code);
+  if (info.changes === 0) return res.status(404).json({ error: 'not_found' });
+  res.json({ ok: true });
+});
+
+// Owner-only update. Used when the author edits their own shared
+// puzzle and re-publishes. We re-validate, then overwrite payload
+// and bump updated_at. Non-owners get 403.
+app.put('/levels/:code', requireProfile, (req, res) => {
+  const code = String(req.params.code || '').toLowerCase();
+  const owner = db
+    .prepare('SELECT owner_id FROM levels WHERE code = ?')
+    .get(code);
+  if (!owner) return res.status(404).json({ error: 'not_found' });
+  if (owner.owner_id !== req.profile.id) {
+    return res.status(403).json({ error: 'forbidden' });
+  }
+  const level = req.body && req.body.level;
+  const v = validateLevel(level);
+  if (!v.ok) {
+    return res.status(422).json({ error: 'invalid_level', details: v.errors });
+  }
+  const payload = JSON.stringify(level);
+  if (payload.length > 200_000) {
+    return res.status(413).json({ error: 'level_too_large' });
+  }
+  db.prepare(
+    `UPDATE levels SET payload = ?, name = ?, updated_at = ?
+     WHERE code = ?`
+  ).run(payload, String(level.name || 'Untitled house'), nowMs(), code);
+  res.json({ ok: true });
+});
+
+// ----- Completions + leaderboard -----
+
+// Record a win on a shared puzzle. duration_ms must be positive,
+// mistakes must be a non-negative integer. We do not de-duplicate
+// per (profile, level): the player can post multiple completions
+// across multiple sessions and the leaderboard reports their best.
+app.post('/completions', requireProfile, (req, res) => {
+  const body = req.body || {};
+  const code = String(body.code || '').toLowerCase();
+  const durationMs = Number(body.durationMs);
+  const mistakes = Number.isFinite(body.mistakes) ? Math.max(0, Math.floor(body.mistakes)) : 0;
+  if (!code || !Number.isFinite(durationMs) || durationMs <= 0) {
+    return res.status(400).json({ error: 'bad_payload' });
+  }
+  const lvl = db.prepare('SELECT 1 FROM levels WHERE code = ?').get(code);
+  if (!lvl) return res.status(404).json({ error: 'not_found' });
+  db.prepare(
+    `INSERT INTO completions (profile_id, level_code, duration_ms, mistakes, completed_at)
+     VALUES (?, ?, ?, ?, ?)`
+  ).run(req.profile.id, code, Math.floor(durationMs), mistakes, nowMs());
+  res.status(201).json({ ok: true });
+});
+
+// Public leaderboard for a shared puzzle. Best time per profile,
+// fastest first, top 50. completed_at on the winning row breaks
+// ties so a player who matched the time later doesn't displace
+// the earlier finisher.
+app.get('/levels/:code/leaderboard', (req, res) => {
+  const code = String(req.params.code || '').toLowerCase();
+  const rows = db
+    .prepare(
+      `SELECT p.name AS profile_name,
+              MIN(c.duration_ms) AS best_ms,
+              MIN(c.mistakes)    AS best_mistakes,
+              MIN(c.completed_at) AS first_at
+       FROM completions c
+       JOIN profiles p ON p.id = c.profile_id
+       WHERE c.level_code = ?
+       GROUP BY c.profile_id
+       ORDER BY best_ms ASC, first_at ASC
+       LIMIT 50`
+    )
+    .all(code);
+  res.json({ code, entries: rows });
+});
+
 // ----- Admin dashboard -----
 
+function formatDuration(ms) {
+  if (!Number.isFinite(ms)) return '';
+  const totalSec = Math.floor(ms / 1000);
+  const m = Math.floor(totalSec / 60);
+  const s = totalSec % 60;
+  return `${m}:${s.toString().padStart(2, '0')}`;
+}
+
 app.get('/admin', (_req, res) => {
-  const stats = db
+  const kpi = db
     .prepare(
       `SELECT
          (SELECT COUNT(*) FROM profiles)                             AS profiles,
-         (SELECT COUNT(*) FROM profiles WHERE banned_at IS NOT NULL) AS banned`
+         (SELECT COUNT(*) FROM profiles WHERE banned_at IS NOT NULL) AS banned,
+         (SELECT COUNT(*) FROM levels)                               AS puzzles,
+         (SELECT COUNT(*) FROM completions)                          AS completions`
     )
     .get();
-  const recent = db
+
+  const profiles = db
     .prepare(
-      `SELECT name,
+      `SELECT id, name,
               datetime(created_at   / 1000, 'unixepoch') AS created,
-              datetime(last_seen_at / 1000, 'unixepoch') AS seen
-       FROM profiles ORDER BY created_at DESC LIMIT 50`
+              datetime(last_seen_at / 1000, 'unixepoch') AS seen,
+              (SELECT COUNT(*) FROM completions c WHERE c.profile_id = profiles.id) AS plays,
+              (SELECT COUNT(*) FROM levels l WHERE l.owner_id = profiles.id)        AS authored
+       FROM profiles ORDER BY last_seen_at DESC LIMIT 50`
     )
     .all();
-  const rows = recent
-    .map((r) => `<tr><td>${escapeHtml(r.name)}</td><td>${escapeHtml(r.created)}</td><td>${escapeHtml(r.seen)}</td></tr>`)
+
+  const puzzles = db
+    .prepare(
+      `SELECT l.code, l.name, l.plays_count,
+              p.name AS owner_name,
+              datetime(l.created_at / 1000, 'unixepoch') AS created,
+              (SELECT COUNT(*) FROM completions c WHERE c.level_code = l.code) AS completions
+       FROM levels l
+       JOIN profiles p ON p.id = l.owner_id
+       ORDER BY l.created_at DESC
+       LIMIT 100`
+    )
+    .all();
+
+  const completions = db
+    .prepare(
+      `SELECT c.duration_ms, c.mistakes,
+              datetime(c.completed_at / 1000, 'unixepoch') AS done,
+              p.name AS profile_name,
+              l.name AS level_name,
+              c.level_code
+       FROM completions c
+       JOIN profiles p ON p.id = c.profile_id
+       LEFT JOIN levels l ON l.code = c.level_code
+       ORDER BY c.completed_at DESC
+       LIMIT 100`
+    )
+    .all();
+
+  // Top times across all puzzles. One row per (level, profile) at
+  // that profile's best time. Used as a "fastest solves" board.
+  const leaderboard = db
+    .prepare(
+      `SELECT l.code, l.name AS level_name,
+              p.name AS profile_name,
+              MIN(c.duration_ms) AS best_ms,
+              MIN(c.mistakes)    AS best_mistakes
+       FROM completions c
+       JOIN profiles p ON p.id = c.profile_id
+       LEFT JOIN levels l ON l.code = c.level_code
+       GROUP BY c.level_code, c.profile_id
+       ORDER BY best_ms ASC
+       LIMIT 50`
+    )
+    .all();
+
+  const profileRows = profiles
+    .map((r) => `<tr><td>${escapeHtml(r.name)}</td><td>${escapeHtml(r.created)}</td><td>${escapeHtml(r.seen)}</td><td class="num">${r.authored}</td><td class="num">${r.plays}</td></tr>`)
     .join('');
+
+  const puzzleRows = puzzles
+    .map((r) => `<tr><td><code>${escapeHtml(r.code)}</code></td><td>${escapeHtml(r.name)}</td><td>@${escapeHtml(r.owner_name)}</td><td>${escapeHtml(r.created)}</td><td class="num">${r.plays_count}</td><td class="num">${r.completions}</td></tr>`)
+    .join('');
+
+  const completionRows = completions
+    .map((r) => `<tr><td>@${escapeHtml(r.profile_name)}</td><td>${escapeHtml(r.level_name || r.level_code)}</td><td class="num">${formatDuration(r.duration_ms)}</td><td class="num">${r.mistakes}</td><td>${escapeHtml(r.done)}</td></tr>`)
+    .join('');
+
+  const leaderboardRows = leaderboard
+    .map((r, i) => `<tr><td class="num">${i + 1}</td><td>@${escapeHtml(r.profile_name)}</td><td>${escapeHtml(r.level_name || r.code)}</td><td class="num">${formatDuration(r.best_ms)}</td><td class="num">${r.best_mistakes}</td></tr>`)
+    .join('');
+
   res.set('content-type', 'text/html; charset=utf-8');
   res.send(`<!doctype html>
 <html><head><meta charset="utf-8"><title>Murdoku admin</title>
 <style>
-  body{font:14px ui-sans-serif,system-ui,sans-serif;background:#1f1b2e;color:#ece8ff;margin:0;padding:24px}
+  body{font:14px ui-sans-serif,system-ui,sans-serif;background:#1f1b2e;color:#ece8ff;margin:0;padding:24px;max-width:1100px}
   h1{margin:0 0 8px;color:#f0abfc}
-  h2{margin:24px 0 8px;font-size:14px;color:#c084fc;letter-spacing:1px;text-transform:uppercase}
-  table{border-collapse:collapse;width:100%}
-  td,th{border-bottom:1px solid #4a416c;padding:6px 10px;text-align:left}
-  .kpis{display:flex;gap:14px;margin:12px 0}
-  .kpi{background:#2f2848;border:1px solid #4a416c;padding:10px 14px;border-radius:8px}
+  h2{margin:28px 0 8px;font-size:14px;color:#c084fc;letter-spacing:1px;text-transform:uppercase}
+  table{border-collapse:collapse;width:100%;font-variant-numeric:tabular-nums}
+  td,th{border-bottom:1px solid #4a416c;padding:6px 10px;text-align:left;vertical-align:top}
+  th{color:#c084fc;font-weight:600;font-size:12px;text-transform:uppercase;letter-spacing:1px}
+  .num{text-align:right;font-variant-numeric:tabular-nums}
+  .kpis{display:flex;gap:14px;margin:12px 0;flex-wrap:wrap}
+  .kpi{background:#2f2848;border:1px solid #4a416c;padding:10px 14px;border-radius:8px;min-width:90px}
   .kpi strong{font-size:18px;color:#f0abfc;display:block}
+  .kpi span{font-size:12px;color:#a89dc4}
+  code{background:#2f2848;padding:1px 6px;border-radius:4px;font-size:12px}
+  em{color:#a89dc4}
 </style></head>
 <body>
   <h1>Murdoku admin</h1>
   <div class="kpis">
-    <div class="kpi"><strong>${stats.profiles}</strong>profiles</div>
-    <div class="kpi"><strong>${stats.banned}</strong>banned</div>
+    <div class="kpi"><strong>${kpi.profiles}</strong><span>profiles</span></div>
+    <div class="kpi"><strong>${kpi.banned}</strong><span>banned</span></div>
+    <div class="kpi"><strong>${kpi.puzzles}</strong><span>shared puzzles</span></div>
+    <div class="kpi"><strong>${kpi.completions}</strong><span>completions</span></div>
   </div>
-  <h2>Most recent profiles</h2>
-  <table><thead><tr><th>Name</th><th>Created</th><th>Last seen</th></tr></thead><tbody>${rows || '<tr><td colspan=3><em>None yet.</em></td></tr>'}</tbody></table>
+
+  <h2>Profiles &amp; login timers</h2>
+  <table>
+    <thead><tr><th>Name</th><th>Created</th><th>Last seen</th><th class="num">Authored</th><th class="num">Plays</th></tr></thead>
+    <tbody>${profileRows || '<tr><td colspan=5><em>None yet.</em></td></tr>'}</tbody>
+  </table>
+
+  <h2>User-generated puzzles</h2>
+  <table>
+    <thead><tr><th>Code</th><th>Name</th><th>Owner</th><th>Created</th><th class="num">Plays</th><th class="num">Solved by</th></tr></thead>
+    <tbody>${puzzleRows || '<tr><td colspan=6><em>Nobody has shared a puzzle yet.</em></td></tr>'}</tbody>
+  </table>
+
+  <h2>Recent completions</h2>
+  <table>
+    <thead><tr><th>Player</th><th>Puzzle</th><th class="num">Time</th><th class="num">Mistakes</th><th>When</th></tr></thead>
+    <tbody>${completionRows || '<tr><td colspan=5><em>No completions logged yet.</em></td></tr>'}</tbody>
+  </table>
+
+  <h2>Leaderboard (fastest solves across all puzzles)</h2>
+  <table>
+    <thead><tr><th class="num">#</th><th>Player</th><th>Puzzle</th><th class="num">Best time</th><th class="num">Mistakes</th></tr></thead>
+    <tbody>${leaderboardRows || '<tr><td colspan=5><em>No leaderboard entries yet.</em></td></tr>'}</tbody>
+  </table>
 </body></html>`);
 });
 

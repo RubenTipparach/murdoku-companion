@@ -31,6 +31,39 @@ db.exec(`
   );
   CREATE INDEX IF NOT EXISTS idx_profiles_last_seen
     ON profiles(last_seen_at);
+
+  -- A shared puzzle. Only exists once the author clicks Share on a
+  -- level they authored locally. The full level JSON is stored under
+  -- 'payload'; we keep 'name' denormalized for cheap listing. 'code'
+  -- is a short shareable token that lives in the URL.
+  CREATE TABLE IF NOT EXISTS levels (
+    id           INTEGER PRIMARY KEY,
+    code         TEXT UNIQUE NOT NULL,
+    owner_id     INTEGER NOT NULL REFERENCES profiles(id),
+    name         TEXT NOT NULL,
+    payload      TEXT NOT NULL,
+    plays_count  INTEGER NOT NULL DEFAULT 0,
+    created_at   INTEGER NOT NULL,
+    updated_at   INTEGER NOT NULL
+  );
+  CREATE INDEX IF NOT EXISTS idx_levels_owner   ON levels(owner_id);
+  CREATE INDEX IF NOT EXISTS idx_levels_created ON levels(created_at);
+
+  -- One row per win. Anyone who completes a shared puzzle posts here
+  -- once. duration_ms is the on-the-clock solve time, mistakes is the
+  -- count of bad placements during play.
+  CREATE TABLE IF NOT EXISTS completions (
+    id            INTEGER PRIMARY KEY,
+    profile_id    INTEGER NOT NULL REFERENCES profiles(id),
+    level_code    TEXT    NOT NULL,
+    duration_ms   INTEGER NOT NULL,
+    mistakes      INTEGER NOT NULL DEFAULT 0,
+    completed_at  INTEGER NOT NULL
+  );
+  CREATE INDEX IF NOT EXISTS idx_completions_level
+    ON completions(level_code, duration_ms);
+  CREATE INDEX IF NOT EXISTS idx_completions_profile
+    ON completions(profile_id, completed_at DESC);
 `);
 
 export function nowMs() {
