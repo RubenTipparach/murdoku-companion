@@ -11,7 +11,7 @@
 # Subsequent deploys are automatic on every push to the repo.
 
 app = "murdoku-companion"
-primary_region = "iad"
+primary_region = "ams"
 
 [build]
 

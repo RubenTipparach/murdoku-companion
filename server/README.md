@@ -45,7 +45,7 @@ exist before the first deploy. Run these once locally with the
 
 ```
 fly apps create murdoku-companion
-fly volumes create murdoku_data --size 1 --region iad
+fly volumes create murdoku_data --size 1 --region ams
 fly secrets set SERVER_SALT="$(openssl rand -hex 32)"
 fly secrets set ADMIN_USER=admin ADMIN_PASSWORD="$(openssl rand -hex 16)"
 ```
