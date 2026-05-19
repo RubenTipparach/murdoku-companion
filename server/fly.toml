@@ -3,14 +3,14 @@
 # Deploys via .github/workflows/deploy.yml using the FLY_API_TOKEN repo
 # secret. Bootstrap on a fresh app (run once locally with flyctl):
 #
-#   fly apps create murdoku-companion-api
+#   fly apps create murdoku-companion
 #   fly volumes create murdoku_data --size 1 --region iad
 #   fly secrets set SERVER_SALT="$(openssl rand -hex 32)"
 #   fly secrets set ADMIN_USER=admin ADMIN_PASSWORD="$(openssl rand -hex 16)"
 #
 # Subsequent deploys are automatic on every push to the repo.
 
-app = "murdoku-companion-api"
+app = "murdoku-companion"
 primary_region = "iad"
 
 [build]

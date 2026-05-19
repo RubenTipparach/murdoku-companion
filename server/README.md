@@ -33,7 +33,7 @@ Then in another shell:
 curl http://localhost:8080/healthz
 ```
 
-The frontend defaults to `https://murdoku-companion-api.fly.dev` via
+The frontend defaults to `https://murdoku-companion.fly.dev` via
 the `<meta name="murdoku-api-base">` tag in `index.html`. To point at
 a local API during development, change that meta value.
 
@@ -44,7 +44,7 @@ exist before the first deploy. Run these once locally with the
 `flyctl` CLI:
 
 ```
-fly apps create murdoku-companion-api
+fly apps create murdoku-companion
 fly volumes create murdoku_data --size 1 --region iad
 fly secrets set SERVER_SALT="$(openssl rand -hex 32)"
 fly secrets set ADMIN_USER=admin ADMIN_PASSWORD="$(openssl rand -hex 16)"
