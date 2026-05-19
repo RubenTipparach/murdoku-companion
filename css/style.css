@@ -437,6 +437,23 @@ input:focus, textarea:focus { outline: 2px solid var(--accent); outline-offset: 
 }
 .cell.mismatch { box-shadow: 0 0 0 3px var(--bad) inset; }
 .cell.correct  { box-shadow: 0 0 0 3px var(--good) inset; }
+/* Overlay ✕ / ✓ glyphs on Check-Solution feedback so the verdict
+   reads at a glance, even with a portrait sitting in the cell. */
+.cell.mismatch::before,
+.cell.correct::before {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: calc(var(--cell, 56px) * 0.55);
+  font-weight: 800;
+  line-height: 1;
+  text-shadow: 0 0 6px rgba(0,0,0,0.85), 0 0 2px rgba(0,0,0,0.85);
+  pointer-events: none;
+  z-index: 4;
+}
+.cell.mismatch::before { content: "✕"; color: var(--bad); }
+.cell.correct::before  { content: "✓"; color: var(--good); }
 
 /* Victim / killer badge layered over the portrait. Uses inline SVG so it
    renders the same on every device, no system-font emoji gaps. */

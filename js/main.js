@@ -21,6 +21,7 @@ import {
   shareLevel, updateSharedLevel, getSharedLevel, bumpPlays,
   recordCompletion, getLeaderboard, shareUrlFor,
   getLevelCompletions, getPlayers, getPlayerProfile, getPuzzles,
+  getRankings,
 } from './api.js';
 import { validateLevel } from './validator.js';
 import { renderGrid } from './grid.js';
@@ -88,6 +89,7 @@ const puzzlesModal = $('#puzzles-modal');
 const puzzlesList = $('#puzzles-list');
 const puzzlesLoading = $('#puzzles-loading');
 const puzzlesError = $('#puzzles-error');
+const puzzlesHint = $('#puzzles-hint');
 const shareModal   = $('#share-modal');
 const shareErrors  = $('#share-errors');
 const shareSuccess = $('#share-success');
@@ -404,7 +406,10 @@ function updateStatus() {
   } else {
     const placed = Object.keys(lvl.playerPlacement).length;
     const sol = Object.keys(lvl.solution).length;
-    setStatus(`Play · placed ${placed} / ${sol} suspects`);
+    const guesses = playSession && playSession.levelId === lvl.id
+      ? ` · guesses ${playSession.mistakes}`
+      : '';
+    setStatus(`Play · placed ${placed} / ${sol} suspects${guesses}`);
   }
 }
 
@@ -956,6 +961,9 @@ function startPlaySession(level) {
 function bumpMistakes(n) {
   if (!playSession || !n) return;
   playSession.mistakes += n;
+  // Reflect the new count in the play-screen status line so the
+  // player can see their guess total live.
+  updateStatus();
 }
 
 async function openShareModal(authoredId) {
@@ -1097,29 +1105,72 @@ function inferNamespace(code) {
   return SAMPLES.some((s) => s.code === code) ? 'sample' : 'custom';
 }
 
-// Pull the active profile's completions from the server and merge any
-// server-side sample wins into the local completedSamples set. The
-// server is the source of truth for cross-device sync: if a player
-// solved m1 on their phone, this loop is what makes the laptop's
-// start-menu card light up green too. Best-effort, swallows errors.
+// Check-Solution feedback auto-clear: the green ✓ / red ✕ outlines
+// linger for 10 seconds, then fade so the board stops shouting at the
+// player while they're deciding what to move. Cancelled by the toast's
+// Clear button (immediate) or by a fresh Check click (rescheduled).
+const CHECK_FEEDBACK_TTL_MS = 10_000;
+let checkFeedbackTimer = null;
+function scheduleCheckFeedbackClear() {
+  cancelCheckFeedbackClear();
+  checkFeedbackTimer = setTimeout(() => {
+    checkFeedbackTimer = null;
+    highlightCells({});
+    winToast.classList.add('hidden');
+  }, CHECK_FEEDBACK_TTL_MS);
+}
+function cancelCheckFeedbackClear() {
+  if (checkFeedbackTimer) {
+    clearTimeout(checkFeedbackTimer);
+    checkFeedbackTimer = null;
+  }
+}
+
+// Two-way completion sync for the active profile. PULL: any sample
+// codes the server has but the local set doesn't get added so a
+// cross-device win lights up the green check on this device. PUSH:
+// any local sample wins the server doesn't know about are posted as
+// backfill rows (no time, no mistakes) so they count toward this
+// player's total-completed without polluting the per-puzzle time
+// leaderboard. Best-effort, swallows errors.
 async function syncCompletionsFromServer(profile) {
   if (!profile || !apiAvailable()) return;
   const data = await getPlayerProfile(profile.name);
   if (!data || !Array.isArray(data.completions)) return;
-  let added = 0;
+
+  // Pull: server → local
+  const serverCodes = new Set(data.completions.map((c) => c.level_code));
+  let pulled = 0;
   for (const c of data.completions) {
     const s = SAMPLES.find((x) => x.code === c.level_code);
     if (s && !state.completedSamples.has(s.key)) {
       state.completedSamples.add(s.key);
-      added++;
+      pulled++;
     }
   }
-  if (added > 0) {
+  if (pulled > 0) {
     saveCompletedSamples([...state.completedSamples]);
-    // If the start menu is up, rebuild the library so the new green
-    // checks render without waiting for the next user action.
     if (!startModal.classList.contains('hidden')) renderStartMenu();
-    flashStatus(`Synced ${added} completion${added === 1 ? '' : 's'} from the server.`);
+  }
+
+  // Push: local → server (backfill). Every sample the player has
+  // finished locally but the server has no record of gets a one-time
+  // backfill post. The server de-dupes per (profile, code) so a
+  // re-sync on another device is a no-op.
+  let pushed = 0;
+  for (const sampleKey of state.completedSamples) {
+    const s = SAMPLES.find((x) => x.key === sampleKey);
+    if (!s || !s.code) continue;
+    if (serverCodes.has(s.code)) continue;
+    const ok = await recordCompletion(profile.token, s.code, 'sample', 0, 0, { backfill: true });
+    if (ok) pushed++;
+  }
+
+  if (pulled > 0 || pushed > 0) {
+    const parts = [];
+    if (pulled > 0) parts.push(`pulled ${pulled}`);
+    if (pushed > 0) parts.push(`backfilled ${pushed}`);
+    flashStatus(`Synced completions, ${parts.join(', ')}.`);
   }
 }
 
@@ -1365,13 +1416,55 @@ async function renderPlayerDetail(name) {
   playersList.appendChild(table);
 }
 
-// ---------- Puzzles directory modal (global Leaderboards picker) ----------
+// ---------- Global Leaderboards modal (two tabs: rankings + puzzles) ----------
+
+const puzzlesState = { tab: 'ranked' };
 
 async function openPuzzlesModal() {
+  puzzlesState.tab = 'ranked';
   puzzlesModal.classList.remove('hidden');
+  for (const t of puzzlesModal.querySelectorAll('.lb-tab')) {
+    t.classList.toggle('active', t.dataset.puzzlesTab === 'ranked');
+  }
+  await renderPuzzlesModalTab();
+}
+
+function closePuzzlesModal() {
+  puzzlesModal.classList.add('hidden');
+}
+
+async function renderPuzzlesModalTab() {
   puzzlesList.innerHTML = '';
   puzzlesError.classList.add('hidden');
   puzzlesLoading.classList.remove('hidden');
+
+  if (puzzlesState.tab === 'ranked') {
+    puzzlesHint.textContent = 'Players ranked by puzzles completed, total guesses break ties.';
+    const entries = await getRankings();
+    puzzlesLoading.classList.add('hidden');
+    if (entries === null) { puzzlesError.classList.remove('hidden'); return; }
+    if (!entries.length) {
+      puzzlesList.innerHTML = '<p class="lb-empty">No solves recorded yet. Be the first.</p>';
+      return;
+    }
+    const ap = activeProfile();
+    puzzlesList.innerHTML = entries
+      .map((p, i) => {
+        const mine = ap && ap.name === p.name;
+        return `<button class="player-row ${mine ? 'player-you' : ''}" data-player-name="${escapeHtml(p.name)}">
+          <span>
+            <strong>#${i + 1} ${mine ? 'You · ' : ''}@${escapeHtml(p.name)}</strong>
+            <span class="player-meta">${p.total_guesses} total guess${p.total_guesses === 1 ? '' : 'es'}</span>
+          </span>
+          <span class="player-stats">${p.completion_count} puzzle${p.completion_count === 1 ? '' : 's'}</span>
+        </button>`;
+      })
+      .join('');
+    return;
+  }
+
+  // 'puzzles' tab
+  puzzlesHint.textContent = 'Every puzzle with at least one recorded solve. Pick one to see its leaderboard.';
   const entries = await getPuzzles();
   puzzlesLoading.classList.add('hidden');
   if (entries === null) { puzzlesError.classList.remove('hidden'); return; }
@@ -1387,14 +1480,10 @@ async function openPuzzlesModal() {
           <strong>${escapeHtml(p.name || p.code)}</strong>
           <span class="player-meta">${ns} · code <code>${escapeHtml(p.code)}</code> · last solve ${escapeHtml(formatWhen(p.last_completed_at))}</span>
         </span>
-        <span class="player-stats">${p.completion_count} solve(s)</span>
+        <span class="player-stats">${p.completion_count} solve${p.completion_count === 1 ? '' : 's'}</span>
       </button>`;
     })
     .join('');
-}
-
-function closePuzzlesModal() {
-  puzzlesModal.classList.add('hidden');
 }
 
 // Self-authored levels (the "Your levels" section). Always shows a
@@ -1528,6 +1617,12 @@ function openStartMenu() {
 }
 function closeStartMenu() {
   startModal.classList.add('hidden');
+  // The Players / Leaderboards / per-puzzle leaderboard modals are
+  // start-menu surfaces; dismiss anything still open so they don't
+  // hang over the game grid once the player enters a level.
+  puzzlesModal.classList.add('hidden');
+  playersModal.classList.add('hidden');
+  leaderboardModal.classList.add('hidden');
   document.body.classList.remove('menu-active');
 }
 
@@ -1780,13 +1875,29 @@ async function boot() {
   for (const c of document.querySelectorAll('[data-close="puzzles"]')) c.addEventListener('click', closePuzzlesModal);
   puzzlesModal.addEventListener('click', (e) => {
     if (e.target === puzzlesModal) { closePuzzlesModal(); return; }
-    const row = e.target.closest('.player-row[data-puzzle-code]');
-    if (row) {
-      const code = row.dataset.puzzleCode;
-      const name = row.dataset.puzzleName;
-      const namespace = row.dataset.puzzleNamespace;
+    const tab = e.target.closest('.lb-tab[data-puzzles-tab]');
+    if (tab) {
+      puzzlesState.tab = tab.dataset.puzzlesTab;
+      for (const t of puzzlesModal.querySelectorAll('.lb-tab')) {
+        t.classList.toggle('active', t === tab);
+      }
+      renderPuzzlesModalTab();
+      return;
+    }
+    const puzzleRow = e.target.closest('.player-row[data-puzzle-code]');
+    if (puzzleRow) {
+      const code = puzzleRow.dataset.puzzleCode;
+      const name = puzzleRow.dataset.puzzleName;
+      const namespace = puzzleRow.dataset.puzzleNamespace;
       closePuzzlesModal();
       openLeaderboardModal(code, name, { namespace });
+      return;
+    }
+    const playerRow = e.target.closest('.player-row[data-player-name]');
+    if (playerRow) {
+      const name = playerRow.dataset.playerName;
+      closePuzzlesModal();
+      openPlayersModal({ initialPlayer: name });
     }
   });
 
@@ -2009,12 +2120,16 @@ async function boot() {
       // Outline only placed cells: green if right, red if wrong. NEVER
       // outline cells the player hasn't placed on, they're not feedback.
       highlightCells({ correct: result.correct, wrong: result.wrong });
+      // Auto-clear the check feedback after 10s so a half-solved board
+      // doesn't stay smeared with red Xs while the player thinks.
+      scheduleCheckFeedbackClear();
     }
   });
   for (const c of document.querySelectorAll('[data-close="toast"]')) {
     c.addEventListener('click', () => {
       winToast.classList.add('hidden');
       highlightCells({});
+      cancelCheckFeedbackClear();
     });
   }
 

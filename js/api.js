@@ -172,12 +172,15 @@ export async function bumpPlays(code) {
 // Post a completion record after a player wins a puzzle. Namespace
 // must be either 'sample' (for shipped mN codes) or 'custom' (for
 // player-shared codes), the URL prefix is selected accordingly.
-export async function recordCompletion(token, code, namespace, durationMs, mistakes) {
+// Pass `backfill: true` for pre-feature wins that don't have a real
+// duration or mistake count, the server stores those as flagged rows
+// and excludes them from the time / mistake leaderboards.
+export async function recordCompletion(token, code, namespace, durationMs, mistakes, { backfill = false } = {}) {
   if (!apiAvailable()) return false;
   try {
     const res = await call('POST', `${nsPrefix(namespace)}/${encodeURIComponent(code)}/completions`, {
       token,
-      body: { durationMs, mistakes },
+      body: { durationMs, mistakes, backfill: backfill || undefined },
     });
     return res.ok;
   } catch {
@@ -210,6 +213,21 @@ export async function getLevelCompletions(code, namespace) {
     const res = await call('GET', `${nsPrefix(namespace)}/${encodeURIComponent(code)}/completions`);
     if (!res.ok) return null;
     return await res.json();
+  } catch {
+    return null;
+  }
+}
+
+// Global player rankings: who has solved the most puzzles, with total
+// guesses as the tiebreaker. Returns the array of entries (each
+// { name, completion_count, total_guesses }) or null on failure.
+export async function getRankings() {
+  if (!apiAvailable()) return null;
+  try {
+    const res = await call('GET', '/rankings');
+    if (!res.ok) return null;
+    const data = await res.json();
+    return data.entries || [];
   } catch {
     return null;
   }

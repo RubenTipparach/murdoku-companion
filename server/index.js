@@ -306,9 +306,15 @@ function recordCompletionHandler(namespace) {
   return (req, res) => {
     const code = String(req.params.code || '').toLowerCase();
     const body = req.body || {};
-    const durationMs = Number(body.durationMs);
+    const isBackfill = body.backfill === true;
+    const rawDuration = Number(body.durationMs);
+    const durationMs = isBackfill
+      ? (Number.isFinite(rawDuration) && rawDuration > 0 ? Math.floor(rawDuration) : 0)
+      : (Number.isFinite(rawDuration) ? Math.floor(rawDuration) : 0);
     const mistakes = Number.isFinite(body.mistakes) ? Math.max(0, Math.floor(body.mistakes)) : 0;
-    if (!Number.isFinite(durationMs) || durationMs <= 0) {
+    // Live posts require a positive duration; backfill rows are allowed
+    // to be timeless since the win predates the timing feature.
+    if (!isBackfill && durationMs <= 0) {
       return res.status(400).json({ error: 'bad_payload' });
     }
     if (namespace === 'sample') {
@@ -317,10 +323,23 @@ function recordCompletionHandler(namespace) {
       const lvl = db.prepare('SELECT 1 FROM levels WHERE code = ?').get(code);
       if (!lvl) return res.status(404).json({ error: 'not_found' });
     }
+    // De-dupe backfill rows so a re-syncing client doesn't keep
+    // stacking phantom completions. Live posts intentionally still
+    // accept multiple inserts so a replay of the same puzzle counts.
+    if (isBackfill) {
+      const dup = db
+        .prepare(
+          `SELECT 1 FROM completions
+           WHERE profile_id = ? AND level_code = ?
+           LIMIT 1`
+        )
+        .get(req.profile.id, code);
+      if (dup) return res.status(200).json({ ok: true, deduped: true });
+    }
     db.prepare(
-      `INSERT INTO completions (profile_id, level_code, duration_ms, mistakes, completed_at)
-       VALUES (?, ?, ?, ?, ?)`
-    ).run(req.profile.id, code, Math.floor(durationMs), mistakes, nowMs());
+      `INSERT INTO completions (profile_id, level_code, duration_ms, mistakes, completed_at, is_backfill)
+       VALUES (?, ?, ?, ?, ?, ?)`
+    ).run(req.profile.id, code, durationMs, mistakes, nowMs(), isBackfill ? 1 : 0);
     res.status(201).json({ ok: true });
   };
 }
@@ -338,6 +357,8 @@ function leaderboardHandler(namespace) {
       const lvl = db.prepare('SELECT 1 FROM levels WHERE code = ?').get(code);
       if (!lvl) return res.status(404).json({ error: 'not_found' });
     }
+    // Exclude backfill rows from the time leaderboard: they have no
+    // recorded duration and would sort to the top by accident.
     const rows = db
       .prepare(
         `SELECT p.name AS profile_name,
@@ -346,7 +367,7 @@ function leaderboardHandler(namespace) {
                 MIN(c.completed_at) AS first_at
          FROM completions c
          JOIN profiles p ON p.id = c.profile_id
-         WHERE c.level_code = ?
+         WHERE c.level_code = ? AND c.is_backfill = 0
          GROUP BY c.profile_id
          ORDER BY best_ms ASC, first_at ASC
          LIMIT 50`
@@ -443,7 +464,8 @@ app.get('/players', (_req, res) => {
       `SELECT p.name,
               p.created_at,
               p.last_seen_at,
-              (SELECT COUNT(*) FROM completions c WHERE c.profile_id = p.id) AS completion_count,
+              (SELECT COUNT(DISTINCT c.level_code) FROM completions c WHERE c.profile_id = p.id) AS completion_count,
+              (SELECT COALESCE(SUM(c.mistakes), 0)  FROM completions c WHERE c.profile_id = p.id AND c.is_backfill = 0) AS total_guesses,
               (SELECT COUNT(*) FROM levels    l WHERE l.owner_id   = p.id) AS authored_count
        FROM profiles p
        WHERE p.banned_at IS NULL
@@ -452,6 +474,26 @@ app.get('/players', (_req, res) => {
     )
     .all();
   res.json({ entries: rows });
+});
+
+// Public global player leaderboard. Ranks players by puzzles
+// completed (distinct level codes, DESC) with total guesses across
+// live solves as a tiebreaker (ASC). Returns up to 100 rows. Used by
+// the start-menu Leaderboards button as the "who has solved the most"
+// scoreboard.
+app.get('/rankings', (_req, res) => {
+  const rows = db
+    .prepare(
+      `SELECT p.name,
+              (SELECT COUNT(DISTINCT c.level_code) FROM completions c WHERE c.profile_id = p.id) AS completion_count,
+              (SELECT COALESCE(SUM(c.mistakes), 0)  FROM completions c WHERE c.profile_id = p.id AND c.is_backfill = 0) AS total_guesses
+       FROM profiles p
+       WHERE p.banned_at IS NULL
+       ORDER BY completion_count DESC, total_guesses ASC, p.created_at ASC
+       LIMIT 100`
+    )
+    .all();
+  res.json({ entries: rows.filter((r) => r.completion_count > 0) });
 });
 
 // Public profile view: every solve this player has logged, with the

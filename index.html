@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Murdoku</title>
-    <link rel="stylesheet" href="./css/style.css?v=33" />
+    <link rel="stylesheet" href="./css/style.css?v=34" />
     <!-- API base URL for the Murdoku companion server. Empty = local-
          only mode (no claims, no leaderboards). The deploy.yml workflow
          can substitute this from a build-time env var if needed. -->
@@ -237,7 +237,7 @@
       <div id="win-leaderboard" class="win-leaderboard hidden"></div>
       <div class="toast-actions">
         <button id="win-view-leaderboard" class="hidden">See full leaderboard</button>
-        <button data-close="toast">OK</button>
+        <button data-close="toast">Clear</button>
       </div>
     </div>
 
@@ -273,9 +273,10 @@
       </div>
     </div>
 
-    <!-- Cross-namespace puzzles directory. Opened by the top-of-menu
-         Leaderboards button; click a row to open the per-puzzle
-         leaderboard modal for it. -->
+    <!-- Global leaderboards: a two-tab modal that ranks players by
+         puzzles completed (default) and lists every puzzle that has
+         at least one solve. Rows are click-through into the per-
+         player or per-puzzle drilldowns. -->
     <div id="puzzles-modal" class="modal hidden" role="dialog">
       <div class="modal-inner">
         <header>
@@ -283,9 +284,13 @@
           <button class="close" data-close="puzzles">×</button>
         </header>
         <div class="modal-body">
+          <div class="lb-tabs" role="tablist">
+            <button class="lb-tab active" data-puzzles-tab="ranked">🥇 Players ranked</button>
+            <button class="lb-tab" data-puzzles-tab="puzzles">🧩 All puzzles</button>
+          </div>
           <div id="puzzles-loading" class="lb-loading hidden">Loading...</div>
-          <div id="puzzles-error" class="lb-error hidden">Could not load the puzzle list.</div>
-          <p class="lb-hint">Every puzzle that has at least one recorded solve. Pick one to see its leaderboard.</p>
+          <div id="puzzles-error" class="lb-error hidden">Could not load.</div>
+          <p id="puzzles-hint" class="lb-hint"></p>
           <div id="puzzles-list"></div>
         </div>
       </div>
@@ -330,6 +335,6 @@
       </div>
     </div>
 
-    <script type="module" src="./js/main.js?v=33"></script>
+    <script type="module" src="./js/main.js?v=34"></script>
   </body>
 </html>
