@@ -83,6 +83,13 @@ export const state = {
   completedSamples: new Set(),
   // Cache of cell → roomId for O(1) lookup. Rebuilt on render.
   cellRoomCache: new Map(),
+  // The active player profile. Null until the player creates one from
+  // the start menu. Phase 11 is local-only; Phase 12 adds server claim.
+  // Shape: { name, createdAt }
+  profile: null,
+  // Start-menu library filter, transient (not persisted). One of:
+  // 'all' | 'new' | 'finished' | 'usergames'.
+  menuFilter: 'all',
 };
 
 export function activeLevel() {

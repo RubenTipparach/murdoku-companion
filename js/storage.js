@@ -3,6 +3,7 @@
 const LS_LEVELS = 'murdoku.levels';
 const LS_ACTIVE = 'murdoku.activeId';
 const LS_COMPLETED = 'murdoku.completedSamples';
+const LS_PROFILE = 'murdoku.profile';
 
 export function loadLevels() {
   try {
@@ -44,4 +45,23 @@ export function loadCompletedSamples() {
 
 export function saveCompletedSamples(arr) {
   localStorage.setItem(LS_COMPLETED, JSON.stringify(arr));
+}
+
+// The local player profile. Phase 11 stores only `{name, createdAt}`.
+// Phase 12 will add a token and a server-claimed flag.
+export function loadProfile() {
+  try {
+    const raw = localStorage.getItem(LS_PROFILE);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (!parsed || typeof parsed.name !== 'string') return null;
+    return parsed;
+  } catch {
+    return null;
+  }
+}
+
+export function saveProfile(profile) {
+  if (profile) localStorage.setItem(LS_PROFILE, JSON.stringify(profile));
+  else localStorage.removeItem(LS_PROFILE);
 }
