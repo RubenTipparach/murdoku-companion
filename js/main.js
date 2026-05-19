@@ -132,6 +132,17 @@ function validateProfileName(name) {
 // ---------- Mode / tool switching ----------
 
 function setMode(mode) {
+  // Refuse to enter Edit on a shipped sample. The Edit-mode button is
+  // already disabled in rerender(), this is defense in depth for any
+  // code path that still tries (e.g. older saved activeId pointing at
+  // a sample that booted directly into edit).
+  if (mode === 'edit') {
+    const lvl = activeLevel();
+    if (lvl && lvl.isSample) {
+      flashStatus('Clone this sample first to edit it.');
+      mode = 'play';
+    }
+  }
   state.mode = mode;
   modeEditBtn.classList.toggle('active', mode === 'edit');
   modePlayBtn.classList.toggle('active', mode === 'play');
@@ -212,6 +223,14 @@ function rerender() {
   sampleBanner.classList.toggle('hidden', !(isSample && state.mode === 'edit'));
   // Lock the edit sidebar interactions when on a sample.
   editTools.classList.toggle('locked', isSample);
+  // The Edit-mode toggle is disabled on samples so a player can't
+  // accidentally enter a locked editor (and end up confused about
+  // why typing does nothing). Cloning is the only path to a
+  // writable copy of a shipped puzzle.
+  modeEditBtn.disabled = isSample;
+  modeEditBtn.title = isSample
+    ? 'This is a shipped sample. Clone it to enable editing.'
+    : 'Edit this house';
 
   renderLevelSelect();
   updateStatus();
@@ -1832,8 +1851,20 @@ async function boot() {
     rerender();
   });
 
-  // Topbar Clone (also exposed on the in-grid sample banner).
+  // Topbar Clone (also exposed on the in-grid sample banner). Cloning
+  // a shipped sample is the only path to an editable copy, so we ask
+  // for explicit confirmation before doing it, otherwise an accidental
+  // tap silently spawns a level the player didn't mean to author.
   const cloneCurrent = () => {
+    const src = activeLevel();
+    if (!src) return;
+    if (src.isSample) {
+      const ok = confirm(
+        `Clone "${src.name}" into your own editable copy?\n\n` +
+        `The original sample stays untouched. The copy goes into Your levels.`
+      );
+      if (!ok) return;
+    }
     const cloned = cloneActiveLevel();
     if (!cloned) return;
     persist();
