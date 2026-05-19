@@ -325,38 +325,37 @@ input:focus, textarea:focus { outline: 2px solid var(--accent); outline-offset: 
 /* Victim / killer badge layered over the portrait. Uses inline SVG so it
    renders the same on every device — no system-font emoji gaps. */
 .md-icon {
-  width: 1em;
-  height: 1em;
+  width: 18px;
+  height: 18px;
   display: inline-block;
-  vertical-align: -0.15em;
+  vertical-align: -0.2em;
+  image-rendering: pixelated;
   filter: drop-shadow(0 1px 1px rgba(0,0,0,0.6));
 }
 .cell .cell-badge {
   position: absolute;
-  top: 2px;
-  right: 2px;
+  top: 3px;
+  right: 3px;
   z-index: 3;
-  font-size: 16px;
   line-height: 1;
   pointer-events: none;
   display: flex;
-  gap: 1px;
+  gap: 2px;
 }
-.cell .cell-badge .md-icon { width: 14px; height: 14px; }
+.cell .cell-badge .md-icon { width: 18px; height: 18px; }
 .char-tile { position: relative; }
 .char-tile .tile-badge {
   position: absolute;
   top: 2px;
   right: 2px;
-  font-size: 13px;
   line-height: 1;
   pointer-events: none;
   display: flex;
   gap: 1px;
 }
-.char-tile .tile-badge .md-icon { width: 12px; height: 12px; }
-.inline-badge .md-icon { width: 14px; height: 14px; vertical-align: -0.2em; margin-right: 2px; }
-.kill-btn .md-icon { width: 14px; height: 14px; vertical-align: -0.2em; margin-right: 4px; }
+.char-tile .tile-badge .md-icon { width: 14px; height: 14px; }
+.inline-badge .md-icon { width: 16px; height: 16px; vertical-align: -0.25em; margin-right: 4px; }
+.kill-btn .md-icon { width: 16px; height: 16px; vertical-align: -0.25em; margin-right: 4px; }
 .cell.drag-over { outline: 2px dashed var(--accent-2); outline-offset: -2px; }
 
 /* Fade-guests view: drops placed portrait opacity so the tile/furniture

@@ -40,6 +40,9 @@ jobs:
       - name: Regenerate furniture
         run: node scripts/generate-furniture.js
 
+      - name: Regenerate badge icons
+        run: node scripts/generate-icons.js
+
       - name: Configure Pages
         uses: actions/configure-pages@v5
 
