@@ -16,7 +16,12 @@ import {
   loadActiveProfileName, saveActiveProfileName,
   generateToken,
 } from './storage.js';
-import { apiAvailable, probeServer, claimProfile } from './api.js';
+import {
+  apiAvailable, probeServer, claimProfile,
+  shareLevel, updateSharedLevel, getSharedLevel, bumpPlays,
+  recordCompletion, getLeaderboard, shareUrlFor,
+} from './api.js';
+import { validateLevel } from './validator.js';
 import { renderGrid } from './grid.js';
 import { loadCharacters, renderRoster } from './portraits.js';
 import { loadFurniture, normalizeLevel, rollAllRooms } from './decor.js';
@@ -62,6 +67,13 @@ const levelsModal  = $('#levels-modal');
 const levelsListEl = $('#levels-list');
 const winToast     = $('#win-toast');
 const winDetail    = $('#win-detail');
+const winLeaderboard = $('#win-leaderboard');
+const shareModal   = $('#share-modal');
+const shareErrors  = $('#share-errors');
+const shareSuccess = $('#share-success');
+const sharePending = $('#share-pending');
+const shareUrlInput = $('#share-url');
+const shareCopyStatus = $('#share-copy-status');
 const importFile   = $('#import-file');
 const levelSelect  = $('#level-select');
 const sampleBanner = $('#sample-banner');
@@ -105,6 +117,8 @@ function setMode(mode) {
   playTools.classList.toggle('hidden', mode !== 'play');
   // Reset transient selection between modes.
   state.selectedCharacterId = null;
+  // Entering play mode (re-)starts the per-session clock and mistake count.
+  if (mode === 'play') startPlaySession(activeLevel());
   rerender();
 }
 
@@ -801,10 +815,32 @@ function renderStartLibrary() {
   startLibrary.innerHTML = '';
 
   if (state.menuFilter === 'usergames') {
-    const p = document.createElement('p');
-    p.className = 'empty-state';
-    p.textContent = 'Levels shared by other players will appear here. Visit a share link to add one. Sharing ships in Phase 13.';
-    startLibrary.appendChild(p);
+    const shared = state.levels.filter((l) => l.isShared);
+    if (!shared.length) {
+      const p = document.createElement('p');
+      p.className = 'empty-state';
+      p.textContent = 'Levels shared by other players will appear here. Open a share link (?play=CODE) to add one.';
+      startLibrary.appendChild(p);
+      return;
+    }
+    const cards = document.createElement('div');
+    cards.className = 'start-cards';
+    for (const lvl of shared) {
+      const card = document.createElement('button');
+      card.className = 'start-card';
+      card.dataset.action = 'open-authored';
+      card.dataset.authoredId = lvl.id;
+      const who = lvl.ownerName ? `@${escapeHtml(lvl.ownerName)}` : 'someone';
+      card.innerHTML = `
+        <h3>🔗 ${escapeHtml(lvl.name || 'Shared puzzle')}</h3>
+        <p>By ${who} · code <code>${escapeHtml(lvl.code || '')}</code></p>
+        <div class="authored-actions">
+          <button data-authored-action="clone" data-authored-id="${escapeHtml(lvl.id)}" class="clone-btn">Clone to edit</button>
+        </div>
+      `;
+      cards.appendChild(card);
+    }
+    startLibrary.appendChild(cards);
     return;
   }
 
@@ -859,9 +895,194 @@ function renderStartLibrary() {
   }
 }
 
+// ---------- Share / play-by-code / completion tracking ----------
+
+// Per-session play stats. Reset whenever the player enters play
+// mode on a level. Mistakes accumulate from failed Check clicks.
+// Lost on page reload, which is fine for a POC leaderboard.
+let playSession = null; // { levelId, startedAt, mistakes }
+
+function startPlaySession(level) {
+  if (!level) return;
+  playSession = {
+    levelId: level.id,
+    startedAt: Date.now(),
+    mistakes: 0,
+  };
+}
+
+function bumpMistakes(n) {
+  if (!playSession || !n) return;
+  playSession.mistakes += n;
+}
+
+async function openShareModal(authoredId) {
+  const lvl = state.levels.find((l) => l.id === authoredId);
+  if (!lvl) return;
+  const profile = activeProfile();
+  if (!profile) {
+    alert('Sign in to share a puzzle.');
+    return;
+  }
+  // Run the same validator the server runs, so we surface errors
+  // before the round trip.
+  const v = validateLevel(lvl);
+  shareModal.classList.remove('hidden');
+  shareSuccess.classList.add('hidden');
+  shareErrors.classList.add('hidden');
+  sharePending.classList.add('hidden');
+  shareCopyStatus.textContent = '';
+  if (!v.ok) {
+    shareErrors.innerHTML =
+      '<strong>Fix these before sharing:</strong>' +
+      `<ul>${v.errors.map((e) => `<li>${escapeHtml(e)}</li>`).join('')}</ul>`;
+    shareErrors.classList.remove('hidden');
+    return;
+  }
+  sharePending.textContent = lvl.code ? 'Re-publishing...' : 'Publishing...';
+  sharePending.classList.remove('hidden');
+  const result = lvl.code
+    ? await updateSharedLevel(profile.token, lvl.code, lvl)
+    : await shareLevel(profile.token, lvl);
+  sharePending.classList.add('hidden');
+  if (result.ok) {
+    if (result.code) {
+      lvl.code = result.code;
+      persist();
+      renderStartMenu();
+    }
+    const url = result.url || shareUrlFor(lvl.code);
+    shareUrlInput.value = url;
+    shareSuccess.classList.remove('hidden');
+    return;
+  }
+  // Server-side validator can disagree with the client (rare but possible
+  // if the level was edited mid-flight). Surface those errors too.
+  if (result.invalid) {
+    shareErrors.innerHTML =
+      '<strong>The server rejected this puzzle:</strong>' +
+      `<ul>${(result.errors || []).map((e) => `<li>${escapeHtml(e)}</li>`).join('')}</ul>`;
+    shareErrors.classList.remove('hidden');
+    return;
+  }
+  if (result.forbidden) {
+    shareErrors.innerHTML = '<strong>You don\'t own this puzzle on the server. Clone it to edit your own copy.</strong>';
+    shareErrors.classList.remove('hidden');
+    return;
+  }
+  shareErrors.innerHTML = `<strong>Could not publish (status ${escapeHtml(String(result.status || 0))}).</strong> Try again in a moment.`;
+  shareErrors.classList.remove('hidden');
+}
+
+function closeShareModal() {
+  shareModal.classList.add('hidden');
+}
+
+// Create a fresh authored copy of a shared puzzle in the player's own
+// library. The new level has no `code` (re-share creates a new one)
+// and no owner; the original stays untouched in the shared section.
+function cloneSharedLevelToAuthored(sharedId) {
+  const src = state.levels.find((l) => l.id === sharedId);
+  if (!src) return;
+  const copy = JSON.parse(JSON.stringify(src));
+  copy.id = 'lvl_' + Math.random().toString(36).slice(2, 8);
+  copy.name = `${src.name} (clone)`;
+  copy.isShared = false;
+  copy.code = null;
+  copy.ownerId = null;
+  copy.ownerName = null;
+  copy.completed = false;
+  copy.createdAt = Date.now();
+  copy.updatedAt = Date.now();
+  state.levels.push(copy);
+  state.activeId = copy.id;
+  persist();
+  closeStartMenu();
+  rerender();
+  flashStatus(`Cloned "${src.name}" into your authored levels.`);
+}
+
+// Pull a level by code from the server and merge into the local
+// library. If we already have it (matching code), just activate it.
+// If the active profile owns it, store it as an authored (editable)
+// level; otherwise mark it isShared so the UI offers Clone-to-edit.
+async function applyPlayUrlParam() {
+  const url = new URL(window.location.href);
+  const code = url.searchParams.get('play');
+  if (!code) return;
+  // Strip the param so refreshing doesn't re-add the level.
+  url.searchParams.delete('play');
+  history.replaceState(null, '', url.toString());
+
+  const existing = state.levels.find((l) => l.code === code);
+  if (existing) {
+    state.activeId = existing.id;
+    persist();
+    return;
+  }
+  const data = await getSharedLevel(code);
+  if (!data) {
+    flashStatus(`Could not load shared puzzle "${code}".`);
+    return;
+  }
+  const lvl = normalizeLevel(data.level);
+  // Always regenerate id locally so we don't collide with an existing
+  // entry that happens to share the original level id.
+  lvl.id = 'lvl_' + Math.random().toString(36).slice(2, 8);
+  lvl.code = data.code;
+  lvl.ownerId = data.ownerId;
+  lvl.ownerName = data.ownerName;
+  lvl.name = data.name || lvl.name;
+  const ap = activeProfile();
+  // If the signed-in player owns this puzzle, treat it as authored so
+  // they can edit + Re-publish in place.
+  lvl.isShared = !(ap && data.ownerId === ap.id);
+  lvl.completed = false;
+  state.levels.push(lvl);
+  state.activeId = lvl.id;
+  persist();
+  bumpPlays(code);
+  flashStatus(`Loaded "${lvl.name}" from @${data.ownerName}.`);
+}
+
+// On a win for a shared puzzle, post the completion + show the
+// top-of-leaderboard inline in the win toast.
+async function postCompletionAndShowLeaderboard(lvl) {
+  if (!lvl || !lvl.code) return;
+  const ap = activeProfile();
+  if (!ap || !apiAvailable()) return;
+  const session = playSession && playSession.levelId === lvl.id
+    ? playSession
+    : null;
+  const durationMs = session ? Math.max(1, Date.now() - session.startedAt) : 1000;
+  const mistakes = session ? session.mistakes : 0;
+  await recordCompletion(ap.token, lvl.code, durationMs, mistakes);
+  const entries = await getLeaderboard(lvl.code);
+  if (!entries || !entries.length) return;
+  const top = entries.slice(0, 5);
+  const items = top
+    .map((e) => {
+      const mine = ap.name === e.profile_name;
+      return `<li class="${mine ? 'lb-you' : ''}">
+        <span>${mine ? 'You' : '@' + escapeHtml(e.profile_name)}</span>
+        <span class="lb-time">${formatMs(e.best_ms)}</span>
+      </li>`;
+    })
+    .join('');
+  winLeaderboard.innerHTML = `<h4>Leaderboard for "${escapeHtml(lvl.name || lvl.code)}"</h4><ol>${items}</ol>`;
+  winLeaderboard.classList.remove('hidden');
+}
+
+function formatMs(ms) {
+  if (!Number.isFinite(ms)) return '';
+  const totalSec = Math.floor(ms / 1000);
+  const m = Math.floor(totalSec / 60);
+  const s = totalSec % 60;
+  return `${m}:${s.toString().padStart(2, '0')}`;
+}
+
 // Self-authored levels (the "Your levels" section). Always shows a
-// + New level card first; the share button is present but disabled
-// until Phase 13.
+// + New level card first.
 function renderStartAuthored() {
   startAuthored.innerHTML = '';
 
@@ -884,11 +1105,18 @@ function renderStartAuthored() {
     const chip = lvl.difficulty && DIFFICULTY_LABELS[lvl.difficulty]
       ? `<span class="difficulty-chip diff-${lvl.difficulty}">${DIFFICULTY_LABELS[lvl.difficulty]}</span>`
       : '';
+    const sharedChip = lvl.code
+      ? `<span class="shared-chip" title="Published as ${escapeHtml(lvl.code)}">shared</span>`
+      : '';
+    const canShare = apiAvailable() && activeProfile();
+    const shareBtn = canShare
+      ? `<button data-authored-action="share" data-authored-id="${escapeHtml(lvl.id)}" class="share-btn">${lvl.code ? 'Re-publish' : 'Share'}</button>`
+      : `<span class="share-btn-disabled" title="Sign in and connect to the server first.">Share</span>`;
     card.innerHTML = `
-      <h3>✏ ${escapeHtml(lvl.name || 'Untitled level')} ${chip}</h3>
+      <h3>✏ ${escapeHtml(lvl.name || 'Untitled level')} ${chip} ${sharedChip}</h3>
       <p>Last edited ${updated.toLocaleDateString()}</p>
       <div class="authored-actions">
-        <span data-authored-action="share" class="share-btn-disabled" title="Sharing ships in Phase 13.">Share (soon)</span>
+        ${shareBtn}
       </div>
     `;
     startAuthored.appendChild(card);
@@ -1077,6 +1305,10 @@ async function boot() {
   // retries every 10 seconds while offline so the client recovers
   // automatically when the server comes back.
   startServerLoop();
+  // If we landed on a ?play=<code> URL, fetch the shared puzzle and
+  // add it to the library. The handler strips the query string so a
+  // refresh does not re-add the level.
+  await applyPlayUrlParam();
   // We *never* auto-load a level on boot. The start menu is always the
   // first thing the user sees, even on returning visits. If there's a
   // previously-active level it's reachable via the menu's Continue card.
@@ -1162,6 +1394,29 @@ async function boot() {
     if (e.target === levelsModal) closeLevels();
   });
 
+  // Share modal close + copy-link handlers.
+  for (const c of document.querySelectorAll('[data-close="share"]')) c.addEventListener('click', closeShareModal);
+  shareModal.addEventListener('click', (e) => {
+    if (e.target === shareModal) closeShareModal();
+  });
+  $('#btn-copy-share').addEventListener('click', async () => {
+    const url = shareUrlInput.value;
+    if (!url) return;
+    try {
+      await navigator.clipboard.writeText(url);
+      shareCopyStatus.textContent = 'Copied.';
+    } catch {
+      // Fallback for browsers that block clipboard API.
+      shareUrlInput.select();
+      try {
+        document.execCommand('copy');
+        shareCopyStatus.textContent = 'Copied.';
+      } catch {
+        shareCopyStatus.textContent = 'Press Ctrl-C / Cmd-C to copy.';
+      }
+    }
+  });
+
   // Start menu wiring. There is no close affordance, the user picks a
   // card to leave. The topbar Menu button reopens the menu mid-session.
   $('#btn-menu').addEventListener('click', () => openStartMenu());
@@ -1209,8 +1464,13 @@ async function boot() {
     if (authoredBtn) {
       if (authoredBtn.disabled) return;
       const act = authoredBtn.dataset.authoredAction;
+      e.stopPropagation();
       if (act === 'open') {
         handleStartAction('open-authored', { authoredId: authoredBtn.dataset.authoredId });
+      } else if (act === 'share') {
+        openShareModal(authoredBtn.dataset.authoredId);
+      } else if (act === 'clone') {
+        cloneSharedLevelToAuthored(authoredBtn.dataset.authoredId);
       }
       return;
     }
@@ -1296,11 +1556,20 @@ async function boot() {
         lvl.updatedAt = Date.now();
         persist();
       }
-      winDetail.textContent = lvl && lvl.name ? `You solved "${lvl.name}".` : 'You solved this case.';
+      const baseLine = lvl && lvl.name ? `You solved "${lvl.name}".` : 'You solved this case.';
+      const elapsed = playSession && lvl && playSession.levelId === lvl.id
+        ? ` Time ${formatMs(Date.now() - playSession.startedAt)}, mistakes ${playSession.mistakes}.`
+        : '';
+      winDetail.textContent = baseLine + elapsed;
+      winLeaderboard.classList.add('hidden');
+      winLeaderboard.innerHTML = '';
       winToast.classList.remove('hidden', 'bad');
+      // Post completion + render leaderboard for shared puzzles.
+      if (lvl && lvl.code) postCompletionAndShowLeaderboard(lvl);
       // Outline only the cells the player actually placed, all correct on a win.
       highlightCells({ correct: result.correct, wrong: [] });
     } else {
+      bumpMistakes(result.wrong.length || 1);
       let msg;
       const hasWrong = result.wrong.length > 0;
       const hasMissing = result.missingCount > 0;

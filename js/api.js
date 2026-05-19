@@ -89,3 +89,112 @@ export async function whoami(token) {
     return null;
   }
 }
+
+// ----- Shared puzzles -----
+
+// Publish an authored level to the server. The server re-runs the
+// validator; on a 422 the caller gets the array of error strings
+// produced server-side and can show them to the player. On success
+// returns { ok: true, code, url }.
+export async function shareLevel(token, level) {
+  if (!apiAvailable()) return { ok: false, status: 0 };
+  try {
+    const res = await call('POST', '/levels', { token, body: { level } });
+    const data = await safeJson(res);
+    if (res.status === 201) {
+      return { ok: true, code: data.code, url: shareUrlFor(data.code) };
+    }
+    if (res.status === 422) {
+      return { ok: false, invalid: true, errors: data.details || [], status: 422 };
+    }
+    return { ok: false, status: res.status, error: data && data.error };
+  } catch {
+    return { ok: false, status: 0 };
+  }
+}
+
+// Update an existing shared level. Owner-only; server returns 403 if
+// the bearer token's profile is not the level's owner.
+export async function updateSharedLevel(token, code, level) {
+  if (!apiAvailable()) return { ok: false, status: 0 };
+  try {
+    const res = await call('PUT', `/levels/${encodeURIComponent(code)}`, {
+      token,
+      body: { level },
+    });
+    const data = await safeJson(res);
+    if (res.ok) return { ok: true };
+    if (res.status === 422) {
+      return { ok: false, invalid: true, errors: data.details || [], status: 422 };
+    }
+    if (res.status === 403) return { ok: false, forbidden: true, status: 403 };
+    return { ok: false, status: res.status, error: data && data.error };
+  } catch {
+    return { ok: false, status: 0 };
+  }
+}
+
+// Public fetch of a shared puzzle by code. Returns the full record
+// (code, name, ownerName, ownerId, playsCount, createdAt, level).
+export async function getSharedLevel(code) {
+  if (!apiAvailable()) return null;
+  try {
+    const res = await call('GET', `/levels/${encodeURIComponent(code)}`);
+    if (!res.ok) return null;
+    return await res.json();
+  } catch {
+    return null;
+  }
+}
+
+// Fire-and-forget plays counter bump. Called once per first open of a
+// shared puzzle on this device.
+export async function bumpPlays(code) {
+  if (!apiAvailable()) return;
+  try {
+    await call('POST', `/levels/${encodeURIComponent(code)}/plays`);
+  } catch {
+    // swallow; the count is best-effort
+  }
+}
+
+// Post a completion record after a player wins a shared puzzle.
+export async function recordCompletion(token, code, durationMs, mistakes) {
+  if (!apiAvailable()) return false;
+  try {
+    const res = await call('POST', '/completions', {
+      token,
+      body: { code, durationMs, mistakes },
+    });
+    return res.ok;
+  } catch {
+    return false;
+  }
+}
+
+// Public leaderboard for a single puzzle. Returns the array of
+// entries (each { profile_name, best_ms, best_mistakes, first_at })
+// or null on failure.
+export async function getLeaderboard(code) {
+  if (!apiAvailable()) return null;
+  try {
+    const res = await call('GET', `/levels/${encodeURIComponent(code)}/leaderboard`);
+    if (!res.ok) return null;
+    const data = await res.json();
+    return data.entries || [];
+  } catch {
+    return null;
+  }
+}
+
+// Convenience: build the public share URL for a level code. We point
+// at the current origin + ?play=<code> so the link the author copies
+// matches the URL handler in main.js.
+export function shareUrlFor(code) {
+  const { origin, pathname } = window.location;
+  return `${origin}${pathname}?play=${encodeURIComponent(code)}`;
+}
+
+async function safeJson(res) {
+  try { return await res.json(); } catch { return null; }
+}

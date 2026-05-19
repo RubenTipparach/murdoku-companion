@@ -1220,6 +1220,109 @@ body:has(> #start-modal.start-screen:not(.hidden)) > .layout {
   opacity: 0.7;
   cursor: not-allowed;
 }
+.share-btn,
+.clone-btn,
+.leaderboard-btn {
+  display: inline-block;
+  font-size: 11px;
+  padding: 3px 10px;
+  border: 1px solid #6b4a8a;
+  border-radius: 4px;
+  background: #2f2848;
+  color: #ece8ff;
+  cursor: pointer;
+  font-family: inherit;
+}
+.share-btn:hover,
+.clone-btn:hover,
+.leaderboard-btn:hover {
+  background: #3a2c4a;
+}
+.shared-chip {
+  display: inline-block;
+  font-size: 10px;
+  padding: 1px 6px;
+  background: #3a2c4a;
+  color: #fcd34d;
+  border-radius: 999px;
+  letter-spacing: 0.5px;
+  margin-left: 4px;
+  vertical-align: middle;
+}
+
+/* Share modal */
+.share-errors {
+  background: #3a1f24;
+  border: 1px solid #8a3a3a;
+  color: #fca5a5;
+  padding: 10px 14px;
+  border-radius: 6px;
+  margin-bottom: 10px;
+}
+.share-errors ul { margin: 6px 0 0; padding-left: 18px; }
+.share-errors li { margin: 2px 0; }
+.share-pending { color: var(--ink-dim); padding: 8px 0; }
+.share-success p { margin: 0 0 10px; color: var(--ink-dim); }
+.share-url-row {
+  display: flex;
+  gap: 6px;
+  margin: 6px 0;
+}
+.share-url-row input {
+  flex: 1;
+  font-family: monospace;
+  font-size: 12px;
+  padding: 6px 8px;
+  background: #1f1b2e;
+  border: 1px solid #4a416c;
+  color: var(--ink);
+  border-radius: 4px;
+}
+.share-url-row button {
+  padding: 6px 14px;
+  font-size: 12px;
+}
+.share-copy-status {
+  font-size: 11px;
+  color: #86efac;
+  margin: 4px 0 0;
+  min-height: 14px;
+}
+
+/* Win-modal leaderboard */
+.win-leaderboard {
+  margin-top: 8px;
+  padding: 8px 10px;
+  background: #2f2848;
+  border: 1px solid #4a416c;
+  border-radius: 6px;
+  font-size: 12px;
+}
+.win-leaderboard.hidden { display: none; }
+.win-leaderboard h4 {
+  margin: 0 0 6px;
+  color: #c084fc;
+  font-size: 11px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+.win-leaderboard ol {
+  margin: 0;
+  padding-left: 22px;
+}
+.win-leaderboard li {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+.win-leaderboard .lb-you {
+  color: #fcd34d;
+  font-weight: 600;
+}
+.win-leaderboard .lb-time {
+  font-variant-numeric: tabular-nums;
+  color: var(--ink-dim);
+}
 
 /* Character description under the clue */
 .clue-row .char-desc {
