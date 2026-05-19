@@ -39,6 +39,16 @@
     </header>
 
     <main class="layout">
+      <section class="meta-panel">
+        <h2 id="meta-heading">Level description</h2>
+        <textarea
+          id="level-description"
+          rows="3"
+          placeholder="Set the scene for your players…"
+        ></textarea>
+        <p id="meta-readonly" class="meta-readonly hidden"></p>
+      </section>
+
       <section class="board-wrap">
         <div id="sample-banner" class="sample-banner hidden">
           <span>This is a shipped sample. To make changes, <strong>Clone</strong> it first.</span>
@@ -94,16 +104,6 @@
           <ul id="room-list-play" class="room-list readonly"></ul>
         </div>
       </aside>
-
-      <section class="meta-panel">
-        <h2 id="meta-heading">Level description</h2>
-        <textarea
-          id="level-description"
-          rows="3"
-          placeholder="Set the scene for your players…"
-        ></textarea>
-        <p id="meta-readonly" class="meta-readonly hidden"></p>
-      </section>
     </main>
 
     <!-- Start menu modal -->
@@ -115,6 +115,8 @@
         </header>
         <div class="modal-body">
           <p class="start-tagline">A murder-mystery puzzle in nine by nine.</p>
+          <h3 id="start-continue-heading" class="start-section hidden">Continue</h3>
+          <div id="start-continue" class="start-cards hidden"></div>
           <h3 class="start-section">Play a sample</h3>
           <div id="start-samples" class="start-cards"></div>
           <h3 class="start-section">Or author your own</h3>

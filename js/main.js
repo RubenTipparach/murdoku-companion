@@ -368,7 +368,8 @@ function loadSampleAsNewLevel(sampleKey) {
   state.selectedRoomId = null;
 }
 
-// Populate the start-menu sample cards from SAMPLES.
+// Populate the start-menu sample cards from SAMPLES, plus a Continue card
+// when there's an active level to resume.
 function renderStartSamples() {
   startSamples.innerHTML = '';
   for (const s of SAMPLES) {
@@ -382,6 +383,33 @@ function renderStartSamples() {
     `;
     startSamples.appendChild(card);
   }
+  renderStartContinue();
+}
+
+function renderStartContinue() {
+  const continueEl = $('#start-continue');
+  const headingEl = $('#start-continue-heading');
+  continueEl.innerHTML = '';
+  const lvl = state.levels.find((l) => l.id === state.activeId) || state.levels[0];
+  if (!lvl) {
+    continueEl.classList.add('hidden');
+    headingEl.classList.add('hidden');
+    return;
+  }
+  continueEl.classList.remove('hidden');
+  headingEl.classList.remove('hidden');
+  const card = document.createElement('button');
+  card.className = 'start-card';
+  card.dataset.action = 'continue';
+  card.dataset.continueId = lvl.id;
+  const subtitle = lvl.isSample
+    ? 'Sample — resumes in Play mode.'
+    : 'Your last-edited level — resumes in Edit mode.';
+  card.innerHTML = `
+    <h3>↻ ${escapeHtml(lvl.name || 'Untitled level')}</h3>
+    <p>${escapeHtml(subtitle)}</p>
+  `;
+  continueEl.appendChild(card);
 }
 
 // ---------- Levels modal ----------
@@ -455,6 +483,9 @@ function closeLevels() { levelsModal.classList.add('hidden'); }
 // ---------- Start menu ----------
 
 function openStartMenu({ closable } = { closable: true }) {
+  // Refresh dynamic cards (the Continue card depends on the active level,
+  // which can change between opens via Levels modal etc.).
+  renderStartSamples();
   const closeBtn = $('#start-close');
   if (closeBtn) closeBtn.hidden = !closable;
   startModal.classList.remove('hidden');
@@ -481,6 +512,17 @@ function handleStartAction(action, opts = {}) {
       setMode('edit');
       break;
     }
+    case 'continue': {
+      // Resume the saved level under its current id. Default mode: play
+      // for samples (case file feel), edit for everything else.
+      const id = opts.continueId;
+      const lvl = state.levels.find((l) => l.id === id);
+      if (!lvl) break;
+      state.activeId = id;
+      persist();
+      setMode(lvl.isSample ? 'play' : 'edit');
+      break;
+    }
   }
   closeStartMenu();
   rerender();
@@ -491,10 +533,13 @@ function handleStartAction(action, opts = {}) {
 async function boot() {
   state.levels = loadLevels().map(normalizeLevel);
   state.activeId = loadActiveId();
-  // First-visit users hit the start menu instead of auto-loading the sample,
-  // so they aren't spoiled by seeing the solution in edit mode.
-  const firstVisit = state.levels.length === 0;
-  if (!firstVisit) ensureAtLeastOneLevel();
+  // We *never* auto-load a level on boot. The start menu is always the
+  // first thing the user sees, even on returning visits. If there's a
+  // previously-active level it's reachable via the menu's Continue card.
+  const hasLevels = state.levels.length > 0;
+  // Clear activeId so nothing renders behind the modal — the menu is the
+  // whole UI until the user picks something.
+  if (!hasLevels) state.activeId = null;
 
   await Promise.all([loadCharacters(), loadFurniture()]);
 
@@ -562,7 +607,10 @@ async function boot() {
   startModal.addEventListener('click', (e) => {
     const card = e.target.closest('.start-card');
     if (!card) return;
-    handleStartAction(card.dataset.action, { sampleKey: card.dataset.sampleKey });
+    handleStartAction(card.dataset.action, {
+      sampleKey: card.dataset.sampleKey,
+      continueId: card.dataset.continueId,
+    });
   });
 
   $('#btn-new-level').addEventListener('click', () => {
@@ -694,14 +742,11 @@ async function boot() {
     }
   }, 4000);
 
-  // First-visit users see the start menu (not closable — they must pick).
-  // Returning users land in edit mode on their last-active level.
-  if (firstVisit) {
-    setMode('edit'); // initial paint will be hidden behind the modal
-    openStartMenu({ closable: false });
-  } else {
-    setMode('edit');
-  }
+  // The start menu is the entry point on every boot. It's closable only
+  // when there's a saved level to fall back to — first-time users must
+  // pick something before the editor is reachable.
+  setMode('edit'); // baseline so the rest of the chrome paints once
+  openStartMenu({ closable: hasLevels });
 }
 
 let flashTimer = null;
