@@ -379,7 +379,13 @@ function positionSelectedClue(charId) {
 // Repopulate the topbar level-select dropdown to mirror state.levels.
 function renderLevelSelect() {
   levelSelect.innerHTML = '';
+  // The dropdown is "your levels" + custom shared puzzles. Shipped
+  // samples are never editable, so we don't expose them here, the
+  // player picks samples from the start menu's library instead. If
+  // the current active level is a sample we still include it so the
+  // dropdown has a valid selected option while the player is on it.
   for (const lvl of state.levels) {
+    if (lvl.isSample && lvl.id !== state.activeId) continue;
     const opt = document.createElement('option');
     opt.value = lvl.id;
     opt.textContent = (lvl.isSample ? '🔒 ' : '') + (lvl.name || '(untitled)');
@@ -522,12 +528,55 @@ function ensureAtLeastOneLevel({ seedSample = false } = {}) {
 
 // Load a fresh copy of the named sample (or the default if no key supplied).
 // The new copy gets a unique id and is marked isSample so the editor locks it
-// until the player clones.
+// until the player clones. If an instance for this sample already exists in
+// state.levels (e.g. the player previously played and didn't clone), we
+// reuse it and reset the play state instead of stacking another one, so
+// "Your levels" / the levels modal / the dropdown never see duplicates.
 function loadSampleAsNewLevel(sampleKey) {
+  const existing = state.levels.find((l) => l.isSample && l.sampleKey === sampleKey);
+  if (existing) {
+    existing.playerPlacement = {};
+    existing.playerKiller = null;
+    existing.updatedAt = Date.now();
+    state.activeId = existing.id;
+    state.selectedRoomId = null;
+    return;
+  }
   const lvl = buildSampleLevel(sampleKey);
   state.levels.push(lvl);
   state.activeId = lvl.id;
   state.selectedRoomId = null;
+}
+
+// One-time cleanup, called from boot(). Older saves stacked a new
+// instance every time a sample was played, so the levels modal and
+// the topbar dropdown can be cluttered with phantom duplicates of
+// the same shipped puzzle. Consolidate down to one instance per
+// sampleKey (keeping the most recently updated, so any in-flight
+// placements survive).
+function dedupeSamplePlayInstances() {
+  const bySample = new Map();
+  const survivors = [];
+  for (const lvl of state.levels) {
+    if (!lvl.isSample || !lvl.sampleKey) {
+      survivors.push(lvl);
+      continue;
+    }
+    const prior = bySample.get(lvl.sampleKey);
+    if (!prior || (lvl.updatedAt || 0) > (prior.updatedAt || 0)) {
+      bySample.set(lvl.sampleKey, lvl);
+    }
+  }
+  for (const lvl of bySample.values()) survivors.push(lvl);
+  if (survivors.length !== state.levels.length) {
+    // Keep activeId pointing at a surviving level, fall back to null
+    // so boot lands on the start menu rather than a dangling id.
+    const survivorIds = new Set(survivors.map((l) => l.id));
+    if (state.activeId && !survivorIds.has(state.activeId)) state.activeId = null;
+    state.levels = survivors;
+    saveLevels(state.levels);
+    saveActiveId(state.activeId);
+  }
 }
 
 // Render the profile row at the top of the start menu. Three states:
@@ -1539,7 +1588,11 @@ function renderStartAuthored() {
 
 function renderLevelsList() {
   levelsListEl.innerHTML = '';
-  for (const lvl of state.levels) {
+  // Shipped samples are managed from the start menu library, not
+  // the levels modal, so they don't appear here. Authored levels +
+  // clones + custom shared puzzles do.
+  const managed = state.levels.filter((l) => !l.isSample);
+  for (const lvl of managed) {
     const li = document.createElement('li');
     if (lvl.id === state.activeId) li.classList.add('active');
 
@@ -1702,6 +1755,10 @@ async function boot() {
   state.levels = loadLevels().map(normalizeLevel);
   state.activeId = loadActiveId();
   state.completedSamples = new Set(loadCompletedSamples());
+  // Older saves stacked a fresh instance every time a shipped sample
+  // was played; collapse those down so the levels modal + dropdown
+  // never show phantom duplicates of the same case.
+  dedupeSamplePlayInstances();
   state.profiles = loadProfiles();
   state.activeProfileName = loadActiveProfileName();
   // Verify the stored active-profile name still matches an entry.
