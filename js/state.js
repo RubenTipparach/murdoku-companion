@@ -33,6 +33,12 @@ export function emptyLevel(name = 'Untitled house') {
     decorations: {},
     // Per-character clue text. Keyed by character id. Rendered in Play mode.
     clues: {},
+    // Whose body is on the floor. Their portrait gets a 🪦 badge and they
+    // appear in the suspect roster already-placed by default for the player.
+    victim: null,
+    // Who actually did it (author truth). Player guesses via playerKiller.
+    killerSolution: null,
+    playerKiller: null,
     createdAt: now,
     updatedAt: now,
   };

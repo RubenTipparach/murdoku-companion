@@ -91,6 +91,9 @@ export function normalizeLevel(lvl) {
   if (!lvl.clues || typeof lvl.clues !== 'object') lvl.clues = {};
   if (!Array.isArray(lvl.rooms)) lvl.rooms = [];
   if (typeof lvl.isSample !== 'boolean') lvl.isSample = false;
+  if (typeof lvl.victim === 'undefined') lvl.victim = null;
+  if (typeof lvl.killerSolution === 'undefined') lvl.killerSolution = null;
+  if (typeof lvl.playerKiller === 'undefined') lvl.playerKiller = null;
   for (const room of lvl.rooms) {
     if (!room.tilePattern) room.tilePattern = 'solid';
   }

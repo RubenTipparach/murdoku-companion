@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Murdoku</title>
-    <link rel="stylesheet" href="./css/style.css?v=16" />
+    <link rel="stylesheet" href="./css/style.css?v=17" />
     <link
       rel="icon"
       type="image/svg+xml"
@@ -21,6 +21,7 @@
         </div>
         <div class="topbar-actions">
           <button id="btn-menu" title="Open the start menu">Menu</button>
+          <button id="btn-help-topbar" title="How to play Murdoku">❓</button>
           <button id="btn-clone" title="Clone the current level into an editable copy">Clone</button>
           <button id="btn-save" title="Force save to localStorage">Save</button>
           <button id="btn-export" title="Download this level as JSON">Export</button>
@@ -129,6 +130,50 @@
               <p>Author rooms, place suspects, write the clues.</p>
             </button>
           </div>
+
+          <div class="start-footer">
+            <button id="btn-help" class="start-footer-btn">❓ How to play</button>
+            <button id="btn-reset-all" class="start-footer-btn danger">⚠ Reset all data</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Help modal — game rules walkthrough. -->
+    <div id="help-modal" class="modal hidden" role="dialog">
+      <div class="modal-inner">
+        <header>
+          <h2>How to play Murdoku</h2>
+          <button class="close" data-close="help">×</button>
+        </header>
+        <div class="modal-body help-body">
+          <h3>The setup</h3>
+          <p>The 9×9 grid is a house. Each suspect stood in exactly one cell at the moment of the murder. The victim 🪦 is one of them.</p>
+
+          <h3>The rules</h3>
+          <ul>
+            <li><strong>Unique row + column.</strong> No two suspects share a row or a column. Everyone stands on their own row and their own column.</li>
+            <li><strong>Killer alone with the victim.</strong> The killer 🔪 stood in the same room as the victim. Every other suspect was in a different room.</li>
+          </ul>
+
+          <h3>The clues</h3>
+          <p>Each suspect has a clue describing where they stood. Clues use relative language:</p>
+          <ul>
+            <li>Furniture references: <em>"at the orchid table"</em>, <em>"on the rug"</em>, <em>"at the keys of a piano"</em>.</li>
+            <li>Other suspects: <em>"in the same room as Crowe"</em>, <em>"to the left of the piano"</em>, <em>"directly below the lantern"</em>.</li>
+            <li>Room references: <em>"in the only room with no furniture"</em>, <em>"on the shop floor"</em>.</li>
+          </ul>
+
+          <h3>How to play</h3>
+          <ol>
+            <li>Click a suspect to read their clue.</li>
+            <li>Drag — or click cell — to place them where you think they stood.</li>
+            <li>Re-placing a suspect moves them; each suspect can only be in one cell.</li>
+            <li>Identify who shared the room with the victim and mark them with 🔪 <strong>Mark as killer</strong> in the clue bubble.</li>
+            <li>When every suspect is placed and a killer is named, <strong>Check solution</strong> unlocks. Click it.</li>
+          </ol>
+
+          <p class="hint">Toggles above the grid: hide room names, fade portraits so you can read the tile under them.</p>
         </div>
       </div>
     </div>
@@ -158,6 +203,6 @@
       <button data-close="toast">OK</button>
     </div>
 
-    <script type="module" src="./js/main.js?v=16"></script>
+    <script type="module" src="./js/main.js?v=17"></script>
   </body>
 </html>

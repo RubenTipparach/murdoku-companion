@@ -321,6 +321,28 @@ input:focus, textarea:focus { outline: 2px solid var(--accent); outline-offset: 
 }
 .cell.mismatch { box-shadow: 0 0 0 3px var(--bad) inset; }
 .cell.correct  { box-shadow: 0 0 0 3px var(--good) inset; }
+
+/* Victim 🪦 / killer 🔪 badge layered over the portrait. */
+.cell .cell-badge {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  z-index: 3;
+  font-size: 13px;
+  line-height: 1;
+  pointer-events: none;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.7);
+}
+.char-tile .tile-badge {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  font-size: 11px;
+  line-height: 1;
+  pointer-events: none;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.7);
+}
+.char-tile { position: relative; }
 .cell.drag-over { outline: 2px dashed var(--accent-2); outline-offset: -2px; }
 
 /* Fade-guests view: drops placed portrait opacity so the tile/furniture
@@ -473,6 +495,25 @@ body.guests-transparent .cell.suspect-selected .portrait { opacity: 0.9; }
 
 .play-actions { display: flex; gap: 6px; margin: 10px 0; }
 .play-actions button { flex: 1; }
+.play-actions button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+/* Mark-as-killer button inside the clue bubble. */
+.kill-btn {
+  margin-top: 8px;
+  width: 100%;
+  background: var(--bg-2);
+  border-color: #4a416c;
+  font-size: 12px;
+}
+.kill-btn:hover { background: #4a416c; }
+.kill-btn.on {
+  background: var(--bad);
+  color: #1c1330;
+  border-color: var(--bad);
+}
 
 /* The selected-suspect clue bubble. Floats above the page UI and is
    positioned by JS to point at the currently-selected suspect tile.
@@ -597,6 +638,33 @@ body.guests-transparent .cell.suspect-selected .portrait { opacity: 0.9; }
   background: linear-gradient(180deg, rgba(110, 231, 183, 0.10), transparent);
 }
 .start-card.completed h3 { color: var(--good); }
+
+/* Start-menu footer: small links for help + destructive reset. */
+.start-footer {
+  display: flex;
+  gap: 8px;
+  margin-top: 20px;
+  padding-top: 14px;
+  border-top: 1px solid #4a416c;
+  justify-content: space-between;
+  flex-wrap: wrap;
+}
+.start-footer-btn {
+  background: transparent;
+  border: 1px solid #4a416c;
+  color: var(--ink-dim);
+  font-size: 12px;
+}
+.start-footer-btn:hover { background: var(--panel-2); color: var(--ink); }
+.start-footer-btn.danger { color: var(--bad); border-color: var(--bad); }
+.start-footer-btn.danger:hover { background: var(--bad); color: #1c1330; }
+
+/* Help modal content. */
+.help-body h3 { margin: 14px 0 4px; font-size: 14px; color: var(--accent-2); }
+.help-body h3:first-child { margin-top: 0; }
+.help-body p, .help-body ul, .help-body ol { margin: 4px 0; font-size: 13px; line-height: 1.5; }
+.help-body ul, .help-body ol { padding-left: 18px; }
+.help-body em { color: var(--ink-dim); }
 .start-card h3 {
   margin: 0 0 4px;
   font-size: 15px;

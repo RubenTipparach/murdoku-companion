@@ -34,8 +34,12 @@ export function checkSolution() {
   for (const k of all) {
     if (lvl.solution[k] !== lvl.playerPlacement[k]) wrong.push(k);
   }
-  const win = wrong.length === 0 && solKeys.size > 0;
-  return { win, wrong };
+  // Killer accusation: only enforced if the level defines a killer.
+  const killerWrong = lvl.killerSolution
+    ? lvl.playerKiller !== lvl.killerSolution
+    : false;
+  const win = wrong.length === 0 && solKeys.size > 0 && !killerWrong;
+  return { win, wrong, killerWrong };
 }
 
 // Briefly tint mismatched cells in the DOM.

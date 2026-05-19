@@ -92,7 +92,7 @@ function rerender() {
   const isSample = !!(lvl && lvl.isSample);
   if (state.mode === 'edit') {
     renderRoomList(roomList);
-    renderRoster(roster, {});
+    renderRoster(roster, { level: lvl });
     renderClueEditor(clueEditorEl);
   } else {
     renderRoomListReadonly(roomListPlay);
@@ -100,8 +100,9 @@ function rerender() {
     // solution — no point cluttering the roster with people the case never
     // names. Derived live so it picks up edits.
     const suspectIds = lvl ? [...new Set(Object.values(lvl.solution))] : [];
-    renderRoster(rosterPlay, { filterIds: suspectIds });
+    renderRoster(rosterPlay, { filterIds: suspectIds, level: lvl });
     renderSelectedClue(selectedClue);
+    updateCheckGate();
   }
   nameInput.value = lvl ? lvl.name : '';
   metaTextarea.value = lvl ? lvl.description : '';
@@ -193,8 +194,7 @@ function renderClueEditor(container) {
 }
 
 // Play mode: render a floating clue bubble pointed at the currently-
-// selected suspect tile. Hidden when no suspect is selected or no clue
-// is available.
+// selected suspect tile. Hidden when no suspect is selected.
 function renderSelectedClue(container) {
   const lvl = activeLevel();
   const charId = state.selectedCharacterId;
@@ -209,17 +209,58 @@ function renderSelectedClue(container) {
     return;
   }
   const clueText = lvl.clues[charId] || '(No clue has been written for this suspect.)';
+  const isVictim = lvl.victim === charId;
+  const isKiller = lvl.playerKiller === charId;
+  // Killer marking is the player's accusation. The victim cannot also be
+  // the killer (they died), so we hide the button on the victim row.
+  const killerBtn = isVictim
+    ? ''
+    : `<button class="kill-btn ${isKiller ? 'on' : ''}" data-kill="1">${isKiller ? '🔪 Unmark killer' : '🔪 Mark as killer'}</button>`;
+  const badge = isVictim ? '🪦 ' : (isKiller ? '🔪 ' : '');
   container.classList.remove('hidden');
   container.innerHTML = `
     <img src="${char.portrait}" alt="${char.name}" />
     <div class="clue-body">
-      <strong>${escapeHtml(char.name)}</strong>
+      <strong>${badge}${escapeHtml(char.name)}</strong>
       <p class="char-desc">${escapeHtml(char.description || '')}</p>
       <p class="clue-text">${escapeHtml(clueText)}</p>
+      ${killerBtn}
     </div>
   `;
-  // Wait one frame so the bubble is measurable before positioning.
+  const killBtn = container.querySelector('[data-kill]');
+  if (killBtn) {
+    killBtn.addEventListener('click', () => {
+      lvl.playerKiller = isKiller ? null : charId;
+      lvl.updatedAt = Date.now();
+      persist();
+      rerender();
+    });
+  }
   requestAnimationFrame(() => positionSelectedClue(charId));
+}
+
+// Gate the Check button: disabled until every solution cell has a
+// player-placement AND a killer has been marked. Tooltip explains why.
+function updateCheckGate() {
+  const btn = $('#btn-check');
+  if (!btn) return;
+  const lvl = activeLevel();
+  if (!lvl || state.mode !== 'play') {
+    btn.disabled = true;
+    btn.title = '';
+    return;
+  }
+  const solutionCount = Object.keys(lvl.solution).length;
+  const placedCount = Object.keys(lvl.playerPlacement).length;
+  const placedAll = solutionCount > 0 && placedCount >= solutionCount;
+  const killerNamed = !!lvl.playerKiller;
+  const ready = placedAll && killerNamed;
+  btn.disabled = !ready;
+  btn.title = ready
+    ? 'Submit your accusation.'
+    : !placedAll
+      ? `Place every suspect first (${placedCount}/${solutionCount} placed).`
+      : 'Mark one suspect as the killer 🔪 first.';
 }
 
 // Anchor the clue bubble below the selected suspect tile, clamped to the
@@ -656,6 +697,29 @@ async function boot() {
   // Start menu wiring. There is no close affordance — the user picks a
   // card to leave. The topbar Menu button reopens the menu mid-session.
   $('#btn-menu').addEventListener('click', () => openStartMenu());
+
+  // Help modal — accessible from both the start menu footer and the topbar.
+  const helpModal = $('#help-modal');
+  const openHelp = () => helpModal.classList.remove('hidden');
+  const closeHelp = () => helpModal.classList.add('hidden');
+  $('#btn-help').addEventListener('click', openHelp);
+  $('#btn-help-topbar').addEventListener('click', openHelp);
+  for (const c of document.querySelectorAll('[data-close="help"]')) c.addEventListener('click', closeHelp);
+  helpModal.addEventListener('click', (e) => { if (e.target === helpModal) closeHelp(); });
+
+  // Reset all data — wipes every saved level and progress flag. Confirmed
+  // twice because there is no undo.
+  $('#btn-reset-all').addEventListener('click', () => {
+    if (!confirm('This will erase every saved level, all progress, and any in-flight clues you have written. Continue?')) return;
+    if (!confirm('Last chance — this cannot be undone. Reset everything?')) return;
+    try {
+      localStorage.removeItem('murdoku.levels');
+      localStorage.removeItem('murdoku.activeId');
+      localStorage.removeItem('murdoku.completedSamples');
+    } catch {}
+    // Reload to start clean — boot() will run again with empty state.
+    location.reload();
+  });
   renderStartSamples();
   startModal.addEventListener('click', (e) => {
     const card = e.target.closest('.start-card');
@@ -748,10 +812,17 @@ async function boot() {
         if (lvl && lvl.solution[k]) cellEl.classList.add('correct');
       }
     } else {
-      winDetail.textContent =
-        result.wrong.length === 0
-          ? 'No solution has been set for this level yet.'
-          : `${result.wrong.length} cell(s) are off. Keep at it.`;
+      let msg;
+      if (result.wrong.length > 0 && result.killerWrong) {
+        msg = `${result.wrong.length} cell(s) are off — and the killer is wrong too.`;
+      } else if (result.wrong.length > 0) {
+        msg = `${result.wrong.length} cell(s) are off. Keep at it.`;
+      } else if (result.killerWrong) {
+        msg = 'Everyone is in the right cell — but the killer is wrong. Look again at who shared a room with the victim.';
+      } else {
+        msg = 'No solution has been set for this level yet.';
+      }
+      winDetail.textContent = msg;
       winToast.classList.remove('hidden');
       winToast.classList.add('bad');
       highlightCells(result.wrong);

@@ -120,8 +120,18 @@ export function renderGrid(container, handlers) {
           p.style.backgroundImage = `url('${char.portrait}')`;
           p.title = char.name;
           cell.appendChild(p);
-          // Highlight the cell when its character is the currently-selected
-          // suspect so players can see where they've already placed them.
+          // Badges: 🪦 for the victim, 🔪 for whoever the player has
+          // marked as the killer (or, in edit mode, the solution killer).
+          const showVictim = lvl.victim === charId;
+          const showKiller = state.mode === 'play'
+            ? lvl.playerKiller === charId
+            : lvl.killerSolution === charId;
+          if (showVictim || showKiller) {
+            const badge = document.createElement('div');
+            badge.className = 'cell-badge';
+            badge.textContent = (showVictim ? '🪦' : '') + (showKiller ? '🔪' : '');
+            cell.appendChild(badge);
+          }
           if (state.selectedCharacterId === charId) {
             cell.classList.add('suspect-selected');
           }
