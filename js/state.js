@@ -1,6 +1,16 @@
 // Global mutable state and the level model.
 
-export const GRID = 9;
+export const DEFAULT_GRID = 9;
+// Maximum supported grid size, bumping this requires no code changes,
+// but levels above ~14 get cramped on mobile so we cap UI sizing there.
+export const MAX_GRID = 14;
+
+// Active grid size: read from the active level if present, else fall back
+// to the default. Used by grid.js, doorway helpers, and CSS.
+export function gridSize() {
+  const lvl = activeLevel();
+  return (lvl && lvl.size) ? lvl.size : DEFAULT_GRID;
+}
 
 const ROOM_PALETTE = [
   '#7b9ed1', '#c47b7b', '#7bc48f', '#c4a87b', '#a87bc4',
@@ -20,12 +30,13 @@ function id(prefix) {
   return prefix + '_' + Math.random().toString(36).slice(2, 8);
 }
 
-export function emptyLevel(name = 'Untitled house') {
+export function emptyLevel(name = 'Untitled house', size = DEFAULT_GRID) {
   const now = Date.now();
   return {
     id: id('lvl'),
     name,
     description: '',
+    size,
     rooms: [],
     doorways: [],
     solution: {},
@@ -33,6 +44,12 @@ export function emptyLevel(name = 'Untitled house') {
     decorations: {},
     // Per-character clue text. Keyed by character id. Rendered in Play mode.
     clues: {},
+    // Whose body is on the floor. Their portrait gets a 🪦 badge and they
+    // appear in the suspect roster already-placed by default for the player.
+    victim: null,
+    // Who actually did it (author truth). Player guesses via playerKiller.
+    killerSolution: null,
+    playerKiller: null,
     createdAt: now,
     updatedAt: now,
   };
@@ -54,10 +71,16 @@ export const state = {
   levels: [],
   activeId: null,
   characters: [],
-  mode: 'edit',       // 'edit' | 'play'
-  tool: 'paint',      // 'paint' | 'erase' | 'doorway' | 'solution'
+  mode: 'edit',      // 'edit' | 'play'
+  tool: 'paint',     // 'paint' | 'erase' | 'doorway' | 'solution'
   selectedRoomId: null,
   selectedCharacterId: null,
+  showRoomNames: true,
+  transparentGuests: false,
+  showRowColMarks: false,
+  // Sample keys (e.g. 'lvl_sample_lighthouse') the user has solved at
+  // least once. Hydrated from localStorage at boot.
+  completedSamples: new Set(),
   // Cache of cell → roomId for O(1) lookup. Rebuilt on render.
   cellRoomCache: new Map(),
 };
@@ -101,7 +124,7 @@ export function setCellRoom(x, y, roomId) {
     if (lvl.playerPlacement[k]) delete lvl.playerPlacement[k];
     if (lvl.decorations && lvl.decorations[k]) delete lvl.decorations[k];
   }
-  // Doorways become stale silently — they just won't render if there's no
+  // Doorways become stale silently, they just won't render if there's no
   // wall there anymore.
   if (roomId) {
     const room = lvl.rooms.find((r) => r.id === roomId);
@@ -112,14 +135,14 @@ export function setCellRoom(x, y, roomId) {
 }
 
 // Doorway helpers. We store doorways as canonical edge strings:
-//   "h:x,y"  — horizontal edge between (x,y) and (x,y+1)
-//   "v:x,y"  — vertical edge between (x,y) and (x+1,y)
+//   "h:x,y", horizontal edge between (x,y) and (x,y+1)
+//   "v:x,y", vertical edge between (x,y) and (x+1,y)
 export function edgeKey(x, y, side) {
   switch (side) {
     case 'top':    return y > 0 ? `h:${x},${y - 1}` : null;
-    case 'bottom': return y < GRID - 1 ? `h:${x},${y}` : null;
+    case 'bottom': return y < gridSize() - 1 ? `h:${x},${y}` : null;
     case 'left':   return x > 0 ? `v:${x - 1},${y}` : null;
-    case 'right':  return x < GRID - 1 ? `v:${x},${y}` : null;
+    case 'right':  return x < gridSize() - 1 ? `v:${x},${y}` : null;
   }
   return null;
 }
@@ -144,7 +167,7 @@ export function hasDoorway(x, y, side) {
 
 // Place a character at (x,y) in whichever placement map the current mode
 // targets (solution in edit, playerPlacement in play). Each character can
-// only sit in one cell at a time — placing them somewhere new removes them
+// only sit in one cell at a time, placing them somewhere new removes them
 // from wherever they were before. Returns true if the placement happened.
 export function placeCharacterAt(x, y, charId) {
   const lvl = activeLevel();

@@ -1,23 +1,25 @@
 // Grid rendering. Recomputes wall/doorway state on each render.
 
 import {
-  GRID,
   state,
   activeLevel,
+  gridSize,
   key,
   roomAt,
   hasDoorway,
   edgeKey,
 } from './state.js';
 import { findFurniture } from './decor.js';
+import { badge as iconBadge } from './icons.js';
 
 const SIDES = ['top', 'right', 'bottom', 'left'];
 
 function neighbor(x, y, side) {
+  const N = gridSize();
   switch (side) {
     case 'top':    return y > 0 ? { x, y: y - 1 } : null;
-    case 'right':  return x < GRID - 1 ? { x: x + 1, y } : null;
-    case 'bottom': return y < GRID - 1 ? { x, y: y + 1 } : null;
+    case 'right':  return x < N - 1 ? { x: x + 1, y } : null;
+    case 'bottom': return y < N - 1 ? { x, y: y + 1 } : null;
     case 'left':   return x > 0 ? { x: x - 1, y } : null;
   }
 }
@@ -51,6 +53,10 @@ export function renderGrid(container, handlers) {
   const lvl = activeLevel();
   container.innerHTML = '';
   if (!lvl) return;
+  const N = gridSize();
+  // Drive the CSS template via a custom property so the grid lays out
+  // for any supported size (9, 12, …) without a stylesheet change.
+  container.style.setProperty('--grid-cols', N);
 
   // Pre-compute anchor lookup so we can place a label on exactly one cell.
   const anchors = new Map();
@@ -59,8 +65,22 @@ export function renderGrid(container, handlers) {
     if (a) anchors.set(key(a[0], a[1]), room);
   }
 
-  for (let y = 0; y < GRID; y++) {
-    for (let x = 0; x < GRID; x++) {
+  // Row/col X-ray: for every cell, decide if it's in a row or column
+  // currently occupied by a placed suspect. Track conflicts so cells in a
+  // doubly-occupied row/col can be flagged red.
+  const placements = state.mode === 'play' ? lvl.playerPlacement : lvl.solution;
+  const rowsOccupied = new Map(); // y → [charIds]
+  const colsOccupied = new Map(); // x → [charIds]
+  if (state.showRowColMarks) {
+    for (const k of Object.keys(placements)) {
+      const [px, py] = k.split(',').map(Number);
+      rowsOccupied.set(py, (rowsOccupied.get(py) || []).concat(placements[k]));
+      colsOccupied.set(px, (colsOccupied.get(px) || []).concat(placements[k]));
+    }
+  }
+
+  for (let y = 0; y < N; y++) {
+    for (let x = 0; x < N; x++) {
       const cell = document.createElement('div');
       cell.className = 'cell';
       cell.dataset.x = x;
@@ -120,8 +140,19 @@ export function renderGrid(container, handlers) {
           p.style.backgroundImage = `url('${char.portrait}')`;
           p.title = char.name;
           cell.appendChild(p);
-          // Highlight the cell when its character is the currently-selected
-          // suspect so players can see where they've already placed them.
+          // Inline-SVG badges: skull for the victim, knife for whoever
+          // the player has marked as the killer (or, in edit mode, the
+          // solution's killer). Avoids the 🪦 / 🔪 system-font glyph gap.
+          const showVictim = lvl.victim === charId;
+          const showKiller = state.mode === 'play'
+            ? lvl.playerKiller === charId
+            : lvl.killerSolution === charId;
+          if (showVictim || showKiller) {
+            const badge = document.createElement('div');
+            badge.className = 'cell-badge';
+            badge.innerHTML = iconBadge({ victim: showVictim, killer: showKiller });
+            cell.appendChild(badge);
+          }
           if (state.selectedCharacterId === charId) {
             cell.classList.add('suspect-selected');
           }
@@ -141,13 +172,42 @@ export function renderGrid(container, handlers) {
         }
       }
 
-      // Room label, at the anchor cell only.
-      const anchorRoom = anchors.get(k);
-      if (anchorRoom && anchorRoom.name && anchorRoom.name.trim() !== '') {
-        const label = document.createElement('div');
-        label.className = 'room-label';
-        label.textContent = anchorRoom.name;
-        cell.appendChild(label);
+      // Row/col toggle markers.
+      // Placed suspects whose row or column collides with another placed
+      //   suspect get a bright red X on top of their portrait. Empty
+      //   cells in an occupied row or column get a faint accent X so
+      //   the toggle visibly does something even when the layout has no
+      //   conflicts. Valid placed suspects get NOTHING on top of them.
+      if (state.showRowColMarks) {
+        const k = key(x, y);
+        const placed = placements[k];
+        const rowList = rowsOccupied.get(y) || [];
+        const colList = colsOccupied.get(x) || [];
+        if (placed) {
+          if (rowList.length > 1 || colList.length > 1) {
+            const mark = document.createElement('div');
+            mark.className = 'rowcol-x conflict';
+            mark.textContent = '✕';
+            cell.appendChild(mark);
+          }
+        } else if (rowList.length > 0 || colList.length > 0) {
+          const mark = document.createElement('div');
+          mark.className = 'rowcol-x faint';
+          mark.textContent = '✕';
+          cell.appendChild(mark);
+        }
+      }
+
+      // Room label, at the anchor cell only. Suppressed entirely when the
+      // global "show room names" toggle is off.
+      if (state.showRoomNames) {
+        const anchorRoom = anchors.get(k);
+        if (anchorRoom && anchorRoom.name && anchorRoom.name.trim() !== '') {
+          const label = document.createElement('div');
+          label.className = 'room-label';
+          label.textContent = anchorRoom.name;
+          cell.appendChild(label);
+        }
       }
 
       container.appendChild(cell);

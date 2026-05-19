@@ -14,7 +14,7 @@ const { encodePNG, Canvas, mulberry32, pick, darken, lighten, rgba } = require('
 
 const SKIN_TONES = [
   [255, 224, 196], [255, 205, 168], [241, 194, 155], [224, 172, 130],
-  [198, 134, 96],  [161, 102, 70],  [122, 79, 51],   [86, 50, 32],
+  [198, 134, 96], [161, 102, 70], [122, 79, 51],  [86, 50, 32],
 ];
 
 const HAIR_COLORS = [
@@ -51,7 +51,7 @@ function drawPortrait(seed) {
   const shirt = rgba(pick(rng, SHIRT_COLORS));
   const skinShadow = darken(skin, 0.85);
 
-  // Background — solid + a horizon line for a portrait frame feel.
+  // Background, solid + a horizon line for a portrait frame feel.
   cv.fillRect(0, 0, W, H, bg);
   cv.fillRect(0, 22, W, H - 22, darken(bg, 0.85));
 
@@ -77,7 +77,7 @@ function drawPortrait(seed) {
     cv.set(15, 27, darken(shirt, 0.6));
   }
 
-  // Head — an oval, slightly tall.
+  // Head, an oval, slightly tall.
   cv.fillEllipse(16, 13, 7, 8, skin);
   // Face shading on the right side.
   for (let y = 7; y <= 20; y++)
@@ -86,7 +86,7 @@ function drawPortrait(seed) {
       if ((dx * dx) / 49 + (dy * dy) / 64 <= 1) cv.set(x, y, skinShadow);
     }
 
-  // Hair — pick a style.
+  // Hair, pick a style.
   const style = Math.floor(rng() * 6);
   const drawHairCap = () => {
     for (let y = 5; y <= 11; y++)
@@ -141,7 +141,7 @@ function drawPortrait(seed) {
   cv.set(16, 15, skinShadow);
   cv.set(16, 16, skinShadow);
 
-  // Mouth — random expression.
+  // Mouth, random expression.
   const mouth = Math.floor(rng() * 3);
   const lip = darken(skin, 0.6);
   if (mouth === 0) {
@@ -156,13 +156,21 @@ function drawPortrait(seed) {
     cv.set(18, 19, lip);
   }
 
-  // Optional facial hair.
+  // Optional facial hair. The beard frames the jaw rather than covering
+  // the face, a 1px sideburn down each cheek, then a tapered chin patch.
   if (rng() < 0.25) {
     cv.fillRect(13, 17, 6, 1, hair); // Mustache.
   }
   if (rng() < 0.2) {
-    cv.fillRect(12, 18, 8, 3, hair); // Beard.
-    cv.fillRect(14, 18, 4, 1, lip);  // Restore mouth on top of beard.
+    // Sideburns / jaw line, single column down each cheek.
+    cv.set(11, 16, hair); cv.set(11, 17, hair); cv.set(11, 18, hair);
+    cv.set(21, 16, hair); cv.set(21, 17, hair); cv.set(21, 18, hair);
+    // Tapered chin patch.
+    cv.fillRect(13, 19, 6, 1, hair);
+    cv.fillRect(14, 20, 4, 1, hair);
+    cv.set(15, 21, hair); cv.set(16, 21, hair);
+    // Mouth stays visible.
+    cv.fillRect(14, 18, 4, 1, lip);
   }
 
   // Optional glasses.
@@ -212,7 +220,7 @@ const NAMES = [
 const DESCRIPTIONS = [
   'Heiress to the Wraithmoor estate; allergic to chrysanthemums.',
   'A retired detective who insists he came for the hors d\'oeuvres.',
-  'The household physician — knows whose pills are whose.',
+  'The household physician, knows whose pills are whose.',
   'A travelling preacher whose sermons keep mentioning the host.',
   'A medium claiming the victim consulted her last Tuesday.',
   'The butler. Yes, really. Don\'t make it weird.',
@@ -220,7 +228,7 @@ const DESCRIPTIONS = [
   'Old navy friend of the victim, recently returned from sea.',
   'A perfumer; her scents linger in rooms she swears she never entered.',
   'Lecturer in entomology. Carries a jar. Of something.',
-  'A novice nun on retreat — quieter than the wallpaper.',
+  'A novice nun on retreat, quieter than the wallpaper.',
   'Distinguished veteran whose pension does not match his shoes.',
   'A clockmaker. Knows exactly when the lights went out.',
   'Estate solicitor, holding three wills and one secret.',
@@ -228,7 +236,7 @@ const DESCRIPTIONS = [
   'A jazz pianist booked for the evening\'s entertainment.',
   'Patroness of the arts and the victim\'s longtime rival.',
   'A locksmith hired the morning of the party. Why?',
-  'Photographer covering the soirée — every flash is alibi or evidence.',
+  'Photographer covering the soirée, every flash is alibi or evidence.',
   'A childhood friend of the victim. Or so the cards say.',
 ];
 

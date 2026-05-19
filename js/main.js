@@ -8,11 +8,15 @@ import {
   placeCharacterAt,
   cloneActiveLevel,
 } from './state.js';
-import { loadLevels, saveLevels, loadActiveId, saveActiveId } from './storage.js';
+import {
+  loadLevels, saveLevels, loadActiveId, saveActiveId,
+  loadCompletedSamples, saveCompletedSamples,
+} from './storage.js';
 import { renderGrid } from './grid.js';
 import { loadCharacters, renderRoster } from './portraits.js';
 import { loadFurniture, normalizeLevel, rollAllRooms } from './decor.js';
 import { SAMPLES, buildSampleLevel } from './sample.js';
+import { victimIcon, killerIcon } from './icons.js';
 import {
   selectTool,
   createRoom,
@@ -89,16 +93,17 @@ function rerender() {
   const isSample = !!(lvl && lvl.isSample);
   if (state.mode === 'edit') {
     renderRoomList(roomList);
-    renderRoster(roster, {});
+    renderRoster(roster, { level: lvl });
     renderClueEditor(clueEditorEl);
   } else {
     renderRoomListReadonly(roomListPlay);
     // In play mode only show suspects who actually appear in the level's
-    // solution — no point cluttering the roster with people the case never
+    // solution, no point cluttering the roster with people the case never
     // names. Derived live so it picks up edits.
     const suspectIds = lvl ? [...new Set(Object.values(lvl.solution))] : [];
-    renderRoster(rosterPlay, { filterIds: suspectIds });
+    renderRoster(rosterPlay, { filterIds: suspectIds, level: lvl });
     renderSelectedClue(selectedClue);
+    updateCheckGate();
   }
   nameInput.value = lvl ? lvl.name : '';
   metaTextarea.value = lvl ? lvl.description : '';
@@ -189,13 +194,12 @@ function renderClueEditor(container) {
   }
 }
 
-// Play mode: render a clue bubble for the currently-selected suspect.
-// Renders nothing (hidden) when no suspect is selected, or when the level
-// doesn't have a clue for them.
+// Play mode: render a floating clue bubble pointed at the currently-
+// selected suspect tile. Hidden when no suspect is selected.
 function renderSelectedClue(container) {
   const lvl = activeLevel();
   const charId = state.selectedCharacterId;
-  if (!lvl || !charId) {
+  if (!lvl || !charId || state.mode !== 'play') {
     container.classList.add('hidden');
     container.innerHTML = '';
     return;
@@ -206,15 +210,90 @@ function renderSelectedClue(container) {
     return;
   }
   const clueText = lvl.clues[charId] || '(No clue has been written for this suspect.)';
+  const isVictim = lvl.victim === charId;
+  const isKiller = lvl.playerKiller === charId;
+  // Killer marking is the player's accusation. The victim cannot also be
+  // the killer (they died), so we hide the button on the victim row.
+  const killerBtn = isVictim
+    ? ''
+    : `<button class="kill-btn ${isKiller ? 'on' : ''}" data-kill="1">${killerIcon()} <span>${isKiller ? 'Unmark killer' : 'Mark as killer'}</span></button>`;
+  const inlineBadge = isVictim
+    ? `<span class="inline-badge">${victimIcon()}</span> `
+    : isKiller
+      ? `<span class="inline-badge">${killerIcon()}</span> `
+      : '';
   container.classList.remove('hidden');
   container.innerHTML = `
     <img src="${char.portrait}" alt="${char.name}" />
     <div class="clue-body">
-      <strong>${escapeHtml(char.name)}</strong>
+      <strong>${inlineBadge}${escapeHtml(char.name)}</strong>
       <p class="char-desc">${escapeHtml(char.description || '')}</p>
       <p class="clue-text">${escapeHtml(clueText)}</p>
+      ${killerBtn}
     </div>
   `;
+  const killBtn = container.querySelector('[data-kill]');
+  if (killBtn) {
+    killBtn.addEventListener('click', () => {
+      lvl.playerKiller = isKiller ? null : charId;
+      lvl.updatedAt = Date.now();
+      persist();
+      rerender();
+    });
+  }
+  requestAnimationFrame(() => positionSelectedClue(charId));
+}
+
+// Gate the Check button: disabled until every solution cell has a
+// player-placement AND a killer has been marked. Tooltip explains why.
+function updateCheckGate() {
+  const btn = $('#btn-check');
+  if (!btn) return;
+  const lvl = activeLevel();
+  if (!lvl || state.mode !== 'play') {
+    btn.disabled = true;
+    btn.title = '';
+    return;
+  }
+  const solutionCount = Object.keys(lvl.solution).length;
+  const placedCount = Object.keys(lvl.playerPlacement).length;
+  const placedAll = solutionCount > 0 && placedCount >= solutionCount;
+  const killerNamed = !!lvl.playerKiller;
+  const ready = placedAll && killerNamed;
+  btn.disabled = !ready;
+  btn.title = ready
+    ? 'Submit your accusation.'
+    : !placedAll
+      ? `Place every suspect first (${placedCount}/${solutionCount} placed).`
+      : 'Mark one suspect as the killer 🔪 first.';
+}
+
+// Anchor the clue bubble below the selected suspect tile, clamped to the
+// viewport, with the bubble's arrow pointing at the tile's center.
+function positionSelectedClue(charId) {
+  const container = selectedClue;
+  if (container.classList.contains('hidden')) return;
+  const tile = document.querySelector(
+    `#char-roster-play .char-tile[data-char-id="${charId}"]`,
+  );
+  if (!tile) return;
+  const rect = tile.getBoundingClientRect();
+  const bubbleWidth = Math.min(container.offsetWidth || 320, 360);
+  const tileCenter = rect.left + rect.width / 2;
+  const margin = 8;
+  let left = tileCenter - bubbleWidth / 2;
+  if (left < margin) left = margin;
+  if (left + bubbleWidth > window.innerWidth - margin) {
+    left = window.innerWidth - bubbleWidth - margin;
+  }
+  container.style.top = (rect.bottom + 10) + 'px';
+  container.style.left = left + 'px';
+  // Place the bubble's arrow so it points at the tile's actual center.
+  const arrowOffset = Math.max(
+    12,
+    Math.min(bubbleWidth - 26, tileCenter - left - 7),
+  );
+  container.style.setProperty('--arrow-x', arrowOffset + 'px');
 }
 
 // Repopulate the topbar level-select dropdown to mirror state.levels.
@@ -373,12 +452,14 @@ function loadSampleAsNewLevel(sampleKey) {
 function renderStartSamples() {
   startSamples.innerHTML = '';
   for (const s of SAMPLES) {
+    const done = state.completedSamples.has(s.key);
     const card = document.createElement('button');
-    card.className = 'start-card';
+    card.className = 'start-card' + (done ? ' completed' : '');
     card.dataset.action = 'play-sample';
     card.dataset.sampleKey = s.key;
+    const icon = done ? '✅' : '🔍';
     card.innerHTML = `
-      <h3>🔍 ${escapeHtml(s.name)}</h3>
+      <h3>${icon} ${escapeHtml(s.name)}</h3>
       <p>${escapeHtml(s.description)}</p>
     `;
     startSamples.appendChild(card);
@@ -399,14 +480,17 @@ function renderStartContinue() {
   continueEl.classList.remove('hidden');
   headingEl.classList.remove('hidden');
   const card = document.createElement('button');
-  card.className = 'start-card';
+  const done =
+    (lvl.sampleKey && state.completedSamples.has(lvl.sampleKey)) || !!lvl.completed;
+  card.className = 'start-card' + (done ? ' completed' : '');
   card.dataset.action = 'continue';
   card.dataset.continueId = lvl.id;
   const subtitle = lvl.isSample
-    ? 'Sample — resumes in Play mode.'
-    : 'Your last-edited level — resumes in Edit mode.';
+    ? 'Sample, resumes in Play mode.'
+    : 'Your last-edited level, resumes in Edit mode.';
+  const icon = done ? '✅' : '↻';
   card.innerHTML = `
-    <h3>↻ ${escapeHtml(lvl.name || 'Untitled level')}</h3>
+    <h3>${icon} ${escapeHtml(lvl.name || 'Untitled level')}</h3>
     <p>${escapeHtml(subtitle)}</p>
   `;
   continueEl.appendChild(card);
@@ -422,7 +506,9 @@ function renderLevelsList() {
 
     const title = document.createElement('div');
     title.className = 'title';
-    title.textContent = lvl.name || '(untitled)';
+    const done =
+      (lvl.sampleKey && state.completedSamples.has(lvl.sampleKey)) || !!lvl.completed;
+    title.textContent = (done ? '✅ ' : '') + (lvl.name || '(untitled)');
     li.appendChild(title);
 
     const meta = document.createElement('div');
@@ -482,15 +568,18 @@ function closeLevels() { levelsModal.classList.add('hidden'); }
 
 // ---------- Start menu ----------
 
-function openStartMenu({ closable } = { closable: true }) {
-  // Refresh dynamic cards (the Continue card depends on the active level,
-  // which can change between opens via Levels modal etc.).
+function openStartMenu() {
+  // The menu is the page when it's up. There is no X, the user picks
+  // one of the cards to leave. Refresh the dynamic cards every time so
+  // the Continue card matches current state.
   renderStartSamples();
-  const closeBtn = $('#start-close');
-  if (closeBtn) closeBtn.hidden = !closable;
   startModal.classList.remove('hidden');
+  document.body.classList.add('menu-active');
 }
-function closeStartMenu() { startModal.classList.add('hidden'); }
+function closeStartMenu() {
+  startModal.classList.add('hidden');
+  document.body.classList.remove('menu-active');
+}
 
 function handleStartAction(action, opts = {}) {
   switch (action) {
@@ -533,11 +622,12 @@ function handleStartAction(action, opts = {}) {
 async function boot() {
   state.levels = loadLevels().map(normalizeLevel);
   state.activeId = loadActiveId();
+  state.completedSamples = new Set(loadCompletedSamples());
   // We *never* auto-load a level on boot. The start menu is always the
   // first thing the user sees, even on returning visits. If there's a
   // previously-active level it's reachable via the menu's Continue card.
   const hasLevels = state.levels.length > 0;
-  // Clear activeId so nothing renders behind the modal — the menu is the
+  // Clear activeId so nothing renders behind the modal, the menu is the
   // whole UI until the user picks something.
   if (!hasLevels) state.activeId = null;
 
@@ -558,6 +648,30 @@ async function boot() {
 
   $('#btn-roll-all').addEventListener('click', () => {
     rollAllRooms();
+    rerender();
+  });
+
+  // Topbar room-name toggle. Pure view setting, does not modify the level.
+  $('#btn-toggle-names').addEventListener('click', () => {
+    state.showRoomNames = !state.showRoomNames;
+    $('#btn-toggle-names').classList.toggle('active', state.showRoomNames);
+    rerender();
+  });
+
+  // Topbar fade-guests toggle, drops the opacity of placed portraits so
+  // the player can read the tile and furniture under them.
+  $('#btn-toggle-guests').addEventListener('click', () => {
+    state.transparentGuests = !state.transparentGuests;
+    $('#btn-toggle-guests').classList.toggle('active', state.transparentGuests);
+    document.body.classList.toggle('guests-transparent', state.transparentGuests);
+  });
+
+  // Row/col X-ray, overlays an X on every cell in the row or column of
+  // each placed suspect. Cells where two suspects share a row or column
+  // get a red X (rule violation).
+  $('#btn-toggle-rowcol').addEventListener('click', () => {
+    state.showRowColMarks = !state.showRowColMarks;
+    $('#btn-toggle-rowcol').classList.toggle('active', state.showRowColMarks);
     rerender();
   });
 
@@ -594,15 +708,32 @@ async function boot() {
     if (e.target === levelsModal) closeLevels();
   });
 
-  // Start menu wiring.
-  $('#btn-menu').addEventListener('click', () => openStartMenu({ closable: true }));
-  for (const c of document.querySelectorAll('[data-close="start"]')) c.addEventListener('click', closeStartMenu);
-  startModal.addEventListener('click', (e) => {
-    // Backdrop click closes only when the X is visible (i.e. not on first
-    // visit, where we want the user to make a real choice).
-    if (e.target === startModal && !$('#start-close').hidden) closeStartMenu();
+  // Start menu wiring. There is no close affordance, the user picks a
+  // card to leave. The topbar Menu button reopens the menu mid-session.
+  $('#btn-menu').addEventListener('click', () => openStartMenu());
+
+  // Help modal, accessible from both the start menu footer and the topbar.
+  const helpModal = $('#help-modal');
+  const openHelp = () => helpModal.classList.remove('hidden');
+  const closeHelp = () => helpModal.classList.add('hidden');
+  $('#btn-help').addEventListener('click', openHelp);
+  $('#btn-help-topbar').addEventListener('click', openHelp);
+  for (const c of document.querySelectorAll('[data-close="help"]')) c.addEventListener('click', closeHelp);
+  helpModal.addEventListener('click', (e) => { if (e.target === helpModal) closeHelp(); });
+
+  // Reset all data, wipes every saved level and progress flag. Confirmed
+  // twice because there is no undo.
+  $('#btn-reset-all').addEventListener('click', () => {
+    if (!confirm('This will erase every saved level, all progress, and any in-flight clues you have written. Continue?')) return;
+    if (!confirm('Last chance, this cannot be undone. Reset everything?')) return;
+    try {
+      localStorage.removeItem('murdoku.levels');
+      localStorage.removeItem('murdoku.activeId');
+      localStorage.removeItem('murdoku.completedSamples');
+    } catch {}
+    // Reload to start clean, boot() will run again with empty state.
+    location.reload();
   });
-  // Dynamic sample cards + the static "edit mode" card.
   renderStartSamples();
   startModal.addEventListener('click', (e) => {
     const card = e.target.closest('.start-card');
@@ -672,28 +803,53 @@ async function boot() {
     const result = checkSolution();
     if (!result) return;
     if (result.win) {
-      winDetail.textContent = activeLevel().name ? `You solved "${activeLevel().name}".` : 'You solved this case.';
-      winToast.classList.remove('hidden', 'bad');
-      highlightCells([]);
-      // Mark all solution cells as correct.
-      for (const cellEl of document.querySelectorAll('.cell')) {
-        const k = `${cellEl.dataset.x},${cellEl.dataset.y}`;
-        if (activeLevel().solution[k]) cellEl.classList.add('correct');
+      const lvl = activeLevel();
+      // Record completion. Sample levels go into a per-install Set keyed
+      // by sampleKey so the green check stays on the menu even after the
+      // user loads a fresh copy of the same sample. Custom levels just
+      // get a sticky boolean on the level itself.
+      if (lvl) {
+        if (lvl.sampleKey) {
+          state.completedSamples.add(lvl.sampleKey);
+          saveCompletedSamples([...state.completedSamples]);
+        }
+        lvl.completed = true;
+        lvl.updatedAt = Date.now();
+        persist();
       }
+      winDetail.textContent = lvl && lvl.name ? `You solved "${lvl.name}".` : 'You solved this case.';
+      winToast.classList.remove('hidden', 'bad');
+      // Outline only the cells the player actually placed, all correct on a win.
+      highlightCells({ correct: result.correct, wrong: [] });
     } else {
-      winDetail.textContent =
-        result.wrong.length === 0
-          ? 'No solution has been set for this level yet.'
-          : `${result.wrong.length} cell(s) are off. Keep at it.`;
+      let msg;
+      const hasWrong = result.wrong.length > 0;
+      const hasMissing = result.missingCount > 0;
+      if (hasWrong && result.killerWrong) {
+        msg = `${result.wrong.length} placement(s) wrong, and the killer is wrong too.`;
+      } else if (hasWrong) {
+        msg = `${result.wrong.length} placement(s) wrong. Green ✓ red ✕ outlines show which.`;
+      } else if (hasMissing && result.killerWrong) {
+        msg = `Still ${result.missingCount} suspect(s) left to place, and the killer is wrong.`;
+      } else if (hasMissing) {
+        msg = `Place the remaining ${result.missingCount} suspect(s) first.`;
+      } else if (result.killerWrong) {
+        msg = 'Everyone is in the right cell, but the killer is wrong. Look again at who shared a room with the victim.';
+      } else {
+        msg = 'No solution has been set for this level yet.';
+      }
+      winDetail.textContent = msg;
       winToast.classList.remove('hidden');
       winToast.classList.add('bad');
-      highlightCells(result.wrong);
+      // Outline only placed cells: green if right, red if wrong. NEVER
+      // outline cells the player hasn't placed on, they're not feedback.
+      highlightCells({ correct: result.correct, wrong: result.wrong });
     }
   });
   for (const c of document.querySelectorAll('[data-close="toast"]')) {
     c.addEventListener('click', () => {
       winToast.classList.add('hidden');
-      highlightCells([]);
+      highlightCells({});
     });
   }
 
@@ -732,6 +888,16 @@ async function boot() {
   // Inter-module re-render trigger.
   document.addEventListener('murdoku:rerender', rerender);
 
+  // Reposition the clue bubble when the page scrolls or resizes so it
+  // stays pinned to its tile.
+  const reposition = () => {
+    if (state.mode === 'play' && state.selectedCharacterId) {
+      positionSelectedClue(state.selectedCharacterId);
+    }
+  };
+  window.addEventListener('scroll', reposition, { passive: true });
+  window.addEventListener('resize', reposition);
+
   // Auto-save every 4s if something changed.
   let lastSerialized = '';
   setInterval(() => {
@@ -742,11 +908,20 @@ async function boot() {
     }
   }, 4000);
 
-  // The start menu is the entry point on every boot. It's closable only
-  // when there's a saved level to fall back to — first-time users must
-  // pick something before the editor is reachable.
-  setMode('edit'); // baseline so the rest of the chrome paints once
-  openStartMenu({ closable: hasLevels });
+  // The start menu is the entire UI on boot. We deliberately do NOT
+  // render the game yet, the user must pick a level first.
+  openStartMenu();
+
+  // Mobile browsers aggressively restore the page from the back-forward
+  // cache (bfcache) when the user returns to the tab. boot() does NOT run
+  // again in that case, script state is restored as-is, so the start
+  // screen would not reappear. Re-open it on every bfcache restore so
+  // the menu really is the first thing every visit.
+  window.addEventListener('pageshow', (ev) => {
+    if (ev.persisted) {
+      openStartMenu();
+    }
+  });
 }
 
 let flashTimer = null;

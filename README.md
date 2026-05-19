@@ -11,7 +11,7 @@ build plan.
 
 ## Run locally
 
-The whole game is static HTML + ES modules — no build step.
+The whole game is static HTML + ES modules, no build step.
 
 ```bash
 # Generate portrait PNGs (one-off; they're committed too)
@@ -50,7 +50,7 @@ All data lives in `localStorage` under `murdoku.levels` and
 
 `scripts/generate-portraits.js` writes 20 deterministic 32×32 pixel-art
 portraits to `assets/portraits/` along with a `manifest.json` roster. It uses
-only Node built-ins (`zlib`, `fs`) — no npm install required.
+only Node built-ins (`zlib`, `fs`), no npm install required.
 
 Rerun any time you tweak the generator:
 

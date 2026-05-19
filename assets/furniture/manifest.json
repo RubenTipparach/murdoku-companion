@@ -58,5 +58,35 @@
     "id": "rug",
     "name": "Patterned rug",
     "sprite": "assets/furniture/rug.png"
+  },
+  {
+    "id": "fireplace",
+    "name": "Fireplace",
+    "sprite": "assets/furniture/fireplace.png"
+  },
+  {
+    "id": "clock",
+    "name": "Grandfather clock",
+    "sprite": "assets/furniture/clock.png"
+  },
+  {
+    "id": "mirror",
+    "name": "Mirror",
+    "sprite": "assets/furniture/mirror.png"
+  },
+  {
+    "id": "gramophone",
+    "name": "Gramophone",
+    "sprite": "assets/furniture/gramophone.png"
+  },
+  {
+    "id": "typewriter",
+    "name": "Typewriter",
+    "sprite": "assets/furniture/typewriter.png"
+  },
+  {
+    "id": "safe",
+    "name": "Safe",
+    "sprite": "assets/furniture/safe.png"
   }
 ]

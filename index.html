@@ -4,14 +4,14 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Murdoku</title>
-    <link rel="stylesheet" href="./css/style.css" />
+    <link rel="stylesheet" href="./css/style.css?v=24" />
     <link
       rel="icon"
       type="image/svg+xml"
       href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' fill='%23583c87'/%3E%3Ctext x='8' y='12' font-size='12' text-anchor='middle' fill='white' font-family='monospace'%3EM%3C/text%3E%3C/svg%3E"
     />
   </head>
-  <body>
+  <body class="menu-active">
     <header class="topbar">
       <div class="topbar-row primary">
         <h1>Murdoku</h1>
@@ -21,6 +21,7 @@
         </div>
         <div class="topbar-actions">
           <button id="btn-menu" title="Open the start menu">Menu</button>
+          <button id="btn-help-topbar" title="How to play Murdoku">❓</button>
           <button id="btn-clone" title="Clone the current level into an editable copy">Clone</button>
           <button id="btn-save" title="Force save to localStorage">Save</button>
           <button id="btn-export" title="Download this level as JSON">Export</button>
@@ -53,6 +54,11 @@
         <div id="sample-banner" class="sample-banner hidden">
           <span>This is a shipped sample. To make changes, <strong>Clone</strong> it first.</span>
           <button id="btn-clone-banner">Clone to edit</button>
+        </div>
+        <div class="view-toggles" role="toolbar" aria-label="View toggles">
+          <button id="btn-toggle-names" class="active" title="Show or hide room names on the grid">🚪 Room names</button>
+          <button id="btn-toggle-guests" title="Fade placed suspect portraits so the floor is visible underneath">👤 Fade</button>
+          <button id="btn-toggle-rowcol" title="Mark every cell in the row + column of each placed suspect. Cells where two suspects collide are flagged red, no two suspects can share a row or column.">✕ Rows + cols</button>
         </div>
         <div id="grid" class="grid" aria-label="9 by 9 grid"></div>
         <div id="status" class="status">Edit mode · paint a room to begin</div>
@@ -93,7 +99,6 @@
           <h2>Suspects</h2>
           <p class="hint">Tap a suspect to read their clue, then drop them into a room cell.</p>
           <div id="char-roster-play" class="char-roster"></div>
-          <div id="selected-clue" class="selected-clue hidden"></div>
 
           <div class="play-actions">
             <button id="btn-check">Check solution</button>
@@ -106,12 +111,12 @@
       </aside>
     </main>
 
-    <!-- Start menu modal -->
-    <div id="start-modal" class="modal hidden" role="dialog">
-      <div class="modal-inner start-inner">
+    <!-- Start screen, the entry point of the app. Not a modal; replaces
+         the game UI entirely until the user picks a level. -->
+    <div id="start-modal" class="start-screen" role="dialog">
+      <div class="start-inner">
         <header>
           <h2>Murdoku</h2>
-          <button class="close" data-close="start" id="start-close" hidden>×</button>
         </header>
         <div class="modal-body">
           <p class="start-tagline">A murder-mystery puzzle in nine by nine.</p>
@@ -126,6 +131,50 @@
               <p>Author rooms, place suspects, write the clues.</p>
             </button>
           </div>
+
+          <div class="start-footer">
+            <button id="btn-help" class="start-footer-btn">❓ How to play</button>
+            <button id="btn-reset-all" class="start-footer-btn danger">⚠ Reset all data</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Help modal, game rules walkthrough. -->
+    <div id="help-modal" class="modal hidden" role="dialog">
+      <div class="modal-inner">
+        <header>
+          <h2>How to play Murdoku</h2>
+          <button class="close" data-close="help">×</button>
+        </header>
+        <div class="modal-body help-body">
+          <h3>The setup</h3>
+          <p>The 9×9 grid is a house. Each suspect stood in exactly one cell at the moment of the murder. The victim 🪦 is one of them.</p>
+
+          <h3>The rules</h3>
+          <ul>
+            <li><strong>Unique row + column.</strong> No two suspects share a row or a column. Everyone stands on their own row and their own column.</li>
+            <li><strong>Killer alone with the victim.</strong> The killer 🔪 stood in the same room as the victim. Every other suspect was in a different room.</li>
+          </ul>
+
+          <h3>The clues</h3>
+          <p>Each suspect has a clue describing where they stood. Clues use relative language:</p>
+          <ul>
+            <li>Furniture references: <em>"at the orchid table"</em>, <em>"on the rug"</em>, <em>"at the keys of a piano"</em>.</li>
+            <li>Other suspects: <em>"in the same room as Crowe"</em>, <em>"to the left of the piano"</em>, <em>"directly below the lantern"</em>.</li>
+            <li>Room references: <em>"in the only room with no furniture"</em>, <em>"on the shop floor"</em>.</li>
+          </ul>
+
+          <h3>How to play</h3>
+          <ol>
+            <li>Click a suspect to read their clue.</li>
+            <li>Drag, or click cell, to place them where you think they stood.</li>
+            <li>Re-placing a suspect moves them; each suspect can only be in one cell.</li>
+            <li>Identify who shared the room with the victim and mark them with 🔪 <strong>Mark as killer</strong> in the clue bubble.</li>
+            <li>When every suspect is placed and a killer is named, <strong>Check solution</strong> unlocks. Click it.</li>
+          </ol>
+
+          <p class="hint">Toggles above the grid: hide room names, fade portraits so you can read the tile under them.</p>
         </div>
       </div>
     </div>
@@ -145,6 +194,9 @@
       </div>
     </div>
 
+    <!-- Floating clue bubble, positioned at the selected suspect tile via JS. -->
+    <div id="selected-clue" class="selected-clue hidden" role="tooltip"></div>
+
     <!-- Win toast -->
     <div id="win-toast" class="toast hidden">
       <strong>Case closed.</strong>
@@ -152,6 +204,6 @@
       <button data-close="toast">OK</button>
     </div>
 
-    <script type="module" src="./js/main.js"></script>
+    <script type="module" src="./js/main.js?v=24"></script>
   </body>
 </html>

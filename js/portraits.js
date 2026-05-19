@@ -1,6 +1,7 @@
 // Load the character roster from the generated manifest.
 
 import { state } from './state.js';
+import { badge as iconBadge } from './icons.js';
 
 export async function loadCharacters() {
   try {
@@ -15,9 +16,9 @@ export async function loadCharacters() {
 }
 
 // Render the suspect roster. Pass `filterIds` to scope the roster down to
-// only the characters used by the active level — Play mode uses this so the
+// only the characters used by the active level, Play mode uses this so the
 // player doesn't see twenty distractors when the case has six suspects.
-export function renderRoster(container, { filterIds = null } = {}) {
+export function renderRoster(container, { filterIds = null, level = null } = {}) {
   container.innerHTML = '';
   const list = filterIds
     ? state.characters.filter((c) => filterIds.includes(c.id))
@@ -29,6 +30,8 @@ export function renderRoster(container, { filterIds = null } = {}) {
     container.appendChild(empty);
     return;
   }
+  const victim = level && level.victim;
+  const killer = level && (state.mode === 'play' ? level.playerKiller : level.killerSolution);
   for (const char of list) {
     const btn = document.createElement('button');
     btn.className = 'char-tile';
@@ -37,6 +40,14 @@ export function renderRoster(container, { filterIds = null } = {}) {
     btn.title = `${char.name}\n${char.description}`;
     btn.innerHTML = `<img src="${char.portrait}" alt="${char.name}" draggable="false" />`;
     if (state.selectedCharacterId === char.id) btn.classList.add('active');
+    // Same victim / killer badges as the grid, inline SVG so they render
+    // identically on every device.
+    if (char.id === victim || char.id === killer) {
+      const badge = document.createElement('span');
+      badge.className = 'tile-badge';
+      badge.innerHTML = iconBadge({ victim: char.id === victim, killer: char.id === killer });
+      btn.appendChild(badge);
+    }
     container.appendChild(btn);
   }
 }
