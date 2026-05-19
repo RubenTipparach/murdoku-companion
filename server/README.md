@@ -9,7 +9,7 @@ a persistent volume so the database survives machine restarts.
 - `POST /profiles { name, token }`, register or re-claim a profile
 - `GET /profiles/me`, whoami (bearer-token auth)
 - `GET /healthz`, liveness probe
-- `GET /admin`, open profiles overview (will move behind OAuth)
+- `GET /admin`, open profiles overview
 
 Subsequent phases add level sharing (13), completions and leaderboards
 (14), and sessions (15). An admin surface lands behind OAuth (no
@@ -53,8 +53,7 @@ as the GitHub Pages frontend deploy and runs in parallel.
 
 - API base: https://murdoku-companion.fly.dev
 - Health check: https://murdoku-companion.fly.dev/healthz
-- Murdoku admin dashboard (profiles overview, open access until
-  OAuth lands): https://murdoku-companion.fly.dev/admin
+- Murdoku admin dashboard: https://murdoku-companion.fly.dev/admin
 - Fly app dashboard (logs, metrics, machines, volumes, secrets):
   https://fly.io/apps/murdoku-companion
 

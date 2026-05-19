@@ -150,8 +150,6 @@ app.get('/profiles/me', requireProfile, (req, res) => {
 
 // ----- Admin dashboard -----
 
-// Open access while pre-launch: no PII beyond profile names + dates,
-// and no auth provider yet. Lock down behind OAuth when it lands.
 app.get('/admin', (_req, res) => {
   const stats = db
     .prepare(
@@ -183,11 +181,9 @@ app.get('/admin', (_req, res) => {
   .kpis{display:flex;gap:14px;margin:12px 0}
   .kpi{background:#2f2848;border:1px solid #4a416c;padding:10px 14px;border-radius:8px}
   .kpi strong{font-size:18px;color:#f0abfc;display:block}
-  .warn{background:#3a2c4a;border:1px solid #6b4a8a;padding:8px 12px;border-radius:6px;color:#fcd34d;font-size:13px}
 </style></head>
 <body>
   <h1>Murdoku admin</h1>
-  <p class="warn">Open access while pre-launch. Locking down behind OAuth in a later phase.</p>
   <div class="kpis">
     <div class="kpi"><strong>${stats.profiles}</strong>profiles</div>
     <div class="kpi"><strong>${stats.banned}</strong>banned</div>
