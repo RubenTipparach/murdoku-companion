@@ -850,11 +850,15 @@ function renderStartLibrary() {
       const lbBtn = lvl.code
         ? `<button data-authored-action="leaderboard" data-authored-id="${escapeHtml(lvl.id)}" class="leaderboard-btn">🏆 Leaderboard</button>`
         : '';
+      const solversBtn = lvl.code
+        ? `<button data-authored-action="solvers" data-authored-id="${escapeHtml(lvl.id)}" class="leaderboard-btn">👥 Players completed</button>`
+        : '';
       card.innerHTML = `
         <h3>🔗 ${escapeHtml(lvl.name || 'Shared puzzle')}</h3>
         <p>By ${who} · code <code>${escapeHtml(lvl.code || '')}</code></p>
         <div class="authored-actions">
           ${lbBtn}
+          ${solversBtn}
           <button data-authored-action="clone" data-authored-id="${escapeHtml(lvl.id)}" class="clone-btn">Clone to edit</button>
         </div>
       `;
@@ -1120,16 +1124,15 @@ function formatWhen(ms) {
 // code; lbState.tab is 'top' or 'all'.
 const lbState = { code: null, name: null, tab: 'top' };
 
-async function openLeaderboardModal(code, fallbackName) {
+async function openLeaderboardModal(code, fallbackName, { initialTab = 'top' } = {}) {
   if (!code) return;
   lbState.code = code;
   lbState.name = fallbackName || code;
-  lbState.tab = 'top';
+  lbState.tab = initialTab === 'all' ? 'all' : 'top';
   leaderboardModal.classList.remove('hidden');
   lbModalTitle.textContent = `Leaderboard, "${fallbackName || code}"`;
-  // Reset tab visuals.
   for (const tab of leaderboardModal.querySelectorAll('.lb-tab')) {
-    tab.classList.toggle('active', tab.dataset.lbTab === 'top');
+    tab.classList.toggle('active', tab.dataset.lbTab === lbState.tab);
   }
   await renderLeaderboardTab();
 }
@@ -1741,6 +1744,9 @@ async function boot() {
       } else if (act === 'leaderboard') {
         const lvl = state.levels.find((l) => l.id === authoredBtn.dataset.authoredId);
         if (lvl && lvl.code) openLeaderboardModal(lvl.code, lvl.name);
+      } else if (act === 'solvers') {
+        const lvl = state.levels.find((l) => l.id === authoredBtn.dataset.authoredId);
+        if (lvl && lvl.code) openLeaderboardModal(lvl.code, lvl.name, { initialTab: 'all' });
       }
       return;
     }
