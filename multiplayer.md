@@ -92,34 +92,103 @@ can't be scrubbed by a username swap). Reserved names: `admin`,
 
 ### Cross-device
 
-A profile is bound to a device by its token. To use the same profile
-on another device, the player views their "Recovery code" on the
-profile page (which is the token, displayed as a short word-pair
-phrase like `viper-orchid-83`) and types it on the new device. The
-new device fetches the profile by name, verifies the token, and
-stores both locally.
+Profiles are **per-account**, not per-device. The same profile is
+usable on any number of devices via a recovery code paste, the way
+Discord or Steam handle multi-device sign-in.
 
-If the player loses the token and the device, the profile is
-unrecoverable. We display a one-time-only "save your recovery code"
-prompt on creation.
+The recovery code is a **BIP39-style word phrase**: 6 short words
+from a curated ~1 KB wordlist of ~1024 unambiguous words, hyphen-
+separated. Example: `viper-orchid-amber-sand-rook-lantern`. Entropy
+~60 bits, paired with per-profile rate limiting on `/profiles/login`
+(5 failed attempts within an hour locks the profile for an hour),
+which is plenty for this threat model.
 
-### Mandatory pickup
+The wordlist ships as a static JSON loaded by both the API server
+and the frontend (frontend only needs it to encode the recovery
+code on profile creation, decoding happens server-side on login).
+
+On profile creation:
+
+1. Frontend generates 32 random bytes for the token (HMAC key).
+2. Frontend derives the recovery phrase from the token via a fixed
+   mapping (first 60 bits, 6 word-indices). Stores the raw token
+   locally; shows the phrase to the user.
+3. Server stores `sha256(token + server_salt)`.
+
+On cross-device restore:
+
+1. User types their name and recovery phrase on the new device.
+2. Frontend reconstructs the token from the phrase, calls
+   `POST /profiles/login { name, token }`.
+3. On success, the new device stores the token locally.
+
+If the player loses the token AND the recovery phrase AND every
+device they had it on, the profile is unrecoverable. We display a
+prominent one-time "save your recovery code" prompt on creation,
+with a "I have saved this" checkbox the user must tick to dismiss.
+
+### Mandatory pickup, with offline-first soft fallback
 
 Before any level loads, the start menu's first row is the profile
-selector. Three states:
+selector. Four states:
 
-- **No profile on this device.** "Create a profile" form: name input,
-  Submit. On success the recovery code is shown once.
+- **No profile on this device, server reachable.** "Create a
+  profile" form: name input, Submit. Server claims the name
+  immediately. On success the recovery phrase is shown once.
+- **No profile on this device, server unreachable.** "Create a
+  local profile" form: name input, Submit. The profile is created
+  locally only. A banner explains: "Local profile, will be claimed
+  on the server when reconnected. If the name is already taken
+  globally, you'll be asked to pick a different one then." The
+  player can play samples and create local levels immediately;
+  sharing and leaderboards are disabled until the server claim
+  succeeds.
 - **Profile present, server reachable.** Shows the active name with
-  a "Switch profile" dropdown (lets the user sign out, create
-  another, or restore from a recovery code).
+  a "Switch profile" dropdown (sign out, create another, restore
+  from a recovery phrase).
 - **Profile present, server unreachable.** Shows the name dimmed
-  with a "Server unreachable" tag and a Retry button. The user can
-  still play local samples; sharing and leaderboards are disabled.
+  with a "Server unreachable" tag and a Retry button. Sharing and
+  leaderboards are disabled.
+
+When the server becomes reachable and an unclaimed local profile
+exists, the frontend auto-attempts to claim the name. If the name
+is taken, a modal prompts: "Your local name @reuben is already
+taken on the server. Pick a new name to keep your local progress
+under." After the rename, local-only completion records are
+*not* posted retroactively (avoids the appearance of backdated
+leaderboard entries); the player starts fresh server-side.
 
 This is the only gate in the menu. Once a profile is active the
 existing menu cards (samples, continue, edit-mode entry) appear
 below it.
+
+### Avatars
+
+Every profile has an avatar, derived **procgen-by-default with a
+player override**:
+
+- On profile creation, a deterministic 32x32 portrait is generated
+  from `sha256(name)` using the existing portrait pipeline in
+  `scripts/generate-portraits.js`. The hash seeds the same RNG the
+  shipped portraits use, so the procgen avatar feels native to the
+  art style. Generation happens client-side at first display and
+  the result is cached as a base64 data URL under the profile.
+- On the profile page, a "Change avatar" button reveals the 20
+  shipped portraits as a picker. Choosing one stores
+  `avatar: { kind: 'shipped', portraitId: 'char-07' }`. The
+  procgen face becomes `avatar: { kind: 'procgen' }` (default).
+- Avatars render alongside the player name on:
+  - the profile row in the start menu
+  - the leaderboard rows on a level card
+  - the "solved by" badge strip on each level card
+  - the admin dashboard rows
+
+Server stores only `avatar_kind` ('procgen' | 'shipped') and, if
+shipped, `avatar_portrait_id`. Procgen avatars are reproduced on
+the fly from the username; no image upload, no storage.
+
+Future room for an upload-your-own avatar feature, but explicitly
+out of scope for v1 (no moderation, no storage, no cost).
 
 ## 5. Level sharing
 
@@ -350,13 +419,15 @@ sqlite, single file at `/data/murdoku.db` on the Fly volume.
 
 ```sql
 CREATE TABLE profiles (
-  id           INTEGER PRIMARY KEY,
-  name         TEXT NOT NULL,            -- display case as typed
-  name_lower   TEXT UNIQUE NOT NULL,     -- lower-case key
-  token_hash   TEXT NOT NULL,            -- sha256(token + salt)
-  created_at   INTEGER NOT NULL,         -- unix ms
-  last_seen_at INTEGER NOT NULL,
-  banned_at    INTEGER
+  id                  INTEGER PRIMARY KEY,
+  name                TEXT NOT NULL,            -- display case as typed
+  name_lower          TEXT UNIQUE NOT NULL,     -- lower-case key
+  token_hash          TEXT NOT NULL,            -- sha256(token + salt)
+  avatar_kind         TEXT NOT NULL DEFAULT 'procgen', -- 'procgen' | 'shipped'
+  avatar_portrait_id  TEXT,                     -- e.g. 'char-07' when shipped
+  created_at          INTEGER NOT NULL,         -- unix ms
+  last_seen_at        INTEGER NOT NULL,
+  banned_at           INTEGER
 );
 CREATE INDEX idx_profiles_last_seen ON profiles(last_seen_at);
 
@@ -572,33 +643,36 @@ local-only play.
 
 Total expected: **$0 to $5 per month** for the foreseeable future.
 
-## 16. Open questions
+## 16. Resolved design decisions
 
-These need a call before we start cutting code on Phase 11.
+Locked-in calls made before Phase 11 starts. The body of this doc
+already reflects them; this section is the changelog.
 
-1. **Profile mandatory even for solo offline play?** The user
-   directive says yes ("lets make profiles mandatory"). The plan
-   above honours that but allows fail-soft when the server is
-   unreachable. Confirm: if a player has no profile AND the server
-   is unreachable, do we let them play samples anyway, or hard-gate
-   them out?
-2. **Recovery-code UX.** Show the raw token, or convert to a
-   memorable word phrase (BIP39-style)? Word phrase is friendlier
-   but adds a dependency-free wordlist file (~1 KB).
-3. **Level name uniqueness on share?** I assumed no. Anyone can
-   share a level called "The Crimson Conservatory". The share code
-   disambiguates. Confirm.
-4. **Per-device profile or per-account?** Above plan = per-account
-   (the same profile usable on multiple devices via recovery code).
-   Could alternatively bind one device per profile for stricter
-   single-source-of-truth. Per-account is friendlier.
-5. **Dashboard auth.** Basic-auth + ADMIN env vars is the minimum.
-   If we want OAuth-via-GitHub for the admin route, add it in
-   Phase 15.
-6. **Avatars.** Procgen portraits keyed by name hash, or let the
-   player pick from the 20 shipped portraits? Picking is friendlier;
-   procgen is "infinite" but locks the player into a generated face
-   they may not like.
+| Topic | Decision |
+|-|-|
+| Offline-first profile gate | **Soft fallback to local profile.** Player picks a local name when offline; claimed on the server on reconnect. If the name is taken globally, prompt for a new name then. Local-only completions are not posted retroactively. (See section 4, "Mandatory pickup".) |
+| Profile scope | **Per-account, multi-device via recovery code.** Same profile usable on any number of devices. (See section 4, "Cross-device".) |
+| Recovery code | **BIP39-style 6-word phrase** from a ~1KB wordlist of ~1024 unambiguous words. ~60 bits of entropy. (See section 4, "Cross-device".) |
+| Avatars | **Procgen by default, player override from the shipped 20.** Server stores only `avatar_kind` and `avatar_portrait_id`. (See section 4, "Avatars".) |
+| Shared level name collisions | **Allowed.** Two different authors can both share a level called "The Crimson Conservatory". The share code disambiguates; the leaderboard shows "by @author" so players know which is which. No uniqueness constraint at the database level. |
+
+## 17. Still open, not blocking Phase 11
+
+These can be deferred until the relevant phase. None of them block
+the menu-reorg and local-profile-shell work in Phase 11.
+
+1. **Dashboard auth strategy** (relevant to Phase 15). Basic-auth +
+   `ADMIN_USER` / `ADMIN_PASSWORD` env vars is the placeholder. If
+   we want OAuth-via-GitHub for the `/admin` route instead, decide
+   when Phase 15 starts. Basic-auth ships fine for a single
+   operator.
+2. **Recovery-phrase wordlist source.** Use a custom murdoku-themed
+   wordlist (clue-language words like "orchid", "lantern",
+   "gramophone"), or the standard BIP39 English wordlist? Custom
+   is more thematic and we control ambiguity; standard is battle-
+   tested for typo distance. Decision when Phase 12 starts. Default
+   stance: custom thematic wordlist, ~1024 entries, manually curated
+   from existing clue text and furniture sprite names.
 
 ## 17. Things to NOT change
 
