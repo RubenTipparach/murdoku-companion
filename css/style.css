@@ -386,6 +386,17 @@ body.guests-transparent .cell.suspect-selected .portrait { opacity: 0.9; }
   min-height: 18px;
 }
 
+/* View toggles that sit directly above the grid — they affect how the
+   canvas renders, so they live next to it rather than in the topbar. */
+.view-toggles {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 10px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+.view-toggles button { padding: 5px 10px; font-size: 12px; }
+
 /* ------ Side panel ------ */
 .panel h2 {
   margin: 14px 0 6px;

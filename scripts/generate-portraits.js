@@ -156,13 +156,21 @@ function drawPortrait(seed) {
     cv.set(18, 19, lip);
   }
 
-  // Optional facial hair.
+  // Optional facial hair. The beard frames the jaw rather than covering
+  // the face — a 1px sideburn down each cheek, then a tapered chin patch.
   if (rng() < 0.25) {
     cv.fillRect(13, 17, 6, 1, hair); // Mustache.
   }
   if (rng() < 0.2) {
-    cv.fillRect(12, 18, 8, 3, hair); // Beard.
-    cv.fillRect(14, 18, 4, 1, lip);  // Restore mouth on top of beard.
+    // Sideburns / jaw line — single column down each cheek.
+    cv.set(11, 16, hair); cv.set(11, 17, hair); cv.set(11, 18, hair);
+    cv.set(21, 16, hair); cv.set(21, 17, hair); cv.set(21, 18, hair);
+    // Tapered chin patch.
+    cv.fillRect(13, 19, 6, 1, hair);
+    cv.fillRect(14, 20, 4, 1, hair);
+    cv.set(15, 21, hair); cv.set(16, 21, hair);
+    // Mouth stays visible.
+    cv.fillRect(14, 18, 4, 1, lip);
   }
 
   // Optional glasses.

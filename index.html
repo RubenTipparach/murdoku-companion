@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Murdoku</title>
-    <link rel="stylesheet" href="./css/style.css?v=13" />
+    <link rel="stylesheet" href="./css/style.css?v=14" />
     <link
       rel="icon"
       type="image/svg+xml"
@@ -21,8 +21,6 @@
         </div>
         <div class="topbar-actions">
           <button id="btn-menu" title="Open the start menu">Menu</button>
-          <button id="btn-toggle-names" class="active" title="Show or hide room names on the grid">🏷 Names</button>
-          <button id="btn-toggle-guests" title="Fade placed suspect portraits so the floor is visible underneath">👤 Fade</button>
           <button id="btn-clone" title="Clone the current level into an editable copy">Clone</button>
           <button id="btn-save" title="Force save to localStorage">Save</button>
           <button id="btn-export" title="Download this level as JSON">Export</button>
@@ -55,6 +53,10 @@
         <div id="sample-banner" class="sample-banner hidden">
           <span>This is a shipped sample. To make changes, <strong>Clone</strong> it first.</span>
           <button id="btn-clone-banner">Clone to edit</button>
+        </div>
+        <div class="view-toggles" role="toolbar" aria-label="View toggles">
+          <button id="btn-toggle-names" class="active" title="Show or hide room names on the grid">🏷 Names</button>
+          <button id="btn-toggle-guests" title="Fade placed suspect portraits so the floor is visible underneath">👤 Fade</button>
         </div>
         <div id="grid" class="grid" aria-label="9 by 9 grid"></div>
         <div id="status" class="status">Edit mode · paint a room to begin</div>
@@ -156,6 +158,6 @@
       <button data-close="toast">OK</button>
     </div>
 
-    <script type="module" src="./js/main.js?v=13"></script>
+    <script type="module" src="./js/main.js?v=14"></script>
   </body>
 </html>
