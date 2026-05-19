@@ -1219,6 +1219,7 @@ async function boot() {
     handleStartAction(card.dataset.action, {
       sampleKey: card.dataset.sampleKey,
       continueId: card.dataset.continueId,
+      profileName: card.dataset.profileName,
     });
   });
 
