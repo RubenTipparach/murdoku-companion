@@ -148,6 +148,59 @@ app.get('/profiles/me', requireProfile, (req, res) => {
   res.json({ id: req.profile.id, name: req.profile.name });
 });
 
+// ----- Admin dashboard -----
+
+// Open access while pre-launch: no PII beyond profile names + dates,
+// and no auth provider yet. Lock down behind OAuth when it lands.
+app.get('/admin', (_req, res) => {
+  const stats = db
+    .prepare(
+      `SELECT
+         (SELECT COUNT(*) FROM profiles)                             AS profiles,
+         (SELECT COUNT(*) FROM profiles WHERE banned_at IS NOT NULL) AS banned`
+    )
+    .get();
+  const recent = db
+    .prepare(
+      `SELECT name,
+              datetime(created_at   / 1000, 'unixepoch') AS created,
+              datetime(last_seen_at / 1000, 'unixepoch') AS seen
+       FROM profiles ORDER BY created_at DESC LIMIT 50`
+    )
+    .all();
+  const rows = recent
+    .map((r) => `<tr><td>${escapeHtml(r.name)}</td><td>${escapeHtml(r.created)}</td><td>${escapeHtml(r.seen)}</td></tr>`)
+    .join('');
+  res.set('content-type', 'text/html; charset=utf-8');
+  res.send(`<!doctype html>
+<html><head><meta charset="utf-8"><title>Murdoku admin</title>
+<style>
+  body{font:14px ui-sans-serif,system-ui,sans-serif;background:#1f1b2e;color:#ece8ff;margin:0;padding:24px}
+  h1{margin:0 0 8px;color:#f0abfc}
+  h2{margin:24px 0 8px;font-size:14px;color:#c084fc;letter-spacing:1px;text-transform:uppercase}
+  table{border-collapse:collapse;width:100%}
+  td,th{border-bottom:1px solid #4a416c;padding:6px 10px;text-align:left}
+  .kpis{display:flex;gap:14px;margin:12px 0}
+  .kpi{background:#2f2848;border:1px solid #4a416c;padding:10px 14px;border-radius:8px}
+  .kpi strong{font-size:18px;color:#f0abfc;display:block}
+  .warn{background:#3a2c4a;border:1px solid #6b4a8a;padding:8px 12px;border-radius:6px;color:#fcd34d;font-size:13px}
+</style></head>
+<body>
+  <h1>Murdoku admin</h1>
+  <p class="warn">Open access while pre-launch. Locking down behind OAuth in a later phase.</p>
+  <div class="kpis">
+    <div class="kpi"><strong>${stats.profiles}</strong>profiles</div>
+    <div class="kpi"><strong>${stats.banned}</strong>banned</div>
+  </div>
+  <h2>Most recent profiles</h2>
+  <table><thead><tr><th>Name</th><th>Created</th><th>Last seen</th></tr></thead><tbody>${rows || '<tr><td colspan=3><em>None yet.</em></td></tr>'}</tbody></table>
+</body></html>`);
+});
+
+function escapeHtml(s) {
+  return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
 // ----- Boot -----
 
 app.listen(PORT, '0.0.0.0', () => {
