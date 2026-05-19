@@ -12,7 +12,8 @@
 import { state, activeLevel, key } from './state.js';
 
 export const TILE_PATTERNS = [
-  'solid', 'check', 'stripe-v', 'stripe-h', 'wood', 'dots', 'diamond', 'square',
+  'solid', 'check', 'stripe-v', 'stripe-h', 'wood', 'dots', 'diamond',
+  'square', 'herringbone', 'parquet', 'brick', 'hex', 'weave', 'marble',
 ];
 
 let furniture = [];
@@ -87,6 +88,7 @@ export function rollAllRooms() {
 // Normalize a level loaded from storage so older levels still render.
 export function normalizeLevel(lvl) {
   if (!lvl) return lvl;
+  if (typeof lvl.size !== 'number' || lvl.size < 6) lvl.size = 9;
   if (!lvl.decorations || typeof lvl.decorations !== 'object') lvl.decorations = {};
   if (!lvl.clues || typeof lvl.clues !== 'object') lvl.clues = {};
   if (!Array.isArray(lvl.rooms)) lvl.rooms = [];

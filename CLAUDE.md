@@ -63,9 +63,12 @@ player has no idea what to look for.
 Allowed clue building blocks:
 - Furniture references: "at the orchid table", "on the rug", "at the
   keys of a piano", "beside the bookshelves".
-- Relative spatial language: "to the left of …", "directly below …",
-  "in the same column as …", "two cells above …", "across the room from
-  …", "behind the sofa".
+- Adjacency / diagonal language: "beside …", "next to …", "directly
+  above …", "directly below …", "diagonally adjacent to …", "between …
+  and …", "flanked by …".
+- Same-row / same-column language: "in the same row as …", "in the
+  same column as …" — these are puzzle-rule references the player
+  uses to deduce position.
 - Other suspects' positions: "to the right of Dr. Quint", "in the same
   row as Crowe", "across from the reverend".
 
@@ -73,6 +76,19 @@ Disallowed:
 - Room names (Library, Parlour, Kitchen, etc.)
 - Direct statements like "in the room with the victim" in any non-victim
   clue.
+- **Counting cells** ("two cells above", "three rows below", "four
+  columns to the right"). Players shouldn't have to count squares —
+  use adjacency / diagonal / same-row / same-column instead.
+
+### Disambiguating duplicate furniture.
+
+When the same furniture (chair, plant, bookshelf, …) appears multiple
+times, do NOT lean on cell-counting to identify the right one. Either:
+- Refer to a unique neighbor: "the chair next to the piano".
+- Refer to another suspect: "the bookshelf behind Mortimer".
+- Or trust the row/column uniqueness rule — the player will eliminate
+  candidates because every suspect occupies a different row and a
+  different column.
 
 ### Furniture for clue anchors must be unique or disambiguated.
 
@@ -89,6 +105,20 @@ in the storage area (not the one in the bedroom)".
 The description of `lvl_sample_conservatory` walks the player through
 the rules. Other sample descriptions are shorter and assume the rules
 are known.
+
+### Check Solution highlighting — only highlight what the player placed.
+
+When the player hits **Check solution** and is wrong, the grid must
+only outline cells the player *actually placed a suspect on*:
+
+- ✅ green outline on placed cells whose suspect is correct
+- ❌ red outline on placed cells whose suspect is wrong
+- **No outline** on cells the player left empty. We never highlight a
+  cell where a suspect is "missing" — that's not feedback the player
+  needs and it lights up half the board on a partial answer.
+
+`checkSolution()` returns both `correct` and `wrong` cell sets — they
+must only contain cells present in `playerPlacement`.
 
 ## Tech notes
 

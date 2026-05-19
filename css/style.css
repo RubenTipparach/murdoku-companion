@@ -198,10 +198,13 @@ input:focus, textarea:focus { outline: 2px solid var(--accent); outline-offset: 
 /* ------ Grid ------ */
 
 .grid {
-  --cell: 56px;
+  /* JS sets --grid-cols when the active level loads. --cell scales down
+     when the grid gets larger so a 12×12 still fits comfortably. */
+  --grid-cols: 9;
+  --cell: clamp(28px, calc((100vw - 360px) / var(--grid-cols)), 56px);
   display: grid;
-  grid-template-columns: repeat(9, var(--cell));
-  grid-template-rows: repeat(9, var(--cell));
+  grid-template-columns: repeat(var(--grid-cols), var(--cell));
+  grid-template-rows: repeat(var(--grid-cols), var(--cell));
   background: var(--outside);
   padding: 2px;
   border-radius: 6px;
@@ -309,6 +312,61 @@ input:focus, textarea:focus { outline: 2px solid var(--accent); outline-offset: 
     linear-gradient(rgba(0,0,0,0.18) 1px, transparent 1px),
     linear-gradient(90deg, rgba(0,0,0,0.18) 1px, transparent 1px);
   background-size: 10px 10px;
+}
+/* Herringbone — two opposing diagonal stripes interleaved. */
+.cell.in-room.tile-herringbone {
+  background-image:
+    repeating-linear-gradient(45deg,  rgba(0,0,0,0.18) 0 2px, transparent 2px 7px),
+    repeating-linear-gradient(-45deg, rgba(255,255,255,0.10) 0 2px, transparent 2px 7px);
+}
+/* Parquet — offset square panels. */
+.cell.in-room.tile-parquet {
+  background-image:
+    linear-gradient(45deg, rgba(0,0,0,0.16) 25%, transparent 25%, transparent 75%, rgba(0,0,0,0.16) 75%),
+    linear-gradient(45deg, rgba(255,255,255,0.10) 25%, transparent 25%, transparent 75%, rgba(255,255,255,0.10) 75%);
+  background-size: 12px 12px;
+  background-position: 0 0, 6px 6px;
+}
+/* Brick — staggered rows of rectangles. */
+.cell.in-room.tile-brick {
+  background-color: var(--room-color);
+  background-image:
+    linear-gradient(0deg, rgba(0,0,0,0.28) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0,0,0,0.28) 1px, transparent 1px);
+  background-size: 100% 8px, 16px 100%;
+  background-position: 0 0, 0 4px;
+}
+.cell.in-room.tile-brick::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image: linear-gradient(90deg, rgba(0,0,0,0.28) 1px, transparent 1px);
+  background-size: 16px 100%;
+  background-position: 8px 4px;
+  pointer-events: none;
+  z-index: 0;
+}
+/* Hex — honeycomb cells via radial highlights on a translucent grid. */
+.cell.in-room.tile-hex {
+  background-image:
+    radial-gradient(circle at 50% 30%, rgba(255,255,255,0.10) 4px, transparent 5px),
+    radial-gradient(circle at 0% 80%, rgba(0,0,0,0.16) 4px, transparent 5px),
+    radial-gradient(circle at 100% 80%, rgba(0,0,0,0.16) 4px, transparent 5px);
+  background-size: 14px 16px;
+}
+/* Basket-weave. */
+.cell.in-room.tile-weave {
+  background-image:
+    repeating-linear-gradient(90deg, rgba(0,0,0,0.22) 0 1px, transparent 1px 8px),
+    repeating-linear-gradient(0deg,  rgba(0,0,0,0.22) 0 1px, transparent 1px 8px),
+    repeating-linear-gradient(45deg, rgba(255,255,255,0.06) 0 2px, transparent 2px 8px);
+}
+/* Marble — soft veining via layered radials. */
+.cell.in-room.tile-marble {
+  background-image:
+    radial-gradient(circle at 20% 40%, rgba(255,255,255,0.18), transparent 40%),
+    radial-gradient(circle at 70% 70%, rgba(0,0,0,0.18), transparent 50%),
+    radial-gradient(circle at 50% 20%, rgba(255,255,255,0.10), transparent 30%);
 }
 .cell.solution-marker::after {
   content: "S";

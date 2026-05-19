@@ -265,21 +265,172 @@ function drawRug(cv, rng) {
   cv.fillRect(15, 17, 2, 2, a);
 }
 
+function drawFireplace(cv, _rng) {
+  cv.fillEllipse(16, 29, 13, 2, SHADOW);
+  // Mantle (top shelf).
+  cv.fillRect(3, 6, 26, 2, WOOD);
+  cv.fillRect(3, 6, 26, 1, WOOD_LIGHT);
+  // Surround (stone).
+  const stone = [170, 165, 150, 255];
+  const stoneDk = [110, 105, 92, 255];
+  cv.fillRect(4, 8, 24, 20, stone);
+  // Brick interior opening.
+  cv.fillRect(8, 12, 16, 16, [40, 24, 18, 255]);
+  // Brick pattern lines.
+  for (let y = 14; y < 28; y += 2) cv.fillRect(8, y, 16, 1, [80, 44, 32, 255]);
+  for (let x = 9; x < 24; x += 4) {
+    for (let y = 12; y < 28; y += 4) cv.set(x, y, [80, 44, 32, 255]);
+  }
+  // Fire glow.
+  cv.fillEllipse(16, 22, 5, 4, [240, 140, 40, 255]);
+  cv.fillEllipse(16, 22, 3, 2, [255, 220, 80, 255]);
+  cv.set(13, 22, [240, 60, 30, 255]);
+  cv.set(19, 22, [240, 60, 30, 255]);
+  // Logs at the base.
+  cv.fillRect(10, 25, 12, 2, [110, 60, 30, 255]);
+  cv.fillRect(11, 26, 10, 1, [70, 36, 20, 255]);
+  // Stone outline.
+  cv.fillRect(4, 8, 24, 1, stoneDk);
+  cv.fillRect(4, 27, 24, 1, stoneDk);
+  cv.fillRect(4, 8, 1, 20, stoneDk);
+  cv.fillRect(27, 8, 1, 20, stoneDk);
+}
+
+function drawClock(cv, _rng) {
+  // Tall grandfather clock.
+  cv.fillEllipse(16, 29, 7, 2, SHADOW);
+  // Cabinet body.
+  cv.fillRect(11, 4, 10, 24, WOOD);
+  cv.fillRect(11, 4, 10, 2, WOOD_DARK);
+  cv.fillRect(11, 26, 10, 2, WOOD_DARK);
+  // Face circle.
+  cv.fillEllipse(16, 9, 4, 4, [240, 230, 200, 255]);
+  cv.fillEllipse(16, 9, 4, 4, [240, 230, 200, 255]);
+  // Hands.
+  cv.fillRect(16, 7, 1, 3, [40, 30, 24, 255]);
+  cv.fillRect(16, 9, 3, 1, [40, 30, 24, 255]);
+  // Cabinet shadow on right.
+  for (let y = 6; y <= 26; y++) cv.set(20, y, WOOD_DARK);
+  // Pendulum window.
+  cv.fillRect(13, 15, 6, 10, [50, 40, 30, 255]);
+  // Pendulum rod + bob.
+  cv.fillRect(15, 15, 1, 6, METAL);
+  cv.fillEllipse(16, 22, 2, 2, POMMEL_CLR());
+  // Feet.
+  cv.fillRect(11, 28, 2, 2, WOOD_DARK);
+  cv.fillRect(19, 28, 2, 2, WOOD_DARK);
+}
+// Tiny helper for the clock's pendulum bob — a single warm yellow.
+function POMMEL_CLR() { return [205, 168, 88, 255]; }
+
+function drawMirror(cv, _rng) {
+  cv.fillEllipse(16, 29, 9, 2, SHADOW);
+  // Outer frame.
+  cv.fillRect(8, 3, 16, 24, [180, 140, 60, 255]);
+  cv.fillRect(8, 3, 16, 1, [220, 180, 100, 255]);
+  cv.fillRect(8, 26, 16, 1, [120, 90, 30, 255]);
+  // Glass.
+  cv.fillRect(10, 5, 12, 20, [180, 210, 220, 255]);
+  // Reflection sheen — diagonal lighter band.
+  for (let i = 0; i < 14; i++) {
+    if (10 + i < 22 && 6 + i < 25) cv.set(10 + i, 6 + i, [220, 235, 240, 255]);
+  }
+  // Frame ornament at the top.
+  cv.fillRect(13, 2, 6, 1, [220, 180, 100, 255]);
+  cv.set(14, 1, [220, 180, 100, 255]);
+  cv.set(17, 1, [220, 180, 100, 255]);
+}
+
+function drawGramophone(cv, _rng) {
+  cv.fillEllipse(16, 29, 11, 2, SHADOW);
+  // Base box (wooden).
+  cv.fillRect(8, 20, 16, 8, WOOD);
+  cv.fillRect(8, 20, 16, 1, WOOD_LIGHT);
+  cv.fillRect(8, 27, 16, 1, WOOD_DARK);
+  // Turntable.
+  cv.fillEllipse(16, 21, 5, 1, [30, 30, 30, 255]);
+  // Tonearm.
+  cv.fillRect(16, 17, 1, 4, METAL);
+  cv.set(17, 17, METAL_DARK);
+  // Horn (cone widening upward and to the right).
+  const horn = [180, 130, 60, 255];
+  const hornL = [220, 170, 90, 255];
+  // Build the cone with stacked rows.
+  cv.fillRect(15, 16, 3, 1, horn);
+  cv.fillRect(14, 14, 6, 2, horn);
+  cv.fillRect(12, 11, 10, 3, horn);
+  cv.fillRect(10, 7, 14, 4, horn);
+  // Highlight along the left edge of the horn.
+  for (let y = 7; y <= 16; y++) cv.set(10 + Math.floor((y - 7) * 0.5), y, hornL);
+  // Inner horn shadow.
+  cv.fillRect(13, 9, 10, 1, darken(horn, 0.7));
+}
+
+function drawTypewriter(cv, _rng) {
+  cv.fillEllipse(16, 29, 11, 2, SHADOW);
+  // Body.
+  cv.fillRect(7, 14, 18, 11, [40, 36, 42, 255]);
+  cv.fillRect(7, 14, 18, 1, [80, 76, 86, 255]);
+  // Keys grid.
+  for (let row = 0; row < 3; row++) {
+    for (let col = 0; col < 7; col++) {
+      cv.set(9 + col * 2, 19 + row * 2, [220, 220, 220, 255]);
+    }
+  }
+  // Carriage return / paper roll on top.
+  cv.fillRect(6, 11, 20, 3, [60, 56, 64, 255]);
+  // Paper coming out.
+  cv.fillRect(12, 7, 8, 5, [240, 240, 230, 255]);
+  cv.fillRect(13, 8, 6, 1, [120, 120, 110, 255]);
+  cv.fillRect(13, 10, 6, 1, [120, 120, 110, 255]);
+  // Side knob.
+  cv.fillEllipse(5, 12, 1, 1, METAL);
+  cv.fillEllipse(26, 12, 1, 1, METAL);
+}
+
+function drawSafe(cv, _rng) {
+  cv.fillEllipse(16, 29, 10, 2, SHADOW);
+  // Body.
+  cv.fillRect(5, 6, 22, 22, [40, 38, 44, 255]);
+  cv.fillRect(5, 6, 22, 1, [80, 76, 84, 255]);
+  cv.fillRect(5, 27, 22, 1, [20, 18, 22, 255]);
+  // Door inset.
+  cv.fillRect(7, 8, 18, 18, [60, 56, 64, 255]);
+  cv.fillRect(7, 8, 18, 1, [30, 28, 32, 255]);
+  // Dial.
+  cv.fillEllipse(13, 17, 4, 4, [200, 196, 188, 255]);
+  cv.fillEllipse(13, 17, 4, 4, [200, 196, 188, 255]);
+  cv.fillEllipse(13, 17, 1, 1, [30, 28, 32, 255]);
+  // Dial pointer.
+  cv.fillRect(13, 14, 1, 2, [30, 28, 32, 255]);
+  // Handle.
+  cv.fillRect(19, 16, 4, 2, [200, 196, 188, 255]);
+  cv.fillRect(20, 18, 2, 2, [200, 196, 188, 255]);
+  // Bolt markings.
+  for (let i = 0; i < 4; i++) cv.set(8 + i, 25, [200, 196, 188, 255]);
+}
+
 // ---------- Roster ----------
 
 const SPRITES = [
-  { id: 'chair',      name: 'Chair',           draw: drawChair },
-  { id: 'armchair',   name: 'Armchair',        draw: drawArmchair },
-  { id: 'sofa',       name: 'Sofa',            draw: drawSofa },
-  { id: 'bed',        name: 'Bed',             draw: drawBed },
-  { id: 'table',      name: 'Table',           draw: drawTable },
-  { id: 'dresser',    name: 'Dresser',         draw: drawDresser },
-  { id: 'bookshelf',  name: 'Bookshelf',       draw: drawBookshelf },
-  { id: 'piano',      name: 'Piano',           draw: drawPiano },
-  { id: 'lamp',       name: 'Floor lamp',      draw: drawLamp },
-  { id: 'plant',      name: 'Potted plant',    draw: drawPlant },
-  { id: 'painting',   name: 'Wall painting',   draw: drawPainting },
-  { id: 'rug',        name: 'Patterned rug',   draw: drawRug },
+  { id: 'chair',       name: 'Chair',                  draw: drawChair },
+  { id: 'armchair',    name: 'Armchair',               draw: drawArmchair },
+  { id: 'sofa',        name: 'Sofa',                   draw: drawSofa },
+  { id: 'bed',         name: 'Bed',                    draw: drawBed },
+  { id: 'table',       name: 'Table',                  draw: drawTable },
+  { id: 'dresser',     name: 'Dresser',                draw: drawDresser },
+  { id: 'bookshelf',   name: 'Bookshelf',              draw: drawBookshelf },
+  { id: 'piano',       name: 'Piano',                  draw: drawPiano },
+  { id: 'lamp',        name: 'Floor lamp',             draw: drawLamp },
+  { id: 'plant',       name: 'Potted plant',           draw: drawPlant },
+  { id: 'painting',    name: 'Wall painting',          draw: drawPainting },
+  { id: 'rug',         name: 'Patterned rug',          draw: drawRug },
+  { id: 'fireplace',   name: 'Fireplace',              draw: drawFireplace },
+  { id: 'clock',       name: 'Grandfather clock',      draw: drawClock },
+  { id: 'mirror',      name: 'Mirror',                 draw: drawMirror },
+  { id: 'gramophone',  name: 'Gramophone',             draw: drawGramophone },
+  { id: 'typewriter',  name: 'Typewriter',             draw: drawTypewriter },
+  { id: 'safe',        name: 'Safe',                   draw: drawSafe },
 ];
 
 function main() {

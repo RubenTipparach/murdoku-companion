@@ -43,6 +43,15 @@ jobs:
       - name: Regenerate badge icons
         run: node scripts/generate-icons.js
 
+      # Keep generated PNGs deterministic across runs by failing fast if
+      # one of the scripts errors out.
+      - name: Check generated assets
+        run: |
+          test -f assets/portraits/manifest.json
+          test -f assets/furniture/manifest.json
+          test -f assets/icons/victim.png
+          test -f assets/icons/killer.png
+
       - name: Configure Pages
         uses: actions/configure-pages@v5
 

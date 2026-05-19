@@ -819,18 +819,20 @@ async function boot() {
       }
       winDetail.textContent = lvl && lvl.name ? `You solved "${lvl.name}".` : 'You solved this case.';
       winToast.classList.remove('hidden', 'bad');
-      highlightCells([]);
-      // Mark all solution cells as correct.
-      for (const cellEl of document.querySelectorAll('.cell')) {
-        const k = `${cellEl.dataset.x},${cellEl.dataset.y}`;
-        if (lvl && lvl.solution[k]) cellEl.classList.add('correct');
-      }
+      // Outline only the cells the player actually placed — all correct on a win.
+      highlightCells({ correct: result.correct, wrong: [] });
     } else {
       let msg;
-      if (result.wrong.length > 0 && result.killerWrong) {
-        msg = `${result.wrong.length} cell(s) are off — and the killer is wrong too.`;
-      } else if (result.wrong.length > 0) {
-        msg = `${result.wrong.length} cell(s) are off. Keep at it.`;
+      const hasWrong = result.wrong.length > 0;
+      const hasMissing = result.missingCount > 0;
+      if (hasWrong && result.killerWrong) {
+        msg = `${result.wrong.length} placement(s) wrong — and the killer is wrong too.`;
+      } else if (hasWrong) {
+        msg = `${result.wrong.length} placement(s) wrong. Green ✓ red ✕ outlines show which.`;
+      } else if (hasMissing && result.killerWrong) {
+        msg = `Still ${result.missingCount} suspect(s) left to place — and the killer is wrong.`;
+      } else if (hasMissing) {
+        msg = `Place the remaining ${result.missingCount} suspect(s) first.`;
       } else if (result.killerWrong) {
         msg = 'Everyone is in the right cell — but the killer is wrong. Look again at who shared a room with the victim.';
       } else {
@@ -839,13 +841,15 @@ async function boot() {
       winDetail.textContent = msg;
       winToast.classList.remove('hidden');
       winToast.classList.add('bad');
-      highlightCells(result.wrong);
+      // Outline only placed cells: green if right, red if wrong. NEVER
+      // outline cells the player hasn't placed on — they're not feedback.
+      highlightCells({ correct: result.correct, wrong: result.wrong });
     }
   });
   for (const c of document.querySelectorAll('[data-close="toast"]')) {
     c.addEventListener('click', () => {
       winToast.classList.add('hidden');
-      highlightCells([]);
+      highlightCells({});
     });
   }
 

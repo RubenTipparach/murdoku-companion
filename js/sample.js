@@ -75,8 +75,7 @@ const CONSERVATORY = {
       'The butler stood at a long table, flanked immediately left and ' +
       'right by tall chairs.',
     'char-10':
-      'Professor Crowe was at a chair, two cells directly below a potted ' +
-      'plant — and one row below the orchid table.',
+      'Professor Crowe was at a chair diagonally adjacent to the orchid table.',
     'char-15':
       'The gardener stood on a rug in a narrow corridor between two ' +
       'larger rooms.',
@@ -128,8 +127,7 @@ const LIGHTHOUSE = {
     'char-17':
       'Genevieve was found in the only bed in the building.',
     'char-19':
-      'Imogen was beside a potted plant, two cells to the left of and ' +
-      'one row below the lantern.',
+      'Imogen was beside a potted plant, diagonally adjacent to the lantern.',
   },
 };
 
@@ -168,8 +166,7 @@ const TEA_AND_TREACHERY = {
       'Madame Sable was on the sofa where she had been pouring tea. ' +
       'She was alone in the room with the killer.',
     'char-09':
-      'Vivienne was directly beneath a hanging painting, two cells above ' +
-      'the sofa where Madame Sable sat.',
+      'Vivienne was standing at a painting, with a lamp directly to her left.',
     'char-20':
       'Felix was at the keys of the only piano in the house.',
   },
@@ -223,8 +220,7 @@ const BOOKSELLERS_LOFT = {
       'Hask was beside a dresser — the one surrounded by storage crates, ' +
       'not the one beside the bed.',
     'char-14':
-      'Mortimer was in the armchair, flanked left, right and behind by ' +
-      'tall bookshelves.',
+      'Mortimer was in the only armchair in the building.',
     'char-16':
       'Silas was on a chair directly to the right of a dresser — the one ' +
       'beside the only bed.',

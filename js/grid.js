@@ -1,9 +1,9 @@
 // Grid rendering. Recomputes wall/doorway state on each render.
 
 import {
-  GRID,
   state,
   activeLevel,
+  gridSize,
   key,
   roomAt,
   hasDoorway,
@@ -15,10 +15,11 @@ import { badge as iconBadge } from './icons.js';
 const SIDES = ['top', 'right', 'bottom', 'left'];
 
 function neighbor(x, y, side) {
+  const N = gridSize();
   switch (side) {
     case 'top':    return y > 0 ? { x, y: y - 1 } : null;
-    case 'right':  return x < GRID - 1 ? { x: x + 1, y } : null;
-    case 'bottom': return y < GRID - 1 ? { x, y: y + 1 } : null;
+    case 'right':  return x < N - 1 ? { x: x + 1, y } : null;
+    case 'bottom': return y < N - 1 ? { x, y: y + 1 } : null;
     case 'left':   return x > 0 ? { x: x - 1, y } : null;
   }
 }
@@ -52,6 +53,10 @@ export function renderGrid(container, handlers) {
   const lvl = activeLevel();
   container.innerHTML = '';
   if (!lvl) return;
+  const N = gridSize();
+  // Drive the CSS template via a custom property so the grid lays out
+  // for any supported size (9, 12, …) without a stylesheet change.
+  container.style.setProperty('--grid-cols', N);
 
   // Pre-compute anchor lookup so we can place a label on exactly one cell.
   const anchors = new Map();
@@ -74,8 +79,8 @@ export function renderGrid(container, handlers) {
     }
   }
 
-  for (let y = 0; y < GRID; y++) {
-    for (let x = 0; x < GRID; x++) {
+  for (let y = 0; y < N; y++) {
+    for (let x = 0; x < N; x++) {
       const cell = document.createElement('div');
       cell.className = 'cell';
       cell.dataset.x = x;

@@ -1,6 +1,16 @@
 // Global mutable state and the level model.
 
-export const GRID = 9;
+export const DEFAULT_GRID = 9;
+// Maximum supported grid size — bumping this requires no code changes,
+// but levels above ~14 get cramped on mobile so we cap UI sizing there.
+export const MAX_GRID = 14;
+
+// Active grid size: read from the active level if present, else fall back
+// to the default. Used by grid.js, doorway helpers, and CSS.
+export function gridSize() {
+  const lvl = activeLevel();
+  return (lvl && lvl.size) ? lvl.size : DEFAULT_GRID;
+}
 
 const ROOM_PALETTE = [
   '#7b9ed1', '#c47b7b', '#7bc48f', '#c4a87b', '#a87bc4',
@@ -20,12 +30,13 @@ function id(prefix) {
   return prefix + '_' + Math.random().toString(36).slice(2, 8);
 }
 
-export function emptyLevel(name = 'Untitled house') {
+export function emptyLevel(name = 'Untitled house', size = DEFAULT_GRID) {
   const now = Date.now();
   return {
     id: id('lvl'),
     name,
     description: '',
+    size,
     rooms: [],
     doorways: [],
     solution: {},
@@ -129,9 +140,9 @@ export function setCellRoom(x, y, roomId) {
 export function edgeKey(x, y, side) {
   switch (side) {
     case 'top':    return y > 0 ? `h:${x},${y - 1}` : null;
-    case 'bottom': return y < GRID - 1 ? `h:${x},${y}` : null;
+    case 'bottom': return y < gridSize() - 1 ? `h:${x},${y}` : null;
     case 'left':   return x > 0 ? `v:${x - 1},${y}` : null;
-    case 'right':  return x < GRID - 1 ? `v:${x},${y}` : null;
+    case 'right':  return x < gridSize() - 1 ? `v:${x},${y}` : null;
   }
   return null;
 }
