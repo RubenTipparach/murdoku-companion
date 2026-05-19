@@ -1,4 +1,4 @@
-name: Deploy Murdoku to GitHub Pages
+name: Deploy Murdoku to GitHub Pages and Fly.io
 
 # Deploy on every push to every branch (and on manual dispatch).
 # Each run overwrites the previously deployed Pages site, so the most-recent
@@ -14,7 +14,8 @@ permissions:
   id-token: write
 
 # Allow at most one Pages deploy at a time; cancel any in-flight run if a new
-# commit lands first.
+# commit lands first. The deploy-api job has its own concurrency group so a
+# Fly deploy is not interrupted by a Pages-only push.
 concurrency:
   group: pages
   cancel-in-progress: true
@@ -70,3 +71,76 @@ jobs:
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
+
+  # Companion API deploy. Runs in parallel with the Pages deploy and
+  # only fires on the canonical repo so forks without Fly access fall
+  # through cleanly. The Fly app, volume, and secrets must exist before
+  # the first run; see server/README.md for the one-time bootstrap.
+  deploy-api:
+    runs-on: ubuntu-latest
+    if: ${{ github.repository == 'RubenTipparach/murdoku-companion' }}
+    concurrency:
+      group: fly-api
+      cancel-in-progress: false
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up flyctl
+        uses: superfly/flyctl-actions/setup-flyctl@master
+
+      - name: Confirm Fly auth and app exist
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+        run: |
+          if [ -z "${FLY_API_TOKEN}" ]; then
+            echo "::error::FLY_API_TOKEN repo secret is empty or missing."
+            exit 1
+          fi
+          flyctl version
+          flyctl auth whoami
+          flyctl status -a murdoku-companion
+
+      # Single-writer sqlite needs exactly one machine on one volume.
+      # The user's existing app sits in ams, so we ensure a volume in
+      # ams and reap any extra machines before deploy. Both steps are
+      # idempotent: no-op if already in the desired state.
+      - name: Ensure volume + single machine
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+          APP: murdoku-companion
+          REGION: ams
+        run: |
+          set -e
+          echo "--- volumes before ---"
+          flyctl volumes list -a "$APP"
+          VOL_ANY=$(flyctl volumes list -a "$APP" --json | jq '[.[] | select(.name=="murdoku_data" and .region=="'"$REGION"'")] | length')
+          if [ "${VOL_ANY:-0}" -lt 1 ]; then
+            echo "Creating volume murdoku_data in $REGION"
+            flyctl volumes create murdoku_data --size 1 --region "$REGION" --app "$APP" --yes
+          else
+            echo "Volume murdoku_data already exists in $REGION"
+          fi
+          echo "--- machines before ---"
+          flyctl machine list -a "$APP"
+          flyctl machine list -a "$APP" --json > /tmp/machines.json
+          APP_IDS=$(jq -r '.[] | select((.config.metadata.fly_process_group // "app") == "app") | .id' /tmp/machines.json)
+          FIRST=""
+          for M in $APP_IDS; do
+            if [ -z "$FIRST" ]; then
+              FIRST="$M"
+              echo "Keeping app machine $M"
+              continue
+            fi
+            echo "Destroying extra app machine $M"
+            flyctl machine stop "$M" --app "$APP" || true
+            flyctl machine destroy "$M" --app "$APP" --force || true
+          done
+          echo "--- machines after ---"
+          flyctl machine list -a "$APP"
+
+      - name: Deploy API to Fly.io
+        working-directory: server
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+        run: flyctl deploy --remote-only

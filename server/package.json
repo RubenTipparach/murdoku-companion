@@ -1,0 +1,19 @@
+{
+  "name": "murdoku-api",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Murdoku companion API. Profiles, level sharing, leaderboards. Phase 12 ships profiles only.",
+  "scripts": {
+    "start": "node index.js",
+    "dev": "node --watch index.js"
+  },
+  "dependencies": {
+    "better-sqlite3": "^11.3.0",
+    "cors": "^2.8.5",
+    "express": "^4.21.0"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

@@ -4,6 +4,7 @@ import {
   state,
   emptyLevel,
   activeLevel,
+  activeProfile,
   rebuildCellCache,
   placeCharacterAt,
   cloneActiveLevel,
@@ -11,8 +12,16 @@ import {
 import {
   loadLevels, saveLevels, loadActiveId, saveActiveId,
   loadCompletedSamples, saveCompletedSamples,
-  loadProfile, saveProfile,
+  loadProfiles, saveProfiles,
+  loadActiveProfileName, saveActiveProfileName,
+  generateToken,
 } from './storage.js';
+import {
+  apiAvailable, probeServer, claimProfile,
+  shareLevel, updateSharedLevel, getSharedLevel, bumpPlays,
+  recordCompletion, getLeaderboard, shareUrlFor,
+} from './api.js';
+import { validateLevel } from './validator.js';
 import { renderGrid } from './grid.js';
 import { loadCharacters, renderRoster } from './portraits.js';
 import { loadFurniture, normalizeLevel, rollAllRooms } from './decor.js';
@@ -58,6 +67,13 @@ const levelsModal  = $('#levels-modal');
 const levelsListEl = $('#levels-list');
 const winToast     = $('#win-toast');
 const winDetail    = $('#win-detail');
+const winLeaderboard = $('#win-leaderboard');
+const shareModal   = $('#share-modal');
+const shareErrors  = $('#share-errors');
+const shareSuccess = $('#share-success');
+const sharePending = $('#share-pending');
+const shareUrlInput = $('#share-url');
+const shareCopyStatus = $('#share-copy-status');
 const importFile   = $('#import-file');
 const levelSelect  = $('#level-select');
 const sampleBanner = $('#sample-banner');
@@ -101,6 +117,8 @@ function setMode(mode) {
   playTools.classList.toggle('hidden', mode !== 'play');
   // Reset transient selection between modes.
   state.selectedCharacterId = null;
+  // Entering play mode (re-)starts the per-session clock and mistake count.
+  if (mode === 'play') startPlaySession(activeLevel());
   rerender();
 }
 
@@ -487,72 +505,269 @@ function loadSampleAsNewLevel(sampleKey) {
   state.selectedRoomId = null;
 }
 
-// Render the profile row at the top of the start menu. Two states:
-//  - No profile: creation form with a name input and a hint about the
-//    Phase 12 server claim. Gated sections below stay hidden.
-//  - Profile present: name chip with a sign-out affordance. Gated
-//    sections become visible.
+// Render the profile row at the top of the start menu. Three states:
+//   1. Active profile: name chip + Switch + Sign out. Gated sections
+//      below become visible.
+//   2. Profiles exist on this device but none is active: sign-in
+//      picker with one card per known profile, plus a + New profile
+//      card. Gated sections stay hidden.
+//   3. No profiles on this device (or user clicked + New profile):
+//      creation form. Gated sections stay hidden.
+//
+// Tokens are generated client-side at creation and persisted in
+// localStorage so the player can sign back in after signing out.
 function renderStartProfile() {
-  if (!state.profile) {
+  const active = activeProfile();
+  if (active) {
+    startGated.classList.remove('hidden');
+    renderActiveProfileBar(active);
+  } else if (state.profiles.length > 0 && state.menuView !== 'create') {
     startGated.classList.add('hidden');
-    startProfile.innerHTML = `
-      <div class="profile-create">
-        <h3>Pick a name to play</h3>
-        <p class="hint">Your name will be public on shared levels and leaderboards once the Murdoku server ships. Don't use your real name if you'd rather stay anonymous. For now this is just a local handle, stored on this device.</p>
-        <form id="profile-create-form" autocomplete="off">
-          <input id="profile-name-input" type="text" placeholder="e.g. inspector_grim" autocomplete="off" maxlength="20" spellcheck="false" />
-          <button type="submit">Create profile</button>
-        </form>
-        <p id="profile-error" class="profile-error hidden"></p>
-      </div>
-    `;
-    const form = startProfile.querySelector('#profile-create-form');
-    const input = startProfile.querySelector('#profile-name-input');
-    const errEl = startProfile.querySelector('#profile-error');
-    form.addEventListener('submit', (ev) => {
-      ev.preventDefault();
-      const name = input.value.trim();
-      const err = validateProfileName(name);
-      if (err) {
-        errEl.textContent = err;
-        errEl.classList.remove('hidden');
-        return;
-      }
-      state.profile = { name, createdAt: Date.now() };
-      saveProfile(state.profile);
-      renderStartMenu();
-    });
-    requestAnimationFrame(() => input.focus());
-    return;
+    renderProfilePicker();
+  } else {
+    startGated.classList.add('hidden');
+    renderProfileCreateForm();
   }
-  startGated.classList.remove('hidden');
+}
+
+function renderActiveProfileBar(profile) {
+  let chip = '';
+  if (!profile.claimed) {
+    if (state.serverReachable === true) {
+      chip = '<span class="profile-claim-pending claiming">claiming…</span>';
+    } else if (state.serverReachable === false) {
+      chip = '<span class="profile-claim-pending local-only">local only</span>';
+    } else {
+      chip = '<span class="profile-claim-pending unknown">checking…</span>';
+    }
+  } else {
+    chip = '<span class="profile-claim-pending claimed">claimed</span>';
+  }
   startProfile.innerHTML = `
     <div class="profile-active">
       <div class="profile-info">
         <span class="profile-icon">🪪</span>
-        <span class="profile-name">@${escapeHtml(state.profile.name)}</span>
-        <span class="profile-hint">Local profile, server sync ships in Phase 12.</span>
+        <span class="profile-name">@${escapeHtml(profile.name)}</span>
+        ${chip}
       </div>
-      <button id="btn-sign-out" class="profile-signout">Sign out</button>
+      <div class="profile-actions">
+        <button id="btn-switch-profile" class="profile-switch" title="Sign out and pick a different profile">Switch</button>
+        <button id="btn-sign-out" class="profile-signout" title="Sign out. Your profile stays on this device.">Sign out</button>
+      </div>
     </div>
   `;
-  startProfile.querySelector('#btn-sign-out').addEventListener('click', () => {
-    if (!confirm(`Sign out of @${state.profile.name}? Your levels stay on this device. You can create a new profile after.`)) return;
-    state.profile = null;
-    saveProfile(null);
+  startProfile.querySelector('#btn-switch-profile').addEventListener('click', () => {
+    state.activeProfileName = null;
+    saveActiveProfileName(null);
+    state.menuView = 'main';
     renderStartMenu();
   });
+  startProfile.querySelector('#btn-sign-out').addEventListener('click', () => {
+    if (!confirm(`Sign out of @${profile.name}? Your profile stays on this device so you can sign back in later.`)) return;
+    state.activeProfileName = null;
+    saveActiveProfileName(null);
+    state.menuView = 'main';
+    renderStartMenu();
+  });
+}
+
+function renderProfilePicker() {
+  const cards = state.profiles.map((p) => {
+    const last = p.lastSeenAt
+      ? new Date(p.lastSeenAt).toLocaleDateString()
+      : 'never';
+    const status = p.claimed ? 'claimed on server' : 'local only';
+    return `
+      <button class="start-card profile-pick-card" data-action="pick-profile" data-profile-name="${escapeHtml(p.name)}">
+        <h3>🪪 @${escapeHtml(p.name)}</h3>
+        <p>Last seen ${last} · ${status}</p>
+      </button>
+    `;
+  }).join('');
+  startProfile.innerHTML = `
+    <div class="profile-picker">
+      <h3>Sign in</h3>
+      <p class="hint">Pick a profile to continue, or create a new one. Profiles never leave this device unless you sync them to the server.</p>
+      <div class="start-cards">
+        ${cards}
+        <button class="start-card new-profile-card" data-action="show-create-profile">
+          <h3>+ New profile</h3>
+          <p>Create another profile on this device.</p>
+        </button>
+      </div>
+    </div>
+  `;
+}
+
+function renderProfileCreateForm() {
+  const hasOthers = state.profiles.length > 0;
+  startProfile.innerHTML = `
+    <div class="profile-create">
+      <h3>${hasOthers ? 'Create a new profile' : 'Pick a name to play'}</h3>
+      <p class="hint">Your name will be public on shared levels and leaderboards. Don't use your real name if you'd rather stay anonymous. A 32-byte secret is generated on this device and stored next to your name so you can sign back in.</p>
+      <form id="profile-create-form" autocomplete="off">
+        <input id="profile-name-input" type="text" placeholder="e.g. inspector_grim" autocomplete="off" maxlength="20" spellcheck="false" />
+        <button type="submit">Create profile</button>
+      </form>
+      ${hasOthers ? '<button id="btn-back-to-picker" class="profile-back">Back to sign-in</button>' : ''}
+      <p id="profile-error" class="profile-error hidden"></p>
+    </div>
+  `;
+  const form = startProfile.querySelector('#profile-create-form');
+  const input = startProfile.querySelector('#profile-name-input');
+  const errEl = startProfile.querySelector('#profile-error');
+  form.addEventListener('submit', (ev) => {
+    ev.preventDefault();
+    const name = input.value.trim();
+    const err = validateProfileName(name);
+    if (err) {
+      errEl.textContent = err;
+      errEl.classList.remove('hidden');
+      return;
+    }
+    if (state.profiles.some((p) => p.name.toLowerCase() === name.toLowerCase())) {
+      errEl.textContent = 'You already have a profile with that name on this device.';
+      errEl.classList.remove('hidden');
+      return;
+    }
+    const profile = {
+      name,
+      token: generateToken(),
+      createdAt: Date.now(),
+      lastSeenAt: Date.now(),
+      claimed: false,
+    };
+    state.profiles.push(profile);
+    state.activeProfileName = profile.name;
+    state.menuView = 'main';
+    saveProfiles(state.profiles);
+    saveActiveProfileName(profile.name);
+    renderStartMenu();
+    // Server claim happens in the background; UI is already responsive.
+    runServerClaim(profile);
+  });
+  if (hasOthers) {
+    startProfile.querySelector('#btn-back-to-picker').addEventListener('click', () => {
+      state.menuView = 'main';
+      renderStartMenu();
+    });
+  }
+  requestAnimationFrame(() => input.focus());
+}
+
+// Attempt to claim the profile on the API. Updates `claimed` and the
+// active-profile bar when the response lands; falls back to the retry
+// loop on transport failure so the next reachable probe re-runs the
+// claim. Name-collision surfaces to the user via alert.
+async function runServerClaim(profile) {
+  if (!apiAvailable()) return;
+  if (activeProfile() && activeProfile().name === profile.name) {
+    renderActiveProfileBar(profile);
+  }
+  let result;
+  try {
+    result = await claimProfile(profile.name, profile.token);
+  } catch {
+    onServerUnreachable();
+    return;
+  }
+  if (result.status === 0) {
+    // Transport-level failure (CORS, DNS, offline). Treat as unreachable.
+    onServerUnreachable();
+    return;
+  }
+  state.serverReachable = true;
+  if (result.ok) {
+    profile.claimed = true;
+    saveProfiles(state.profiles);
+  } else if (result.nameTaken) {
+    alert(
+      `The name @${profile.name} is already claimed on the server. ` +
+      `Your local progress stays under this name on this device, but ` +
+      `leaderboards will not show it. Pick a different name when you ` +
+      `next sign up.`
+    );
+  }
+  renderServerBanner();
+  if (activeProfile() && activeProfile().name === profile.name) {
+    renderActiveProfileBar(profile);
+  }
+}
+
+// Server connectivity loop. Probes the API on boot; if unreachable,
+// retries every 10s until it succeeds. Once reachable, the loop stops.
+// A future enhancement can re-arm the loop on a failed in-flight call
+// to detect mid-session outages; for now any claim/RPC failure also
+// re-arms via onServerUnreachable.
+const SERVER_RETRY_MS = 10_000;
+let serverRetryTimer = null;
+
+function startServerLoop() {
+  if (!apiAvailable()) {
+    state.serverReachable = false;
+    renderServerBanner();
+    return;
+  }
+  attemptProbe();
+}
+
+async function attemptProbe() {
+  let ok;
+  try {
+    ok = await probeServer();
+  } catch {
+    ok = false;
+  }
+  if (ok) onServerReachable();
+  else onServerUnreachable();
+}
+
+function onServerReachable() {
+  const wasReachable = state.serverReachable === true;
+  state.serverReachable = true;
+  if (serverRetryTimer) {
+    clearTimeout(serverRetryTimer);
+    serverRetryTimer = null;
+  }
+  renderServerBanner();
+  const cur = activeProfile();
+  if (cur) renderActiveProfileBar(cur);
+  // Auto-claim an unclaimed signed-in profile the moment the server
+  // becomes reachable. Skipped on transitions from already-reachable
+  // so we don't loop on a stuck name-taken collision.
+  if (!wasReachable && cur && !cur.claimed) runServerClaim(cur);
+}
+
+function onServerUnreachable() {
+  state.serverReachable = false;
+  renderServerBanner();
+  const cur = activeProfile();
+  if (cur) renderActiveProfileBar(cur);
+  if (serverRetryTimer) clearTimeout(serverRetryTimer);
+  serverRetryTimer = setTimeout(attemptProbe, SERVER_RETRY_MS);
 }
 
 // Render every dynamic section of the start menu. Cheap, called whenever
 // any of profile / filter / completion state changes.
 function renderStartMenu() {
   renderStartProfile();
-  if (!state.profile) return; // gated sections stay empty + hidden
+  if (!activeProfile()) return; // gated sections stay empty + hidden
   renderStartContinue();
   renderStartFilterTabs();
   renderStartLibrary();
   renderStartAuthored();
+  renderServerBanner();
+}
+
+function renderServerBanner() {
+  const el = $('#server-banner');
+  if (!el) return;
+  if (state.serverReachable === false) {
+    el.classList.remove('hidden');
+    el.textContent = 'Server unreachable. Playing locally. Sharing and leaderboards are disabled until the server responds again.';
+  } else {
+    el.classList.add('hidden');
+  }
 }
 
 function renderStartContinue() {
@@ -600,10 +815,32 @@ function renderStartLibrary() {
   startLibrary.innerHTML = '';
 
   if (state.menuFilter === 'usergames') {
-    const p = document.createElement('p');
-    p.className = 'empty-state';
-    p.textContent = 'Levels shared by other players will appear here. Visit a share link to add one. Sharing ships in Phase 13.';
-    startLibrary.appendChild(p);
+    const shared = state.levels.filter((l) => l.isShared);
+    if (!shared.length) {
+      const p = document.createElement('p');
+      p.className = 'empty-state';
+      p.textContent = 'Levels shared by other players will appear here. Open a share link (?play=CODE) to add one.';
+      startLibrary.appendChild(p);
+      return;
+    }
+    const cards = document.createElement('div');
+    cards.className = 'start-cards';
+    for (const lvl of shared) {
+      const card = document.createElement('button');
+      card.className = 'start-card';
+      card.dataset.action = 'open-authored';
+      card.dataset.authoredId = lvl.id;
+      const who = lvl.ownerName ? `@${escapeHtml(lvl.ownerName)}` : 'someone';
+      card.innerHTML = `
+        <h3>🔗 ${escapeHtml(lvl.name || 'Shared puzzle')}</h3>
+        <p>By ${who} · code <code>${escapeHtml(lvl.code || '')}</code></p>
+        <div class="authored-actions">
+          <button data-authored-action="clone" data-authored-id="${escapeHtml(lvl.id)}" class="clone-btn">Clone to edit</button>
+        </div>
+      `;
+      cards.appendChild(card);
+    }
+    startLibrary.appendChild(cards);
     return;
   }
 
@@ -658,9 +895,194 @@ function renderStartLibrary() {
   }
 }
 
+// ---------- Share / play-by-code / completion tracking ----------
+
+// Per-session play stats. Reset whenever the player enters play
+// mode on a level. Mistakes accumulate from failed Check clicks.
+// Lost on page reload, which is fine for a POC leaderboard.
+let playSession = null; // { levelId, startedAt, mistakes }
+
+function startPlaySession(level) {
+  if (!level) return;
+  playSession = {
+    levelId: level.id,
+    startedAt: Date.now(),
+    mistakes: 0,
+  };
+}
+
+function bumpMistakes(n) {
+  if (!playSession || !n) return;
+  playSession.mistakes += n;
+}
+
+async function openShareModal(authoredId) {
+  const lvl = state.levels.find((l) => l.id === authoredId);
+  if (!lvl) return;
+  const profile = activeProfile();
+  if (!profile) {
+    alert('Sign in to share a puzzle.');
+    return;
+  }
+  // Run the same validator the server runs, so we surface errors
+  // before the round trip.
+  const v = validateLevel(lvl);
+  shareModal.classList.remove('hidden');
+  shareSuccess.classList.add('hidden');
+  shareErrors.classList.add('hidden');
+  sharePending.classList.add('hidden');
+  shareCopyStatus.textContent = '';
+  if (!v.ok) {
+    shareErrors.innerHTML =
+      '<strong>Fix these before sharing:</strong>' +
+      `<ul>${v.errors.map((e) => `<li>${escapeHtml(e)}</li>`).join('')}</ul>`;
+    shareErrors.classList.remove('hidden');
+    return;
+  }
+  sharePending.textContent = lvl.code ? 'Re-publishing...' : 'Publishing...';
+  sharePending.classList.remove('hidden');
+  const result = lvl.code
+    ? await updateSharedLevel(profile.token, lvl.code, lvl)
+    : await shareLevel(profile.token, lvl);
+  sharePending.classList.add('hidden');
+  if (result.ok) {
+    if (result.code) {
+      lvl.code = result.code;
+      persist();
+      renderStartMenu();
+    }
+    const url = result.url || shareUrlFor(lvl.code);
+    shareUrlInput.value = url;
+    shareSuccess.classList.remove('hidden');
+    return;
+  }
+  // Server-side validator can disagree with the client (rare but possible
+  // if the level was edited mid-flight). Surface those errors too.
+  if (result.invalid) {
+    shareErrors.innerHTML =
+      '<strong>The server rejected this puzzle:</strong>' +
+      `<ul>${(result.errors || []).map((e) => `<li>${escapeHtml(e)}</li>`).join('')}</ul>`;
+    shareErrors.classList.remove('hidden');
+    return;
+  }
+  if (result.forbidden) {
+    shareErrors.innerHTML = '<strong>You don\'t own this puzzle on the server. Clone it to edit your own copy.</strong>';
+    shareErrors.classList.remove('hidden');
+    return;
+  }
+  shareErrors.innerHTML = `<strong>Could not publish (status ${escapeHtml(String(result.status || 0))}).</strong> Try again in a moment.`;
+  shareErrors.classList.remove('hidden');
+}
+
+function closeShareModal() {
+  shareModal.classList.add('hidden');
+}
+
+// Create a fresh authored copy of a shared puzzle in the player's own
+// library. The new level has no `code` (re-share creates a new one)
+// and no owner; the original stays untouched in the shared section.
+function cloneSharedLevelToAuthored(sharedId) {
+  const src = state.levels.find((l) => l.id === sharedId);
+  if (!src) return;
+  const copy = JSON.parse(JSON.stringify(src));
+  copy.id = 'lvl_' + Math.random().toString(36).slice(2, 8);
+  copy.name = `${src.name} (clone)`;
+  copy.isShared = false;
+  copy.code = null;
+  copy.ownerId = null;
+  copy.ownerName = null;
+  copy.completed = false;
+  copy.createdAt = Date.now();
+  copy.updatedAt = Date.now();
+  state.levels.push(copy);
+  state.activeId = copy.id;
+  persist();
+  closeStartMenu();
+  rerender();
+  flashStatus(`Cloned "${src.name}" into your authored levels.`);
+}
+
+// Pull a level by code from the server and merge into the local
+// library. If we already have it (matching code), just activate it.
+// If the active profile owns it, store it as an authored (editable)
+// level; otherwise mark it isShared so the UI offers Clone-to-edit.
+async function applyPlayUrlParam() {
+  const url = new URL(window.location.href);
+  const code = url.searchParams.get('play');
+  if (!code) return;
+  // Strip the param so refreshing doesn't re-add the level.
+  url.searchParams.delete('play');
+  history.replaceState(null, '', url.toString());
+
+  const existing = state.levels.find((l) => l.code === code);
+  if (existing) {
+    state.activeId = existing.id;
+    persist();
+    return;
+  }
+  const data = await getSharedLevel(code);
+  if (!data) {
+    flashStatus(`Could not load shared puzzle "${code}".`);
+    return;
+  }
+  const lvl = normalizeLevel(data.level);
+  // Always regenerate id locally so we don't collide with an existing
+  // entry that happens to share the original level id.
+  lvl.id = 'lvl_' + Math.random().toString(36).slice(2, 8);
+  lvl.code = data.code;
+  lvl.ownerId = data.ownerId;
+  lvl.ownerName = data.ownerName;
+  lvl.name = data.name || lvl.name;
+  const ap = activeProfile();
+  // If the signed-in player owns this puzzle, treat it as authored so
+  // they can edit + Re-publish in place.
+  lvl.isShared = !(ap && data.ownerId === ap.id);
+  lvl.completed = false;
+  state.levels.push(lvl);
+  state.activeId = lvl.id;
+  persist();
+  bumpPlays(code);
+  flashStatus(`Loaded "${lvl.name}" from @${data.ownerName}.`);
+}
+
+// On a win for a shared puzzle, post the completion + show the
+// top-of-leaderboard inline in the win toast.
+async function postCompletionAndShowLeaderboard(lvl) {
+  if (!lvl || !lvl.code) return;
+  const ap = activeProfile();
+  if (!ap || !apiAvailable()) return;
+  const session = playSession && playSession.levelId === lvl.id
+    ? playSession
+    : null;
+  const durationMs = session ? Math.max(1, Date.now() - session.startedAt) : 1000;
+  const mistakes = session ? session.mistakes : 0;
+  await recordCompletion(ap.token, lvl.code, durationMs, mistakes);
+  const entries = await getLeaderboard(lvl.code);
+  if (!entries || !entries.length) return;
+  const top = entries.slice(0, 5);
+  const items = top
+    .map((e) => {
+      const mine = ap.name === e.profile_name;
+      return `<li class="${mine ? 'lb-you' : ''}">
+        <span>${mine ? 'You' : '@' + escapeHtml(e.profile_name)}</span>
+        <span class="lb-time">${formatMs(e.best_ms)}</span>
+      </li>`;
+    })
+    .join('');
+  winLeaderboard.innerHTML = `<h4>Leaderboard for "${escapeHtml(lvl.name || lvl.code)}"</h4><ol>${items}</ol>`;
+  winLeaderboard.classList.remove('hidden');
+}
+
+function formatMs(ms) {
+  if (!Number.isFinite(ms)) return '';
+  const totalSec = Math.floor(ms / 1000);
+  const m = Math.floor(totalSec / 60);
+  const s = totalSec % 60;
+  return `${m}:${s.toString().padStart(2, '0')}`;
+}
+
 // Self-authored levels (the "Your levels" section). Always shows a
-// + New level card first; the share button is present but disabled
-// until Phase 13.
+// + New level card first.
 function renderStartAuthored() {
   startAuthored.innerHTML = '';
 
@@ -683,11 +1105,18 @@ function renderStartAuthored() {
     const chip = lvl.difficulty && DIFFICULTY_LABELS[lvl.difficulty]
       ? `<span class="difficulty-chip diff-${lvl.difficulty}">${DIFFICULTY_LABELS[lvl.difficulty]}</span>`
       : '';
+    const sharedChip = lvl.code
+      ? `<span class="shared-chip" title="Published as ${escapeHtml(lvl.code)}">shared</span>`
+      : '';
+    const canShare = apiAvailable() && activeProfile();
+    const shareBtn = canShare
+      ? `<button data-authored-action="share" data-authored-id="${escapeHtml(lvl.id)}" class="share-btn">${lvl.code ? 'Re-publish' : 'Share'}</button>`
+      : `<span class="share-btn-disabled" title="Sign in and connect to the server first.">Share</span>`;
     card.innerHTML = `
-      <h3>✏ ${escapeHtml(lvl.name || 'Untitled level')} ${chip}</h3>
+      <h3>✏ ${escapeHtml(lvl.name || 'Untitled level')} ${chip} ${sharedChip}</h3>
       <p>Last edited ${updated.toLocaleDateString()}</p>
       <div class="authored-actions">
-        <span data-authored-action="share" class="share-btn-disabled" title="Sharing ships in Phase 13.">Share (soon)</span>
+        ${shareBtn}
       </div>
     `;
     startAuthored.appendChild(card);
@@ -787,10 +1216,30 @@ function closeStartMenu() {
 }
 
 function handleStartAction(action, opts = {}) {
-  // Every play / author action requires a profile. The profile creation
-  // form lives in the same menu, so a missing profile just means we
-  // don't leave; the form is already in front of the user.
-  if (!state.profile) return;
+  // Profile-management actions work without an active profile.
+  if (action === 'pick-profile') {
+    const name = opts.profileName;
+    const p = state.profiles.find((pp) => pp.name === name);
+    if (!p) return;
+    p.lastSeenAt = Date.now();
+    state.activeProfileName = p.name;
+    state.menuView = 'main';
+    saveProfiles(state.profiles);
+    saveActiveProfileName(p.name);
+    // If the chosen profile hasn't been claimed yet, attempt now.
+    if (!p.claimed) runServerClaim(p);
+    renderStartMenu();
+    return;
+  }
+  if (action === 'show-create-profile') {
+    state.menuView = 'create';
+    renderStartMenu();
+    return;
+  }
+  // Every play / author action requires an active profile. The profile
+  // UI lives in the same menu, so a missing profile just means we
+  // don't leave; the form / picker is already in front of the user.
+  if (!activeProfile()) return;
   switch (action) {
     case 'play-sample': {
       loadSampleAsNewLevel(opts.sampleKey);
@@ -839,7 +1288,27 @@ async function boot() {
   state.levels = loadLevels().map(normalizeLevel);
   state.activeId = loadActiveId();
   state.completedSamples = new Set(loadCompletedSamples());
-  state.profile = loadProfile();
+  state.profiles = loadProfiles();
+  state.activeProfileName = loadActiveProfileName();
+  // Verify the stored active-profile name still matches an entry.
+  if (state.activeProfileName && !state.profiles.find((p) => p.name === state.activeProfileName)) {
+    state.activeProfileName = null;
+    saveActiveProfileName(null);
+  }
+  // Bump lastSeenAt on the active profile for the picker UI.
+  const ap = activeProfile();
+  if (ap) {
+    ap.lastSeenAt = Date.now();
+    saveProfiles(state.profiles);
+  }
+  // Kick off the server connectivity loop. Probes once on boot, then
+  // retries every 10 seconds while offline so the client recovers
+  // automatically when the server comes back.
+  startServerLoop();
+  // If we landed on a ?play=<code> URL, fetch the shared puzzle and
+  // add it to the library. The handler strips the query string so a
+  // refresh does not re-add the level.
+  await applyPlayUrlParam();
   // We *never* auto-load a level on boot. The start menu is always the
   // first thing the user sees, even on returning visits. If there's a
   // previously-active level it's reachable via the menu's Continue card.
@@ -925,6 +1394,29 @@ async function boot() {
     if (e.target === levelsModal) closeLevels();
   });
 
+  // Share modal close + copy-link handlers.
+  for (const c of document.querySelectorAll('[data-close="share"]')) c.addEventListener('click', closeShareModal);
+  shareModal.addEventListener('click', (e) => {
+    if (e.target === shareModal) closeShareModal();
+  });
+  $('#btn-copy-share').addEventListener('click', async () => {
+    const url = shareUrlInput.value;
+    if (!url) return;
+    try {
+      await navigator.clipboard.writeText(url);
+      shareCopyStatus.textContent = 'Copied.';
+    } catch {
+      // Fallback for browsers that block clipboard API.
+      shareUrlInput.select();
+      try {
+        document.execCommand('copy');
+        shareCopyStatus.textContent = 'Copied.';
+      } catch {
+        shareCopyStatus.textContent = 'Press Ctrl-C / Cmd-C to copy.';
+      }
+    }
+  });
+
   // Start menu wiring. There is no close affordance, the user picks a
   // card to leave. The topbar Menu button reopens the menu mid-session.
   $('#btn-menu').addEventListener('click', () => openStartMenu());
@@ -947,7 +1439,9 @@ async function boot() {
       localStorage.removeItem('murdoku.levels');
       localStorage.removeItem('murdoku.activeId');
       localStorage.removeItem('murdoku.completedSamples');
-      localStorage.removeItem('murdoku.profile');
+      localStorage.removeItem('murdoku.profiles');
+      localStorage.removeItem('murdoku.activeProfileName');
+      localStorage.removeItem('murdoku.profile'); // legacy Phase 11 key
     } catch {}
     // Reload to start clean, boot() will run again with empty state.
     location.reload();
@@ -970,8 +1464,13 @@ async function boot() {
     if (authoredBtn) {
       if (authoredBtn.disabled) return;
       const act = authoredBtn.dataset.authoredAction;
+      e.stopPropagation();
       if (act === 'open') {
         handleStartAction('open-authored', { authoredId: authoredBtn.dataset.authoredId });
+      } else if (act === 'share') {
+        openShareModal(authoredBtn.dataset.authoredId);
+      } else if (act === 'clone') {
+        cloneSharedLevelToAuthored(authoredBtn.dataset.authoredId);
       }
       return;
     }
@@ -980,6 +1479,7 @@ async function boot() {
     handleStartAction(card.dataset.action, {
       sampleKey: card.dataset.sampleKey,
       continueId: card.dataset.continueId,
+      profileName: card.dataset.profileName,
     });
   });
 
@@ -1056,11 +1556,20 @@ async function boot() {
         lvl.updatedAt = Date.now();
         persist();
       }
-      winDetail.textContent = lvl && lvl.name ? `You solved "${lvl.name}".` : 'You solved this case.';
+      const baseLine = lvl && lvl.name ? `You solved "${lvl.name}".` : 'You solved this case.';
+      const elapsed = playSession && lvl && playSession.levelId === lvl.id
+        ? ` Time ${formatMs(Date.now() - playSession.startedAt)}, mistakes ${playSession.mistakes}.`
+        : '';
+      winDetail.textContent = baseLine + elapsed;
+      winLeaderboard.classList.add('hidden');
+      winLeaderboard.innerHTML = '';
       winToast.classList.remove('hidden', 'bad');
+      // Post completion + render leaderboard for shared puzzles.
+      if (lvl && lvl.code) postCompletionAndShowLeaderboard(lvl);
       // Outline only the cells the player actually placed, all correct on a win.
       highlightCells({ correct: result.correct, wrong: [] });
     } else {
+      bumpMistakes(result.wrong.length || 1);
       let msg;
       const hasWrong = result.wrong.length > 0;
       const hasMissing = result.missingCount > 0;

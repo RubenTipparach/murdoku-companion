@@ -4,7 +4,11 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Murdoku</title>
-    <link rel="stylesheet" href="./css/style.css?v=26" />
+    <link rel="stylesheet" href="./css/style.css?v=29" />
+    <!-- API base URL for the Murdoku companion server. Empty = local-
+         only mode (no claims, no leaderboards). The deploy.yml workflow
+         can substitute this from a build-time env var if needed. -->
+    <meta name="murdoku-api-base" content="https://murdoku-companion.fly.dev" />
     <link
       rel="icon"
       type="image/svg+xml"
@@ -16,8 +20,14 @@
       <div class="topbar-row primary">
         <h1>Murdoku</h1>
         <div class="mode-toggle" role="group" aria-label="Mode">
-          <button id="mode-edit" class="active">Edit</button>
-          <button id="mode-play">Play</button>
+          <button id="mode-edit" class="active" title="Edit this house">
+            <span class="mode-icon" aria-hidden="true">&#9998;</span>
+            <span class="mode-label">Edit</span>
+          </button>
+          <button id="mode-play" title="Play this case">
+            <span class="mode-icon play" aria-hidden="true">&#9654;</span>
+            <span class="mode-label">Play</span>
+          </button>
         </div>
         <div class="topbar-actions">
           <button id="btn-menu" title="Open the start menu">Menu</button>
@@ -124,10 +134,15 @@
         <div class="modal-body">
           <p class="start-tagline">A murder-mystery puzzle in nine by nine.</p>
 
-          <!-- Profile row. Shows a creation form when no profile is
-               set, or the active profile with a sign-out affordance.
-               Everything below is gated until a profile exists. -->
+          <!-- Profile row. Shows the active profile, a sign-in picker
+               when signed out, or a creation form when no profiles
+               exist on this device. Everything below is gated until an
+               active profile is selected. -->
           <div id="start-profile" class="start-profile-row"></div>
+
+          <!-- Server-unreachable banner. Visible only when the API base
+               URL is configured but unreachable. -->
+          <div id="server-banner" class="server-banner hidden"></div>
 
           <div id="start-gated" class="start-gated">
             <h3 id="start-continue-heading" class="start-section hidden">Continue</h3>
@@ -215,9 +230,32 @@
     <div id="win-toast" class="toast hidden">
       <strong>Case closed.</strong>
       <span id="win-detail"></span>
+      <div id="win-leaderboard" class="win-leaderboard hidden"></div>
       <button data-close="toast">OK</button>
     </div>
 
-    <script type="module" src="./js/main.js?v=26"></script>
+    <!-- Share modal: shown when the author hits Share on an authored level. -->
+    <div id="share-modal" class="modal hidden" role="dialog">
+      <div class="modal-inner">
+        <header>
+          <h2>Share this case</h2>
+          <button class="close" data-close="share">×</button>
+        </header>
+        <div class="modal-body">
+          <div id="share-errors" class="share-errors hidden"></div>
+          <div id="share-success" class="share-success hidden">
+            <p>Anyone with this link can play your puzzle. Only you can edit it (others get a Clone option).</p>
+            <div class="share-url-row">
+              <input id="share-url" type="text" readonly />
+              <button id="btn-copy-share">Copy</button>
+            </div>
+            <p id="share-copy-status" class="share-copy-status"></p>
+          </div>
+          <div id="share-pending" class="share-pending hidden">Publishing...</div>
+        </div>
+      </div>
+    </div>
+
+    <script type="module" src="./js/main.js?v=29"></script>
   </body>
 </html>

@@ -83,14 +83,33 @@ export const state = {
   completedSamples: new Set(),
   // Cache of cell → roomId for O(1) lookup. Rebuilt on render.
   cellRoomCache: new Map(),
-  // The active player profile. Null until the player creates one from
-  // the start menu. Phase 11 is local-only; Phase 12 adds server claim.
-  // Shape: { name, createdAt }
-  profile: null,
+  // Every profile ever created on this device. Each profile carries a
+  // {name, token, createdAt, lastSeenAt, claimed} record. Survives
+  // sign-out so the player can sign back in. See storage.loadProfiles.
+  profiles: [],
+  // Which profile in `profiles` is currently signed in, by name. Null
+  // means the player signed out and needs to pick or create one.
+  activeProfileName: null,
+  // Whether the API base URL responded to a recent health probe.
+  //   null = unknown (probe in flight or never attempted)
+  //   true = reachable
+  //   false = unreachable; UI shows the offline banner
+  serverReachable: null,
   // Start-menu library filter, transient (not persisted). One of:
   // 'all' | 'new' | 'finished' | 'usergames'.
   menuFilter: 'all',
+  // Start-menu sub-view: 'main' (gated sections), 'picker' (sign-in
+  // list shown when signed out but profiles exist). Transient.
+  menuView: 'main',
 };
+
+// Helper: the active profile object, looked up by name in the registry.
+// Returns null when no profile is signed in OR the signed-in name
+// somehow no longer matches a registry entry.
+export function activeProfile() {
+  if (!state.activeProfileName) return null;
+  return state.profiles.find((p) => p.name === state.activeProfileName) || null;
+}
 
 export function activeLevel() {
   return state.levels.find((l) => l.id === state.activeId) || null;
