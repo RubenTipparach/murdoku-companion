@@ -10,6 +10,7 @@ import {
   edgeKey,
 } from './state.js';
 import { findFurniture } from './decor.js';
+import { badge as iconBadge } from './icons.js';
 
 const SIDES = ['top', 'right', 'bottom', 'left'];
 
@@ -120,8 +121,9 @@ export function renderGrid(container, handlers) {
           p.style.backgroundImage = `url('${char.portrait}')`;
           p.title = char.name;
           cell.appendChild(p);
-          // Badges: 🪦 for the victim, 🔪 for whoever the player has
-          // marked as the killer (or, in edit mode, the solution killer).
+          // Inline-SVG badges: skull for the victim, knife for whoever
+          // the player has marked as the killer (or, in edit mode, the
+          // solution's killer). Avoids the 🪦 / 🔪 system-font glyph gap.
           const showVictim = lvl.victim === charId;
           const showKiller = state.mode === 'play'
             ? lvl.playerKiller === charId
@@ -129,7 +131,7 @@ export function renderGrid(container, handlers) {
           if (showVictim || showKiller) {
             const badge = document.createElement('div');
             badge.className = 'cell-badge';
-            badge.textContent = (showVictim ? '🪦' : '') + (showKiller ? '🔪' : '');
+            badge.innerHTML = iconBadge({ victim: showVictim, killer: showKiller });
             cell.appendChild(badge);
           }
           if (state.selectedCharacterId === charId) {

@@ -16,6 +16,7 @@ import { renderGrid } from './grid.js';
 import { loadCharacters, renderRoster } from './portraits.js';
 import { loadFurniture, normalizeLevel, rollAllRooms } from './decor.js';
 import { SAMPLES, buildSampleLevel } from './sample.js';
+import { victimIcon, killerIcon } from './icons.js';
 import {
   selectTool,
   createRoom,
@@ -215,13 +216,17 @@ function renderSelectedClue(container) {
   // the killer (they died), so we hide the button on the victim row.
   const killerBtn = isVictim
     ? ''
-    : `<button class="kill-btn ${isKiller ? 'on' : ''}" data-kill="1">${isKiller ? '🔪 Unmark killer' : '🔪 Mark as killer'}</button>`;
-  const badge = isVictim ? '🪦 ' : (isKiller ? '🔪 ' : '');
+    : `<button class="kill-btn ${isKiller ? 'on' : ''}" data-kill="1">${killerIcon()} <span>${isKiller ? 'Unmark killer' : 'Mark as killer'}</span></button>`;
+  const inlineBadge = isVictim
+    ? `<span class="inline-badge">${victimIcon()}</span> `
+    : isKiller
+      ? `<span class="inline-badge">${killerIcon()}</span> `
+      : '';
   container.classList.remove('hidden');
   container.innerHTML = `
     <img src="${char.portrait}" alt="${char.name}" />
     <div class="clue-body">
-      <strong>${badge}${escapeHtml(char.name)}</strong>
+      <strong>${inlineBadge}${escapeHtml(char.name)}</strong>
       <p class="char-desc">${escapeHtml(char.description || '')}</p>
       <p class="clue-text">${escapeHtml(clueText)}</p>
       ${killerBtn}

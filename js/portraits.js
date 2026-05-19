@@ -1,6 +1,7 @@
 // Load the character roster from the generated manifest.
 
 import { state } from './state.js';
+import { badge as iconBadge } from './icons.js';
 
 export async function loadCharacters() {
   try {
@@ -39,13 +40,12 @@ export function renderRoster(container, { filterIds = null, level = null } = {})
     btn.title = `${char.name}\n${char.description}`;
     btn.innerHTML = `<img src="${char.portrait}" alt="${char.name}" draggable="false" />`;
     if (state.selectedCharacterId === char.id) btn.classList.add('active');
-    // Same victim 🪦 / killer 🔪 badges as the grid, so the roster mirrors
-    // the board's state at a glance.
+    // Same victim / killer badges as the grid — inline SVG so they render
+    // identically on every device.
     if (char.id === victim || char.id === killer) {
       const badge = document.createElement('span');
       badge.className = 'tile-badge';
-      badge.textContent =
-        (char.id === victim ? '🪦' : '') + (char.id === killer ? '🔪' : '');
+      badge.innerHTML = iconBadge({ victim: char.id === victim, killer: char.id === killer });
       btn.appendChild(badge);
     }
     container.appendChild(btn);
