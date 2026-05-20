@@ -37,6 +37,16 @@ const isArmchair = (lvl, x, y) => decAt(lvl, x, y) === 'armchair';
 const isRug = (lvl, x, y) => decAt(lvl, x, y) === 'rug';
 const has = (lvl, x, y, kind) => decAt(lvl, x, y) === kind;
 
+// Generic helpers ----------------------------------------------------
+const flankedHorizontal = (kind) => (x, y, l) =>
+  isRug(l, x, y) && has(l, x - 1, y, kind) && has(l, x + 1, y, kind);
+const flankedVertical = (kind) => (x, y, l) =>
+  isRug(l, x, y) && has(l, x, y - 1, kind) && has(l, x, y + 1, kind);
+const armchairWith = (dx, dy, kind) => (x, y, l) =>
+  isArmchair(l, x, y) && has(l, x + dx, y + dy, kind);
+const rugWith = (dx, dy, kind) => (x, y, l) =>
+  isRug(l, x, y) && has(l, x + dx, y + dy, kind);
+
 // m10 clue predicates
 const m10Preds = {
   // Sable: rug + table directly below
@@ -56,7 +66,7 @@ const m10Preds = {
 };
 
 function solveLevel(lvl, preds, extraConstraints = () => true) {
-  const charIds = Object.keys(preds);
+  const charIds = placeOrder[lvl.code] || Object.keys(preds);
   const candidates = {};
   for (const id of charIds) candidates[id] = candidateCells(lvl, preds[id]);
 
@@ -80,10 +90,14 @@ function solveLevel(lvl, preds, extraConstraints = () => true) {
     for (const k of candidates[id]) {
       const [x, y] = k.split(',').map(Number);
       if (usedRows.has(y) || usedCols.has(x)) continue;
-      // Inter-suspect predicate: Penn must be one row below Sable.
-      if (id === 'char-04' && assignment['char-05']) {
-        const [, sy] = assignment['char-05'].split(',').map(Number);
-        if (y !== sy + 1) continue;
+      // Inter-suspect row/col pinches encoded per level. Each killer's
+      // clue spells out a row/col relation to another suspect; we apply
+      // it here so the verifier honours the same constraint a player
+      // would deduce from the clue text.
+      const pinch = interPinches[lvl.code];
+      if (pinch && pinch[id]) {
+        const ok = pinch[id](x, y, assignment);
+        if (!ok) continue;
       }
       usedRows.add(y);
       usedCols.add(x);
@@ -129,7 +143,147 @@ if (!sample) {
 const lvl = buildSampleLevel(sample.key);
 lvl.code = sample.code;
 lvl.name = sample.name;
-const predsByCode = { m10: m10Preds };
+// m11 clue predicates
+const m11Preds = {
+  // Pell: rug flanked left + right by writing desks
+  'char-17': flankedHorizontal('table'),
+  // Finch: armchair + brazier directly to right
+  'char-14': armchairWith(1, 0, 'brazier'),
+  // Voss: rug + table directly to right + dresser directly below
+  'char-11': (x, y, l) =>
+    isRug(l, x, y) && has(l, x + 1, y, 'table') && has(l, x, y + 1, 'dresser'),
+  // Quint: rug flanked left + right by bookshelves
+  'char-03': flankedHorizontal('bookshelf'),
+  // Marchand: armchair + chart table directly above
+  'char-09': armchairWith(0, -1, 'table'),
+  // Yew: rug + potted ferns above AND below
+  'char-15': flankedVertical('plant'),
+};
+
+// m12 clue predicates
+const m12Preds = {
+  // Hask (victim): rug + war table directly to right
+  'char-12': rugWith(1, 0, 'table'),
+  // Knox (killer): chair + brazier left + cauldron below
+  'char-18': (x, y, l) =>
+    (decAt(l, x, y) === 'chair' || isArmchair(l, x, y)) &&
+    has(l, x - 1, y, 'brazier') &&
+    has(l, x, y + 1, 'cauldron'),
+  // Imogen: armchair flanked left + right by chairs
+  'char-19': (x, y, l) =>
+    isArmchair(l, x, y) && has(l, x - 1, y, 'chair') && has(l, x + 1, y, 'chair'),
+  // Glover (butler): rug + bookshelf above + chair below
+  'char-06': (x, y, l) =>
+    isRug(l, x, y) && has(l, x, y - 1, 'bookshelf') && has(l, x, y + 1, 'chair'),
+  // Ardent: chair + bookshelf above + dresser right
+  'char-08': (x, y, l) =>
+    decAt(l, x, y) === 'chair' &&
+    has(l, x, y - 1, 'bookshelf') &&
+    has(l, x + 1, y, 'dresser'),
+  // Beatrice: rug + hearth directly below
+  'char-07': rugWith(0, 1, 'fireplace'),
+  // Felix: any sofa
+  'char-20': (x, y, l) => decAt(l, x, y) === 'sofa',
+  // Silas: rug + anvil directly above
+  'char-16': rugWith(0, -1, 'anvil'),
+};
+
+// m13 clue predicates
+const m13Preds = {
+  // Wraithmoor: rug + stone altar (table) directly above
+  'char-01': rugWith(0, -1, 'table'),
+  // Crowe (killer): armchair + cauldron left + brazier right
+  'char-10': (x, y, l) =>
+    isArmchair(l, x, y) &&
+    has(l, x - 1, y, 'cauldron') &&
+    has(l, x + 1, y, 'brazier'),
+  // Yew: rug + potted fern directly above (simplified, was 4-sided)
+  'char-15': rugWith(0, -1, 'plant'),
+  // Penn: sofa (any sofa)
+  'char-04': (x, y, l) => decAt(l, x, y) === 'sofa',
+  // Voss: armchair + banner directly to left
+  'char-11': armchairWith(-1, 0, 'banner'),
+  // Finch: rug + chest above + dresser below
+  'char-14': (x, y, l) =>
+    isRug(l, x, y) && has(l, x, y - 1, 'chest') && has(l, x, y + 1, 'dresser'),
+};
+
+// m14 clue predicates
+const m14Preds = {
+  // Pell: rug + reliquary table directly above
+  'char-17': rugWith(0, -1, 'table'),
+  // Hask: armchair + brazier left + cauldron right
+  'char-12': (x, y, l) =>
+    isArmchair(l, x, y) &&
+    has(l, x - 1, y, 'brazier') &&
+    has(l, x + 1, y, 'cauldron'),
+  // Bramwell: rug flanked left + right by bookshelves
+  'char-13': flankedHorizontal('bookshelf'),
+  // Yew: rug + anvil directly to left
+  'char-15': rugWith(-1, 0, 'anvil'),
+  // Crowe: sofa (any)
+  'char-10': (x, y, l) => decAt(l, x, y) === 'sofa',
+};
+
+// m15 clue predicates
+const m15Preds = {
+  // Hask: rug + anvil directly above
+  'char-12': rugWith(0, -1, 'anvil'),
+  // Knox: armchair + brazier directly above
+  'char-18': armchairWith(0, -1, 'brazier'),
+  // Marchand: armchair flanked left + right by chairs
+  'char-09': (x, y, l) =>
+    isArmchair(l, x, y) && has(l, x - 1, y, 'chair') && has(l, x + 1, y, 'chair'),
+  // Felix: sofa
+  'char-20': (x, y, l) => decAt(l, x, y) === 'sofa',
+  // Beatrice: rug + hearth directly to left
+  'char-07': rugWith(-1, 0, 'fireplace'),
+};
+
+// m16 clue predicates
+const m16Preds = {
+  // Ardent: rug + war-banner (banner) directly above
+  'char-08': rugWith(0, -1, 'banner'),
+  // Glover: armchair + banner directly above
+  'char-06': armchairWith(0, -1, 'banner'),
+  // Imogen: rug flanked left + right by bookshelves
+  'char-19': flankedHorizontal('bookshelf'),
+  // Bramwell: armchair + brazier directly to right
+  'char-13': armchairWith(1, 0, 'brazier'),
+  // Yew: rug + banner directly to right
+  'char-15': rugWith(1, 0, 'banner'),
+  // Roe: rug + anvil directly to left
+  'char-16': rugWith(-1, 0, 'anvil'),
+};
+
+// Row / column rules are implicit in the puzzle (every suspect on a
+// unique row + column, killer alone with victim). Authors must NEVER
+// spell those out in clue text, so the verifier doesn't carry any
+// inter-suspect pinch constraints either. Uniqueness must fall out of
+// candidate cells + unique-row/col + killer-alone-with-victim alone.
+const interPinches = {};
+
+// Order matters: pinches reference other suspects, so the referenced
+// suspect must be placed first. Per-level placement order.
+const placeOrder = {
+  m10: ['char-05', 'char-04', 'char-13', 'char-10', 'char-15', 'char-08', 'char-16'],
+  m11: ['char-09', 'char-03', 'char-11', 'char-17', 'char-14', 'char-15'],
+  m12: ['char-06', 'char-20', 'char-16', 'char-18', 'char-12', 'char-19', 'char-08', 'char-07'],
+  m13: ['char-14', 'char-10', 'char-01', 'char-15', 'char-04', 'char-11'],
+  m14: ['char-17', 'char-12', 'char-13', 'char-15', 'char-10'],
+  m15: ['char-20', 'char-18', 'char-12', 'char-09', 'char-07'],
+  m16: ['char-08', 'char-06', 'char-19', 'char-13', 'char-15', 'char-16'],
+};
+
+const predsByCode = {
+  m10: m10Preds,
+  m11: m11Preds,
+  m12: m12Preds,
+  m13: m13Preds,
+  m14: m14Preds,
+  m15: m15Preds,
+  m16: m16Preds,
+};
 const preds = predsByCode[code];
 if (!preds) {
   console.error(`No predicate set defined for ${code} yet.`);

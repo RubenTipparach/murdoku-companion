@@ -219,82 +219,92 @@ Tiering rough rubric:
   name a unique anchor in their room. The on-ramp set.
 - **medium** (the m10-m16 samples): non-rectangular rooms (L, T, plus,
   U, S shapes), 5-8 suspects, duplicate furniture forcing row / column
-  deduction, medieval-fantasy flavour. The killer's clue MUST drop
-  "the only X" wording and MUST pinch the killer against at least one
-  other suspect by row or column (see "Killer ambiguity scales with
-  difficulty").
+  deduction, medieval-fantasy flavour. Every clue (including the
+  killer's) must have two or more candidate cells on its own. The
+  killer's duplicates should sit in different rooms so the killer's
+  room is itself a deduction. See "Every clue matches at least two
+  cells".
 - **hard** (planned, no shipped samples yet): introduces the special
-  character cards and house modifiers. Killer's clue references at
-  least two non-victim suspects for row/column pinches, no
-  room-unique anchors. Full row / column saturation, multiple cards
-  in play per puzzle.
+  character cards and house modifiers. Every suspect with two-plus
+  candidate cells, several anchors duplicated three-plus times,
+  multiple suspects with overlapping candidate sets.
 
-### Killer ambiguity scales with difficulty.
+### Row / column uniqueness is implicit, never spelled out in a clue.
 
-The killer's *room* should not be obvious from the killer's own clue.
-The whole point of the killer-alone-with-victim rule is that the
-player works out which room the killer is in by working out where
-every suspect stands and finding the one who landed in the victim's
-room. If the killer's clue says "at the only forge in the keep" or
-"with the only scrying table directly to his right" the player can
-read the room straight off the clue and skip the deduction.
+This is a logic puzzle. Every suspect sits on a unique row and a
+unique column - that rule lives in the help screen, NOT in any clue.
+A clue must never read "in the row directly above [Name]'s" or "in
+the column directly to the right of [Name]'s" or any equivalent
+phrasing that references another suspect's row or column. The
+player applies the unique-row / unique-column rule themselves by
+working through the cast.
 
-Mechanism: **pinch the killer between two other suspects by row or
-column.** Because every suspect occupies a unique row AND a unique
-column, the killer's row can be locked by saying "in the row directly
-above [SuspectA] and directly below [SuspectB]", and the column can
-be locked the same way. The killer's clue then commits to a row/col
-pair without committing to a room; the player must still apply the
-unique-row/col rule plus the killer-alone-with-victim rule to figure
-out which room that row/col falls in.
+❌ "Penn was in an armchair, in the row directly below Sable's,
+   with a table directly to his right."
+❌ "Voss was on a rug, in the column directly to the left of
+   Quint's, with a writing desk to her right."
 
-Allowed in the killer's clue:
-- "in the row directly above [Name]'s" / "in the row directly below
-  [Name]'s" (row-pinch via another suspect).
-- "in the column directly to the left of [Name]'s" / "in the column
-  directly to the right of [Name]'s" (column-pinch).
-- "in the row between [Name] and [Name]" / "in the column between
-  [Name] and [Name]" (two-suspect pinch).
-- Ambiguous furniture references (duplicated anchors): "with a chair
-  directly to her right" when several chairs exist on the board.
+✅ "Penn was in an armchair, with a table directly to his right."
+   (matches multiple cells - duplicate tables exist - and the
+   player resolves it by applying unique-row / unique-column +
+   killer-alone-with-victim to the whole cast.)
+✅ "Voss was on a rug, with a writing desk directly to her right
+   and a heavy dresser directly below."
+   (matches multiple cells; the row / column rule pins it down.)
 
-Disallowed in the killer's clue (these give the room away):
-- "with the only X in the [building]" for any anchor that exists only
-  in the killer's room.
-- Naming a piece of furniture that exists in exactly one room.
+Clues describe what's around a suspect (furniture, adjacency,
+ambiguous anchors). Clues do NOT describe another suspect's row or
+column. If the puzzle can only be solved by spelling out the row /
+column relationship in a clue, the puzzle is under-constrained -
+add ambiguous furniture or move suspects until the implicit logic
+suffices, don't bolt on a pinch.
 
-It's still fine for the killer's clue to mention furniture, just not
-*uniquely-room-identifying* furniture. Mix the pinch with an
-ambiguous anchor ("in the column directly to the right of Yew's,
-with a brazier directly to his left") so the clue reads naturally
-and still places the killer in a specific cell once the room is
-known.
+### Every clue matches at least two cells. Killer ambiguity scales.
 
-The killer's clue must still NOT say "same room as the victim" or
-imply it directly. Row/column-adjacency to the victim is allowed
-(it doesn't itself state same-room), but prefer pinching against
-non-victim suspects where possible.
+The whole heart of the puzzle is: each clue's description fits two
+or more cells on the board, and the player narrows them to one by
+applying unique-row / unique-column across the cast (plus killer-
+alone-with-victim for the killer). If any clue uniquely identifies
+a single cell on its own, that suspect is a freebie and the puzzle
+loses its bite.
 
-**Difficulty scaling.** The amount of ambiguity in the killer's
-position scales with difficulty:
+Mechanism: **duplicate every clue's anchor.** If a clue says "with
+a table directly to his right", the level must contain at least two
+armchair-with-table-to-the-right cells, in different rooms. The
+player has to deduce which one by working out where every other
+suspect sits.
 
-- **easy:** killer's clue may name a unique anchor in their room
-  ("with the only piano in the house directly to her right"). The
-  room is essentially given to the player; the puzzle is about
-  placing the other suspects.
-- **medium:** killer's clue MUST drop "the only X" wording and MUST
-  include at least one row/column pinch against another suspect.
-  Anchors used by the killer should be furniture types that appear
-  in more than one room of the level (chair, table, brazier when
-  duplicated, etc.).
-- **hard:** killer's clue must be fully ambiguous on the room: at
-  least two non-victim suspects referenced for row/column pinches,
-  no room-unique anchors at all, and ideally the clue is consistent
-  with two or more rooms until the unique-row/col rule is fully
-  resolved across the whole cast.
+Killer-specific: because the killer must share a room with the
+victim, the killer's clue is most powerful when its duplicate
+anchors live in different rooms. The player sees the clue matches
+(say) two cells, one in Room A and one in Room B, and only resolves
+which is the killer by working out where the victim is and
+applying killer-alone-with-victim. The killer's *room* becomes a
+deduction, not a giveaway.
 
-When in doubt, ratchet up. The killer's room being a deduction, not
-a given, is what makes a medium level harder than an easy one.
+Disallowed in any clue:
+- "with the only X in the [building]" for any anchor that exists
+  only in one room. Add a duplicate of the anchor elsewhere instead.
+- Naming a piece of furniture that exists in exactly one room
+  ("the war table", "the scrying table") unless a duplicate of
+  the same furniture exists somewhere else.
+- Any explicit row / column reference to another suspect (see the
+  rule above). The row / column constraint is the player's tool,
+  not the author's narrative device.
+
+**Difficulty scaling.** The amount of ambiguity scales with tier:
+
+- **easy:** clues may name a unique anchor for that suspect's
+  room ("the only piano in the house"). The puzzle is mostly about
+  placing the others around them.
+- **medium:** every clue must have at least two candidate cells
+  consistent with the description alone. The killer's two
+  candidates should be in different rooms so the killer's room is
+  also a deduction.
+- **hard:** every suspect has two or more candidate cells, AND at
+  least one pair of suspects has overlapping candidates (so the
+  player must use elimination across multiple suspects to break
+  the tie). Several anchors duplicated three or more times.
 
 ### The house outline must NEVER be a plain rectangle.
 
