@@ -78,6 +78,11 @@ export const state = {
   showRoomNames: true,
   transparentGuests: false,
   showRowColMarks: false,
+  // Transient row/col X overlay enabled by the Check Solution button
+  // when the player's placement isn't yet a win. Lets them see at a
+  // glance which rows / columns are already locked by other suspects.
+  // Cleared on auto-clear, toast close, or Clear / Reset.
+  checkFeedbackRowCol: false,
   // Sample keys (e.g. 'lvl_sample_lighthouse') the user has solved at
   // least once. Hydrated from localStorage at boot.
   completedSamples: new Set(),

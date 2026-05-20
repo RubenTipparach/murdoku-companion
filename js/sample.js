@@ -740,42 +740,47 @@ const WITCHSTONE_SANCTUM = {
     '9,9': 'char-16', // Roe, rug, only standing clock directly to his right
   },
   decorations: {
-    // Scrying Chamber (stem): the only scrying table at the chambers
-    // centre, Sable on the rug above it, Penn in the armchair to its
-    // left. A couple of mirrors and lamps for atmosphere.
-    '3,0': 'mirror',   '5,0': 'banner',    '7,0': 'mirror',
+    // Every clue anchor in this level repeats at least once. Each
+    // suspect's clue matches two cells on its own; only the row +
+    // column uniqueness rule plus the killer-alone-with-victim rule
+    // narrow them to one.
+    // Scrying Chamber: rug+table for Sable, armchair+table-right for
+    // Penn, plus a bookshelf decoy for Crowe.
+    '5,0': 'banner',
     '5,1': 'rug',
     '4,2': 'armchair', '5,2': 'table',
-    '4,3': 'lamp',     '5,3': 'rug',       '6,3': 'lamp',
-    // Hearthroom: the only hearth in the keep at [1,4], Bramwell in
-    // the armchair to its left.
+    '3,3': 'bookshelf',
+    // Hearthroom: armchair+hearth-right candidate for Bramwell.
     '0,4': 'armchair', '1,4': 'fireplace', '2,4': 'bookshelf',
-    '0,5': 'rug',
-    '2,6': 'cauldron',
-    // Reliquary: Crowe in the armchair below a tall bookshelf.
-    '8,4': 'safe',     '10,4': 'bookshelf',
-    '9,5': 'chest',    '10,5': 'armchair',
-    '8,6': 'mirror',
-    // Mandrake Garden: plants are the rooms identity. Yew stands on
-    // a rug, flanked on all four sides by mandrakes.
+    // Reliquary: banner+armchair-below decoy for Ardent, clock decoy
+    // for Roe, and the Crowe-canonical armchair+bookshelf-above pair.
+    '9,4': 'banner',   '10,4': 'bookshelf',
+    '8,5': 'clock',    '9,5': 'armchair',  '10,5': 'armchair',
+    // Mandrake Garden: plants line every cell except two rugs. Yew at
+    // [1,8] is the canonical match; [2,9] is the rug+plant-above
+    // decoy.
     '0,7': 'plant',    '1,7': 'plant',     '2,7': 'plant',
     '0,8': 'plant',    '1,8': 'rug',       '2,8': 'plant',
-    '0,9': 'plant',    '1,9': 'plant',     '2,9': 'plant',
-    // Bone Sanctum (the central spine, kept sparse): only sofa and
-    // anvil in the keep, banner above Ardent.
-    '5,4': 'sofa',
-    '4,5': 'anvil',
-    '6,6': 'banner',   '6,7': 'armchair',
-    '5,8': 'chest',
-    // Wellhouse: Roe on a rug, the only standing clock in the keep
-    // directly to his right.
-    '8,8': 'bed',
+    '0,9': 'plant',    '1,9': 'plant',     '2,9': 'rug',
+    // Bone Sanctum: holds the duplicates that mirror the other rooms.
+    // Decoy armchair-below-bookshelf at [3,4]/[3,3]. Decoy rug-above-
+    // table at [4,7]/[4,8]. Decoy armchair-table-right at [3,8]/[4,8].
+    // Decoy armchair-hearth-right at [7,8]/[8,8] (hearth in
+    // Wellhouse). Roe decoy rug at [7,5] with clock at [8,5].
+    '3,4': 'armchair', '5,4': 'sofa',
+    '4,5': 'anvil',    '7,5': 'rug',
+    '6,6': 'banner',
+    '4,7': 'rug',                          '6,7': 'armchair',
+    '3,8': 'armchair', '4,8': 'table',     '7,8': 'armchair',
+    // Wellhouse: a 2nd hearth (the decoy partner for [7,8]), Roe on
+    // the canonical rug with a clock directly to his right.
+    '8,8': 'fireplace',
     '9,9': 'rug',      '10,9': 'clock',
   },
   clues: {
     'char-05':
       'Madame Sable was slumped on a rug, directly above a heavy ' +
-      'scrying table. She was alone in the room with the killer.',
+      'table. She was alone in the room with the killer.',
     'char-04':
       'Reverend Penn was curled in an armchair, in the row directly ' +
       'below Madame Sable\'s, with a heavy table directly to his right.',
@@ -784,10 +789,10 @@ const WITCHSTONE_SANCTUM = {
       'directly to her right.',
     'char-10':
       'Professor Crowe was reading from an armchair, directly below a ' +
-      'tall bookshelf of mouldering bestiaries.',
+      'tall bookshelf.',
     'char-15':
-      'Constance Yew stood on a rug, flanked on all four sides by ' +
-      'potted mandrakes.',
+      'Constance Yew stood on a rug, with a potted mandrake directly ' +
+      'above her.',
     'char-08':
       'Captain Ardent was curled in an armchair, with a banner directly ' +
       'above him.',

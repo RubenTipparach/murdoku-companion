@@ -1378,6 +1378,10 @@ function scheduleCheckFeedbackClear() {
     checkFeedbackTimer = null;
     highlightCells({});
     winToast.classList.add('hidden');
+    if (state.checkFeedbackRowCol) {
+      state.checkFeedbackRowCol = false;
+      rerender();
+    }
   }, CHECK_FEEDBACK_TTL_MS);
 }
 function cancelCheckFeedbackClear() {
@@ -2438,6 +2442,11 @@ async function boot() {
       // Outline only placed cells: green if right, red if wrong. NEVER
       // outline cells the player hasn't placed on, they're not feedback.
       highlightCells({ correct: result.correct, wrong: result.wrong });
+      // Also light up the row/col X overlay so the player can see which
+      // rows + columns are already claimed. Persists until auto-clear /
+      // toast close / Clear, same lifecycle as the red/green outlines.
+      state.checkFeedbackRowCol = true;
+      rerender();
       // Auto-clear the check feedback after 10s so a half-solved board
       // doesn't stay smeared with red Xs while the player thinks.
       scheduleCheckFeedbackClear();
@@ -2448,12 +2457,20 @@ async function boot() {
       winToast.classList.add('hidden');
       highlightCells({});
       cancelCheckFeedbackClear();
+      if (state.checkFeedbackRowCol) {
+        state.checkFeedbackRowCol = false;
+        rerender();
+      }
     });
   }
 
   $('#btn-reset-play').addEventListener('click', () => {
     clearPlayBoard();
     persist();
+    state.checkFeedbackRowCol = false;
+    winToast.classList.add('hidden');
+    highlightCells({});
+    cancelCheckFeedbackClear();
     rerender();
   });
 
