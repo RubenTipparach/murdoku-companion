@@ -774,15 +774,14 @@ const WITCHSTONE_SANCTUM = {
   },
   clues: {
     'char-05':
-      'Madame Sable was slumped on a rug, directly above the only ' +
-      'scrying table in the keep. She was alone in the room with the ' +
-      'killer.',
+      'Madame Sable was slumped on a rug, directly above a heavy ' +
+      'scrying table. She was alone in the room with the killer.',
     'char-04':
-      'Reverend Penn was curled in an armchair, with the only scrying ' +
-      'table in the keep directly to his right.',
+      'Reverend Penn was curled in an armchair, in the row directly ' +
+      'below Madame Sable\'s, with a heavy table directly to his right.',
     'char-13':
-      'Ottilie Bramwell was curled in an armchair, with the only hearth ' +
-      'in the keep directly to her right.',
+      'Ottilie Bramwell was curled in an armchair, with a hearth ' +
+      'directly to her right.',
     'char-10':
       'Professor Crowe was reading from an armchair, directly below a ' +
       'tall bookshelf of mouldering bestiaries.',
@@ -793,8 +792,8 @@ const WITCHSTONE_SANCTUM = {
       'Captain Ardent was curled in an armchair, with a banner directly ' +
       'above him.',
     'char-16':
-      'Silas Roe stood on a rug, with the only standing clock in the ' +
-      'keep directly to his right.',
+      'Silas Roe stood on a rug, with a standing clock directly to his ' +
+      'right.',
   },
 };
 
@@ -904,8 +903,9 @@ const SUNKEN_LIBRARY = {
       'Dame Pell was slumped on a rug, flanked left and right by ' +
       'writing desks. She was alone in the room with the killer.',
     'char-14':
-      'Mortimer Finch was curled in an armchair, with the only ' +
-      'brazier in the library directly to his right.',
+      'Mortimer Finch was curled in an armchair, in the column directly ' +
+      'to the right of Constance Yew\'s, with a tall brazier directly ' +
+      'to his right.',
     'char-11':
       'Sister Voss was curled on a rug, with a writing desk directly ' +
       'to her right and a heavy dresser directly below.',
@@ -1045,12 +1045,13 @@ const IRON_CITADEL = {
   },
   clues: {
     'char-12':
-      'Colonel Hask was slumped on a rug directly to the left of the ' +
-      'only war table in the citadel. He was alone in the room with ' +
-      'the killer.',
+      'Colonel Hask was slumped on a rug, directly to the left of a ' +
+      'heavy war table. He was alone in the room with the killer.',
     'char-18':
-      'Bartholomew Knox sat at a chair, with a tall brazier directly ' +
-      'to his left and a heavy cauldron directly below him.',
+      'Bartholomew Knox sat at a chair, in the column between Felix ' +
+      'Drummond\'s and Silas Roe\'s, in the row directly above Mr. ' +
+      'Glover\'s, with a tall brazier directly to his left and a heavy ' +
+      'cauldron directly below him.',
     'char-19':
       'Imogen Sarsfield was curled in an armchair, flanked left and ' +
       'right by stiff-backed chairs.',
@@ -1061,14 +1062,13 @@ const IRON_CITADEL = {
       'Captain Ardent stood at a chair, directly below a bookshelf and ' +
       'directly to the left of a heavy dresser.',
     'char-07':
-      'Beatrice Halloran stood on a rug, with the only hearth in the ' +
-      'citadel directly below her.',
+      'Beatrice Halloran stood on a rug, with a hearth directly below ' +
+      'her.',
     'char-20':
-      'Felix Drummond was thrown across the only sofa in the citadel, ' +
-      'flanked left, right, and above by potted ferns.',
+      'Felix Drummond was thrown across a sofa, flanked left, right, ' +
+      'and above by potted ferns.',
     'char-16':
-      'Silas Roe stood on a rug, with the only anvil in the citadel ' +
-      'directly above him.',
+      'Silas Roe stood on a rug, with an anvil directly above him.',
   },
 };
 
@@ -1170,18 +1170,17 @@ const DRUIDS_GROVE = {
   },
   clues: {
     'char-01':
-      'Lady Wraithmoor was slumped on a rug, directly below the only ' +
-      'stone altar in the grove. She was alone in the room with the ' +
-      'killer.',
+      'Lady Wraithmoor was slumped on a rug, directly below a stone ' +
+      'altar. She was alone in the room with the killer.',
     'char-10':
-      'Professor Crowe was curled in an armchair, with the only ' +
-      'cauldron in the grove directly to his left and the only ' +
-      'brazier directly to his right.',
+      'Professor Crowe was curled in an armchair, in the column ' +
+      'directly to the right of Mortimer Finch\'s, with a cauldron ' +
+      'directly to his left and a brazier directly to his right.',
     'char-15':
       'Constance Yew stood on a rug, flanked on all four sides by ' +
       'potted ferns.',
     'char-04':
-      'Reverend Penn was thrown across the only sofa in the grove.',
+      'Reverend Penn was thrown across a sofa.',
     'char-11':
       'Sister Voss was curled in an armchair, with a banner directly ' +
       'to her left.',
@@ -1271,21 +1270,20 @@ const CRYPT_OF_THE_FORSWORN = {
   },
   clues: {
     'char-17':
-      'Dame Pell was slumped on a rug, directly below the only ' +
-      'reliquary table in the crypt. She was alone in the room with ' +
-      'the killer.',
+      'Dame Pell was slumped on a rug, directly below a reliquary ' +
+      'table. She was alone in the room with the killer.',
     'char-12':
-      'Colonel Hask was curled in an armchair, with the only brazier ' +
-      'in the crypt directly to his left and the only cauldron in the ' +
-      'crypt directly to his right.',
+      'Colonel Hask was curled in an armchair, in the row directly ' +
+      'below Dame Pell\'s, with a tall brazier directly to his left ' +
+      'and a heavy cauldron directly to his right.',
     'char-13':
       'Ottilie Bramwell stood on a rug, flanked left and right by ' +
       'tall bookshelves.',
     'char-15':
-      'Constance Yew stood on a rug, with the only anvil in the crypt ' +
-      'directly to her left.',
+      'Constance Yew stood on a rug, with an anvil directly to her ' +
+      'left.',
     'char-10':
-      'Professor Crowe was thrown across the only sofa in the crypt.',
+      'Professor Crowe was thrown across a sofa.',
   },
 };
 
@@ -1378,19 +1376,19 @@ const SMITHLORDS_HALL = {
   },
   clues: {
     'char-12':
-      'Hask the Smithlord was slumped on a rug, directly below the ' +
-      'only anvil in the hall. He was alone in the room with the killer.',
+      'Hask the Smithlord was slumped on a rug, directly below an ' +
+      'anvil. He was alone in the room with the killer.',
     'char-18':
-      'Bartholomew Knox was curled in an armchair, with a tall brazier ' +
-      'directly above him.',
+      'Bartholomew Knox was curled in an armchair, in the row directly ' +
+      'below Felix Drummond\'s, with a tall brazier directly above him.',
     'char-09':
       'Vivienne Marchand was curled in an armchair, flanked left and ' +
       'right by stiff-backed chairs.',
     'char-20':
-      'Felix Drummond was thrown across the only sofa in the hall.',
+      'Felix Drummond was thrown across a sofa.',
     'char-07':
-      'Beatrice Halloran stood on a rug, with the only hearth in the ' +
-      'hall directly to her left.',
+      'Beatrice Halloran stood on a rug, with a hearth directly to her ' +
+      'left.',
   },
 };
 
@@ -1486,12 +1484,12 @@ const SKYBRIDGE_KEEP = {
   },
   clues: {
     'char-08':
-      'Captain Ardent was slumped on a rug, directly below the only ' +
+      'Captain Ardent was slumped on a rug, directly below a ' +
       'war-banner stitched with the keeps sigil. He was alone in the ' +
       'room with the killer.',
     'char-06':
-      'The butler was curled in an armchair, with a banner directly ' +
-      'above him.',
+      'The butler was curled in an armchair, in the row directly below ' +
+      'Captain Ardent\'s, with a banner directly above him.',
     'char-19':
       'Imogen Sarsfield stood on a rug, flanked left and right by ' +
       'tall bookshelves.',
@@ -1502,8 +1500,7 @@ const SKYBRIDGE_KEEP = {
       'Constance Yew stood on a rug, with a banner directly to her ' +
       'right.',
     'char-16':
-      'Silas Roe stood on a rug, with the only anvil in the keep ' +
-      'directly to his left.',
+      'Silas Roe stood on a rug, with an anvil directly to his left.',
   },
 };
 

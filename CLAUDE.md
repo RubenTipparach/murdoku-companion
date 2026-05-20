@@ -215,14 +215,86 @@ renders on the start-menu sample card and in the case-file header.
 
 Tiering rough rubric:
 - **easy** (the m1-m9 samples): rectangular rooms, 3-5 suspects, most
-  anchors are unique furniture, generous clues. The on-ramp set.
-- **medium** (the m10-m12 samples): non-rectangular rooms (L, T, plus,
-  S shapes), 6-7 suspects, duplicate furniture forcing row / column
-  deduction, fantasy flavour. Clue chains may reference relative
-  position between suspects.
+  anchors are unique furniture, generous clues. The killer's clue may
+  name a unique anchor in their room. The on-ramp set.
+- **medium** (the m10-m16 samples): non-rectangular rooms (L, T, plus,
+  U, S shapes), 5-8 suspects, duplicate furniture forcing row / column
+  deduction, medieval-fantasy flavour. The killer's clue MUST drop
+  "the only X" wording and MUST pinch the killer against at least one
+  other suspect by row or column (see "Killer ambiguity scales with
+  difficulty").
 - **hard** (planned, no shipped samples yet): introduces the special
-  character cards and house modifiers. Full row / column saturation,
-  multiple cards in play per puzzle.
+  character cards and house modifiers. Killer's clue references at
+  least two non-victim suspects for row/column pinches, no
+  room-unique anchors. Full row / column saturation, multiple cards
+  in play per puzzle.
+
+### Killer ambiguity scales with difficulty.
+
+The killer's *room* should not be obvious from the killer's own clue.
+The whole point of the killer-alone-with-victim rule is that the
+player works out which room the killer is in by working out where
+every suspect stands and finding the one who landed in the victim's
+room. If the killer's clue says "at the only forge in the keep" or
+"with the only scrying table directly to his right" the player can
+read the room straight off the clue and skip the deduction.
+
+Mechanism: **pinch the killer between two other suspects by row or
+column.** Because every suspect occupies a unique row AND a unique
+column, the killer's row can be locked by saying "in the row directly
+above [SuspectA] and directly below [SuspectB]", and the column can
+be locked the same way. The killer's clue then commits to a row/col
+pair without committing to a room; the player must still apply the
+unique-row/col rule plus the killer-alone-with-victim rule to figure
+out which room that row/col falls in.
+
+Allowed in the killer's clue:
+- "in the row directly above [Name]'s" / "in the row directly below
+  [Name]'s" (row-pinch via another suspect).
+- "in the column directly to the left of [Name]'s" / "in the column
+  directly to the right of [Name]'s" (column-pinch).
+- "in the row between [Name] and [Name]" / "in the column between
+  [Name] and [Name]" (two-suspect pinch).
+- Ambiguous furniture references (duplicated anchors): "with a chair
+  directly to her right" when several chairs exist on the board.
+
+Disallowed in the killer's clue (these give the room away):
+- "with the only X in the [building]" for any anchor that exists only
+  in the killer's room.
+- Naming a piece of furniture that exists in exactly one room.
+
+It's still fine for the killer's clue to mention furniture, just not
+*uniquely-room-identifying* furniture. Mix the pinch with an
+ambiguous anchor ("in the column directly to the right of Yew's,
+with a brazier directly to his left") so the clue reads naturally
+and still places the killer in a specific cell once the room is
+known.
+
+The killer's clue must still NOT say "same room as the victim" or
+imply it directly. Row/column-adjacency to the victim is allowed
+(it doesn't itself state same-room), but prefer pinching against
+non-victim suspects where possible.
+
+**Difficulty scaling.** The amount of ambiguity in the killer's
+position scales with difficulty:
+
+- **easy:** killer's clue may name a unique anchor in their room
+  ("with the only piano in the house directly to her right"). The
+  room is essentially given to the player; the puzzle is about
+  placing the other suspects.
+- **medium:** killer's clue MUST drop "the only X" wording and MUST
+  include at least one row/column pinch against another suspect.
+  Anchors used by the killer should be furniture types that appear
+  in more than one room of the level (chair, table, brazier when
+  duplicated, etc.).
+- **hard:** killer's clue must be fully ambiguous on the room: at
+  least two non-victim suspects referenced for row/column pinches,
+  no room-unique anchors at all, and ideally the clue is consistent
+  with two or more rooms until the unique-row/col rule is fully
+  resolved across the whole cast.
+
+When in doubt, ratchet up. The killer's room being a deduction, not
+a given, is what makes a medium level harder than an easy one.
 
 ### The house outline must NEVER be a plain rectangle.
 
