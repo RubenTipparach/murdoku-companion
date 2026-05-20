@@ -631,7 +631,7 @@ app.get('/admin', (_req, res) => {
   }
 
   const profileRows = profiles
-    .map((r) => `<tr><td>${escapeHtml(r.name)}</td><td>${escapeHtml(r.created)}</td><td>${escapeHtml(r.seen)}</td><td class="num">${r.authored}</td><td class="num">${r.plays}</td></tr>`)
+    .map((r) => `<tr><td>${escapeHtml(r.name)}</td><td>${escapeHtml(r.created)}</td><td>${escapeHtml(r.seen)}</td><td class="num">${r.authored}</td><td class="num">${r.plays}</td><td><button class="btn-reset" data-pid="${r.id}" data-pname="${escapeHtml(r.name)}">Issue recovery code</button></td></tr>`)
     .join('');
 
   const puzzleRows = puzzles
@@ -675,8 +675,8 @@ app.get('/admin', (_req, res) => {
 
   <h2>Profiles &amp; login timers</h2>
   <table>
-    <thead><tr><th>Name</th><th>Created</th><th>Last seen</th><th class="num">Authored</th><th class="num">Plays</th></tr></thead>
-    <tbody>${profileRows || '<tr><td colspan=5><em>None yet.</em></td></tr>'}</tbody>
+    <thead><tr><th>Name</th><th>Created</th><th>Last seen</th><th class="num">Authored</th><th class="num">Plays</th><th>Recovery</th></tr></thead>
+    <tbody>${profileRows || '<tr><td colspan=6><em>None yet.</em></td></tr>'}</tbody>
   </table>
 
   <h2>User-generated puzzles</h2>
@@ -696,7 +696,77 @@ app.get('/admin', (_req, res) => {
     <thead><tr><th class="num">#</th><th>Player</th><th>Puzzle</th><th class="num">Best time</th><th class="num">Mistakes</th></tr></thead>
     <tbody>${leaderboardRows || '<tr><td colspan=5><em>No leaderboard entries yet.</em></td></tr>'}</tbody>
   </table>
+
+<script>
+// Issue-recovery-code wiring for the profiles table. Tokens are stored
+// only as sha256(token), so the original plaintext is gone forever the
+// moment the user generated it. The Issue button mints a NEW token
+// server-side, replaces the hash, and surfaces the new plaintext once,
+// which invalidates the user's current device. Drop-in to be sent
+// out-of-band to a player who lost access.
+document.addEventListener('click', function (ev) {
+  var btn = ev.target.closest('.btn-reset');
+  if (!btn) return;
+  var pid = btn.getAttribute('data-pid');
+  var pname = btn.getAttribute('data-pname');
+  if (!confirm('Issue a new recovery code for @' + pname + '?\\n\\nThe user\\'s current session(s) on every device will stop working until they sign in with this new code.')) return;
+  btn.disabled = true;
+  btn.textContent = 'Working...';
+  fetch('/admin/profiles/' + pid + '/reset-token', { method: 'POST' })
+    .then(function (r) { return r.json().then(function (j) { return { ok: r.ok, body: j }; }); })
+    .then(function (res) {
+      if (!res.ok) {
+        btn.disabled = false;
+        btn.textContent = 'Issue recovery code';
+        alert('Failed: ' + (res.body && res.body.error || 'unknown'));
+        return;
+      }
+      // Surface the code in-cell; the admin can copy it before the
+      // page refreshes. Adds a small Copy button beside the value.
+      var cell = btn.parentElement;
+      cell.innerHTML = '';
+      var input = document.createElement('input');
+      input.type = 'text';
+      input.readOnly = true;
+      input.value = res.body.token;
+      input.style.cssText = 'width:280px;font-family:monospace;font-size:11px;background:#1f1b2e;color:#ece8ff;border:1px solid #4a416c;border-radius:3px;padding:3px 5px;';
+      var copy = document.createElement('button');
+      copy.textContent = 'Copy';
+      copy.style.marginLeft = '4px';
+      copy.addEventListener('click', function () {
+        input.select();
+        navigator.clipboard ? navigator.clipboard.writeText(input.value) : document.execCommand('copy');
+        copy.textContent = 'Copied';
+      });
+      cell.appendChild(input);
+      cell.appendChild(copy);
+    })
+    .catch(function () {
+      btn.disabled = false;
+      btn.textContent = 'Issue recovery code';
+      alert('Network error.');
+    });
+});
+</script>
 </body></html>`);
+});
+
+// Mint a fresh recovery code for a profile and replace the stored
+// hash. Returns the new plaintext token, the only chance the admin
+// has to see it (we re-hash before storing). Invalidates whatever
+// the user is currently signed in with on every device. Anonymous
+// endpoint, matches the open-dashboard posture; gate this behind an
+// admin secret before deploying to anywhere that matters.
+app.post('/admin/profiles/:id/reset-token', (req, res) => {
+  const id = Number(req.params.id);
+  if (!Number.isFinite(id)) return res.status(400).json({ error: 'bad_id' });
+  const row = db.prepare('SELECT id, name FROM profiles WHERE id = ?').get(id);
+  if (!row) return res.status(404).json({ error: 'not_found' });
+  const token = randomBytes(32).toString('base64url');
+  const tokenHash = hashToken(token);
+  db.prepare('UPDATE profiles SET token_hash = ?, last_seen_at = ? WHERE id = ?')
+    .run(tokenHash, nowMs(), id);
+  res.json({ ok: true, name: row.name, token });
 });
 
 function escapeHtml(s) {
