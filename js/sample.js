@@ -649,113 +649,130 @@ const WITCHSTONE_SANCTUM = {
   code: 'm10',
   name: 'The Witchstone Sanctum',
   difficulty: 'medium',
-  size: 11,
+  size: 9,
   description:
     'On the eve of the Sigil Moon the coven gathered for council. Their ' +
     'high witch did not come to bear witness, the others found her cold ' +
-    'beside her scrying table. Six remained in the keep tonight.',
+    'at her scrying table. Six remained in the keep tonight.',
+  // Six rooms tile the keep in two clusters that share walls. Shapes
+  // are T, L, hollow-O, square, donut and short-L; every interior
+  // edge is the boundary of two rooms, no waste cells between them.
   rooms: [
-    { id: 'r1', name: 'Scrying Chamber', description: 'A plus-shaped sanctum of black candles around the scrying table.',
+    { id: 'r1', name: 'Scrying Chamber', description: 'A T of black tile around the scrying table.',
       color: '#7b5db5', tilePattern: 'diamond',
-      cells: [[5,0],[5,1],[5,2],[5,3],[5,4],[3,2],[4,2],[6,2],[7,2]] },
-    { id: 'r2', name: 'Hearthroom', description: 'An L of soot-dark wood, hung with charm bundles.',
+      cells: [[3,0],[4,0],[5,0],[3,1],[4,1],[5,1],[3,2],[4,2],[5,2],[4,3]] },
+    { id: 'r2', name: 'Hearthroom', description: 'An L of soot-dark stone, hung with charm bundles.',
       color: '#c97b5d', tilePattern: 'wood',
-      cells: [[0,0],[1,0],[2,0],[3,0],[0,1],[0,2],[0,3]] },
-    { id: 'r3', name: 'Reliquary', description: 'A crooked T, lined with reliquaries of antler and ash.',
+      cells: [[0,0],[1,0],[2,0],[0,1],[0,2],[0,3]] },
+    { id: 'r3', name: 'Reliquary', description: 'A hollow square of niched stone, lined with reliquaries of antler and ash.',
       color: '#5da8c4', tilePattern: 'square',
-      cells: [[8,0],[9,0],[10,0],[8,1],[9,1],[10,1],[9,2],[9,3]] },
-    { id: 'r4', name: 'Mandrake Garden', description: 'A close square of black soil, half-tame mandrakes in rows.',
+      cells: [[6,0],[7,0],[8,0],[6,1],[7,1],[8,1],[6,2],[7,2],[8,2],[6,3],[8,3]] },
+    { id: 'r4', name: 'Mandrake Garden', description: 'A square of black soil, mandrakes in every cell of the ring.',
       color: '#7bc48f', tilePattern: 'check',
-      cells: [[0,7],[1,7],[2,7],[0,8],[1,8],[2,8],[0,9],[1,9],[2,9]] },
-    { id: 'r5', name: 'Bone Sanctum', description: 'A square chapel of antler, ash and a tall standing-stone.',
+      cells: [[0,5],[1,5],[2,5],[0,6],[1,6],[2,6],[0,7],[1,7],[2,7]] },
+    { id: 'r5', name: 'Bone Sanctum', description: 'A donut-shaped chapel of antler and ash, open at its centre.',
       color: '#d1c084', tilePattern: 'stripe-h',
-      cells: [[6,5],[7,5],[8,5],[9,5],[6,6],[7,6],[8,6],[9,6],[6,7],[7,7],[8,7],[9,7]] },
-    { id: 'r6', name: 'Wellhouse', description: 'A low room sheltering the moonwater spring.',
+      cells: [[4,4],[5,4],[6,4],[4,5],[6,5],[4,6],[5,6],[6,6]] },
+    { id: 'r6', name: 'Wellhouse', description: 'A short L sheltering the moonwater spring.',
       color: '#7b9ed1', tilePattern: 'dots',
-      cells: [[5,9],[6,9],[7,9],[5,10],[6,10],[7,10]] },
+      cells: [[7,5],[8,5],[7,6],[8,6],[7,7]] },
   ],
   doorways: [],
   victim: 'char-05',
   killerSolution: 'char-04',
   solution: {
-    '5,1': 'char-05', // Sable, directly above the scrying table
-    '3,2': 'char-04', // Penn (killer), beside an armchair in the same chamber
-    '0,0': 'char-13', // Bramwell, in the L
-    '9,3': 'char-10', // Crowe, below a bookshelf in the T
-    '1,8': 'char-15', // Yew, on a rug ringed by mandrakes
-    '7,6': 'char-08', // Ardent, slung across a sofa
-    '6,10': 'char-16', // Roe, on a rug between two potted ferns
+    '4,1': 'char-05', // Sable, victim, directly above the scrying table
+    '3,2': 'char-04', // Penn, killer, in the only armchair in the chamber
+    '0,0': 'char-13', // Bramwell, in an armchair above the only hearth
+    '8,3': 'char-10', // Crowe, below a bookshelf of bestiaries
+    '1,6': 'char-15', // Yew, on a rug ringed by mandrakes
+    '5,4': 'char-08', // Ardent, on a sofa in the donut chapel
+    '7,5': 'char-16', // Roe, on a rug with the only clock to his right
   },
   decorations: {
-    // Scrying Chamber, plus-shaped, with the scrying table at its centre.
-    '5,2': 'table',
-    '4,2': 'armchair',
-    '5,3': 'rug',
-    '5,4': 'lamp',
-    '6,2': 'lamp',
-    '7,2': 'bookshelf',
+    // Scrying Chamber, T-shape: scrying table dead centre, Penn in
+    // the only armchair to its left, Sable on the empty cell above.
+    '3,0': 'bookshelf',
+    '4,0': 'rug',
     '5,0': 'mirror',
-    // Hearthroom, L-shape: fireplace, armchair, bookshelf, rug.
+    '3,1': 'rug',
+    '5,1': 'lamp',
+    '3,2': 'armchair',
+    '4,2': 'table',
+    '4,3': 'rug',
+    // Hearthroom, L-shape: armchair above the only hearth, with rug
+    // and bookcase and dresser further along.
     '0,0': 'armchair',
-    '1,0': 'fireplace',
-    '2,0': 'bookshelf',
-    '3,0': 'clock',
+    '1,0': 'bookshelf',
+    '2,0': 'dresser',
+    '0,1': 'fireplace',
     '0,2': 'rug',
     '0,3': 'dresser',
-    // Reliquary, crooked T: safe, mirror, bookshelf, armchair.
-    '8,0': 'safe',
-    '10,0': 'mirror',
-    '8,1': 'dresser',
-    '10,1': 'mirror',
-    '9,2': 'bookshelf',
-    '9,3': 'armchair',
-    // Mandrake Garden, 3x3 square of pots with a rug at the centre.
+    // Reliquary, hollow square: bookshelves on every wall save one.
+    '6,0': 'safe',
+    '7,0': 'dresser',
+    '8,0': 'dresser',
+    '6,1': 'dresser',
+    '7,1': 'bookshelf',
+    '8,1': 'lamp',
+    '6,2': 'bookshelf',
+    '7,2': 'bookshelf',
+    '8,2': 'bookshelf',
+    '6,3': 'gramophone',
+    '8,3': 'armchair',
+    // Mandrake Garden, 3x3: mandrakes in every cell save the central
+    // rug. Yew stands flanked on all four orthogonal sides by plants.
+    '0,5': 'plant',
+    '1,5': 'plant',
+    '2,5': 'plant',
+    '0,6': 'plant',
+    '1,6': 'rug',
+    '2,6': 'plant',
     '0,7': 'plant',
     '1,7': 'plant',
     '2,7': 'plant',
-    '0,8': 'plant',
-    '1,8': 'rug',
-    '2,8': 'plant',
-    '0,9': 'plant',
-    '1,9': 'plant',
-    '2,9': 'plant',
-    // Bone Sanctum, 4x3 square with a sofa, a rug, a standing clock,
-    // and two dressers. Multiple anchors so the player has to triangulate.
-    '6,5': 'gramophone',
-    '8,5': 'dresser',
-    '9,5': 'clock',
-    '7,6': 'sofa',
-    '8,6': 'rug',
-    '6,7': 'bed',
-    '8,7': 'bookshelf',
-    '9,7': 'mirror',
-    // Wellhouse, small irregular room: ferns flanking the central rug.
-    '5,9': 'sofa',
-    '5,10': 'plant',
-    '6,10': 'rug',
-    '7,10': 'plant',
+    // Bone Sanctum, donut-O: only sofa in the keep, flanked by a
+    // bookshelf and a dresser. The hole in the middle is the antler
+    // altar, not a room cell.
+    '4,4': 'bookshelf',
+    '5,4': 'sofa',
+    '6,4': 'dresser',
+    '4,5': 'dresser',
+    '6,5': 'bookshelf',
+    '4,6': 'bookshelf',
+    '5,6': 'dresser',
+    '6,6': 'bookshelf',
+    // Wellhouse, short L: rug under the moonwater stone, the keep's
+    // only standing clock to its right, ferns on the other cells.
+    '7,5': 'rug',
+    '8,5': 'clock',
+    '7,6': 'plant',
+    '8,6': 'chair',
+    '7,7': 'plant',
   },
   clues: {
     'char-05':
-      'Madame Sable was slumped directly above a scrying table set with ' +
-      'iron candlesticks. She was alone in the room with the killer.',
+      'Madame Sable was slumped directly above the only scrying table in ' +
+      'the keep. She was alone in the room with the killer.',
     'char-04':
-      'The reverend stood beside an armchair stitched with green velvet ' +
-      'cushions, three rooms away from the only fireplace in the keep.',
+      'Reverend Penn was curled in an armchair, with a tall scrying ' +
+      'table directly to his right and a rug directly above him.',
     'char-13':
-      'Ottilie Bramwell was curled in an armchair, directly beside a ' +
-      'crackling hearth.',
+      'Ottilie Bramwell was curled in an armchair, directly above the ' +
+      'only hearth in the keep.',
     'char-10':
       'Professor Crowe was reading from an armchair, directly below a ' +
       'tall bookshelf of mouldering bestiaries.',
     'char-15':
-      'Constance Yew stood on a rug, flanked on all four sides by potted ' +
-      'mandrakes.',
+      'Constance Yew stood on a rug, flanked on all four sides by ' +
+      'potted mandrakes.',
     'char-08':
-      'Captain Ardent had thrown himself across a sofa, directly beside ' +
-      'a worn rug stitched with bones.',
+      'Captain Ardent had thrown himself across the only sofa in the ' +
+      'keep, with a tall bookshelf directly to his left and a heavy ' +
+      'dresser directly to his right.',
     'char-16':
-      'Silas Roe stood on a rug, flanked left and right by potted ferns.',
+      'Silas Roe stood on a rug, with the only standing clock in the ' +
+      'keep directly to his right and a potted fern directly below.',
   },
 };
 

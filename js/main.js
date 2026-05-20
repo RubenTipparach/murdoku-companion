@@ -633,6 +633,12 @@ function renderStartProfile() {
     startGated.classList.add('hidden');
     renderProfileCreateForm();
   }
+  // Footer "Get claim code" is only meaningful when the active
+  // profile is actually claimed on the server. Hide otherwise.
+  const showCodeBtn = $('#btn-show-claim-code');
+  if (showCodeBtn) {
+    showCodeBtn.classList.toggle('hidden', !(active && active.claimed));
+  }
 }
 
 function renderActiveProfileBar(profile) {
@@ -649,7 +655,8 @@ function renderActiveProfileBar(profile) {
   if (profile.claimed) {
     chip = '<span class="profile-claim-pending claimed">claimed</span>';
   } else if (profile.claimError === 'name_taken') {
-    chip = '<span class="profile-claim-pending taken" title="Another player on the server already owns this name. Pick a different one via Switch.">name taken</span>';
+    chip = '<span class="profile-claim-pending taken" title="Another device already claimed this name on the server.">name taken</span>';
+    retry = '<button id="btn-claim-now" class="profile-retry" title="Already claimed this name on another device? Sign in with that claim code.">Claim now</button>';
   } else if (profile.claimError === 'rate_limited') {
     chip = '<span class="profile-claim-pending failed">rate limited</span>';
     retry = '<button id="btn-claim-retry" class="profile-retry" title="Try claiming this name again">Retry</button>';
@@ -699,6 +706,82 @@ function renderActiveProfileBar(profile) {
       runServerClaim(profile);
     });
   }
+  const claimNowBtn = startProfile.querySelector('#btn-claim-now');
+  if (claimNowBtn) {
+    claimNowBtn.addEventListener('click', () => openClaimModal(profile));
+  }
+}
+
+// Open the "Claim this name" modal: the player pastes the token from
+// their already-claimed account on another device, we adopt it as our
+// local token and re-run the claim. On success, the server sees the
+// matching token-hash and 200s an idempotent re-claim.
+function openClaimModal(profile) {
+  const modal = $('#claim-modal');
+  const input = $('#claim-code-input');
+  const submit = $('#btn-claim-submit');
+  const status = $('#claim-status');
+  input.value = '';
+  status.textContent = '';
+  status.className = 'share-copy-status';
+  modal.classList.remove('hidden');
+  setTimeout(() => input.focus(), 50);
+  const onSubmit = async () => {
+    const code = input.value.trim();
+    if (!/^[A-Za-z0-9_-]{43}$/.test(code)) {
+      status.textContent = 'That does not look like a claim code. Paste the 43-character secret from the other device.';
+      status.style.color = 'var(--bad)';
+      return;
+    }
+    const prevToken = profile.token;
+    profile.token = code;
+    profile.claimed = false;
+    profile.claimError = null;
+    saveProfiles(state.profiles);
+    status.textContent = 'Signing in...';
+    status.style.color = 'var(--ink-dim)';
+    submit.disabled = true;
+    await runServerClaim(profile);
+    submit.disabled = false;
+    if (profile.claimed) {
+      status.textContent = 'Signed in. You can close this dialog.';
+      status.style.color = 'var(--good)';
+      setTimeout(() => closeClaimModal(), 800);
+    } else {
+      // Restore the previous local token so the user isn't locked out
+      // by a typo.
+      profile.token = prevToken;
+      profile.claimError = null;
+      saveProfiles(state.profiles);
+      renderActiveProfileBar(profile);
+      status.textContent = 'That code did not match. Double-check it on the other device.';
+      status.style.color = 'var(--bad)';
+    }
+  };
+  submit.onclick = onSubmit;
+  input.onkeydown = (e) => { if (e.key === 'Enter') onSubmit(); };
+}
+
+function closeClaimModal() {
+  $('#claim-modal').classList.add('hidden');
+}
+
+// Open the "Get claim code" modal: reveal the active profile's token
+// so the player can copy it onto another device.
+function openClaimCodeModal() {
+  const ap = activeProfile();
+  if (!ap || !ap.token) return;
+  const modal = $('#claim-code-modal');
+  $('#claim-code-name').textContent = ap.name;
+  const input = $('#claim-code-value');
+  input.value = ap.token;
+  $('#claim-code-copy-status').textContent = '';
+  modal.classList.remove('hidden');
+  setTimeout(() => { input.focus(); input.select(); }, 50);
+}
+
+function closeClaimCodeModal() {
+  $('#claim-code-modal').classList.add('hidden');
 }
 
 function renderProfilePicker() {
@@ -1998,6 +2081,33 @@ async function boot() {
   $('#btn-help-topbar').addEventListener('click', openHelp);
   for (const c of document.querySelectorAll('[data-close="help"]')) c.addEventListener('click', closeHelp);
   helpModal.addEventListener('click', (e) => { if (e.target === helpModal) closeHelp(); });
+
+  // Claim-now modal close + backdrop click.
+  const claimModalEl = $('#claim-modal');
+  for (const c of document.querySelectorAll('[data-close="claim"]')) c.addEventListener('click', closeClaimModal);
+  claimModalEl.addEventListener('click', (e) => { if (e.target === claimModalEl) closeClaimModal(); });
+
+  // Get-claim-code modal: footer button + copy + close + backdrop.
+  const claimCodeModalEl = $('#claim-code-modal');
+  $('#btn-show-claim-code').addEventListener('click', openClaimCodeModal);
+  for (const c of document.querySelectorAll('[data-close="claim-code"]')) c.addEventListener('click', closeClaimCodeModal);
+  claimCodeModalEl.addEventListener('click', (e) => { if (e.target === claimCodeModalEl) closeClaimCodeModal(); });
+  $('#btn-copy-claim-code').addEventListener('click', async () => {
+    const input = $('#claim-code-value');
+    const status = $('#claim-code-copy-status');
+    try {
+      await navigator.clipboard.writeText(input.value);
+      status.textContent = 'Copied. Paste into "Claim this name" on the other device.';
+    } catch {
+      input.select();
+      try {
+        document.execCommand('copy');
+        status.textContent = 'Copied. Paste into "Claim this name" on the other device.';
+      } catch {
+        status.textContent = 'Press Ctrl-C / Cmd-C to copy.';
+      }
+    }
+  });
 
   // Leaderboard modal close + tab switching + player drill-down. The
   // table is rebuilt by renderLeaderboardTab so we don't need to listen

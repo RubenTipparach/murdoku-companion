@@ -167,6 +167,7 @@
 
           <div class="start-footer">
             <button id="btn-help" class="start-footer-btn">❓ How to play</button>
+            <button id="btn-show-claim-code" class="start-footer-btn hidden">Get claim code</button>
             <button id="btn-reset-all" class="start-footer-btn danger">⚠ Reset all data</button>
           </div>
         </div>
@@ -273,6 +274,44 @@
       </div>
     </div>
 
+    <!-- Claim-now modal: prompts the user for a code (their token
+         from an already-claimed account on another device). -->
+    <div id="claim-modal" class="modal hidden" role="dialog">
+      <div class="modal-inner">
+        <header>
+          <h2>Claim this name</h2>
+          <button class="close" data-close="claim">×</button>
+        </header>
+        <div class="modal-body">
+          <p class="hint">If you've already claimed this name on another device, paste the claim code from that device here to sign in. The claim code is your 32-byte secret, never share it.</p>
+          <div class="share-url-row">
+            <input id="claim-code-input" type="text" autocomplete="off" spellcheck="false" placeholder="Paste your claim code here" />
+            <button id="btn-claim-submit">Sign in</button>
+          </div>
+          <p id="claim-status" class="share-copy-status"></p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Show-claim-code modal: reveals the active profile's token so
+         the player can paste it on another device to sign in there. -->
+    <div id="claim-code-modal" class="modal hidden" role="dialog">
+      <div class="modal-inner">
+        <header>
+          <h2>Your claim code</h2>
+          <button class="close" data-close="claim-code">×</button>
+        </header>
+        <div class="modal-body">
+          <p class="hint">This is the 32-byte secret that proves you own @<span id="claim-code-name"></span>. Paste it into "Claim this name" on another device to sign in there. Anyone with this code can play as you, so keep it private.</p>
+          <div class="share-url-row">
+            <input id="claim-code-value" type="text" readonly />
+            <button id="btn-copy-claim-code">Copy</button>
+          </div>
+          <p id="claim-code-copy-status" class="share-copy-status"></p>
+        </div>
+      </div>
+    </div>
+
     <!-- Global leaderboards: a two-tab modal that ranks players by
          puzzles completed (default) and lists every puzzle that has
          at least one solve. Rows are click-through into the per-
@@ -335,6 +374,6 @@
       </div>
     </div>
 
-    <script type="module" src="./js/main.js?v=39"></script>
+    <script type="module" src="./js/main.js?v=40"></script>
   </body>
 </html>
