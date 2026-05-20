@@ -7,8 +7,22 @@
 const VICTIM_HTML = `<img class="md-icon icon-victim" src="./assets/icons/victim.png" alt="victim" aria-hidden="true" draggable="false" />`;
 const KILLER_HTML = `<img class="md-icon icon-killer" src="./assets/icons/killer.png" alt="killer" aria-hidden="true" draggable="false" />`;
 
+// ID-card glyph for the profile chip on the start menu. Inline SVG
+// instead of the 🪪 emoji because that codepoint is Unicode 2021 and
+// renders as a tofu box on a lot of mobile fonts.
+const PROFILE_SVG =
+  '<svg class="md-icon icon-profile" viewBox="0 0 16 16" width="14" height="14" aria-hidden="true">' +
+  '<rect x="1.2" y="3" width="13.6" height="10" rx="1.6" fill="none" stroke="currentColor" stroke-width="1.2"/>' +
+  '<circle cx="5.4" cy="7.6" r="1.6" fill="currentColor"/>' +
+  '<path d="M2.8 11.5c0-1.3 1.2-2.2 2.6-2.2s2.6 0.9 2.6 2.2" fill="none" stroke="currentColor" stroke-width="1"/>' +
+  '<line x1="9.2" y1="6.6" x2="13.4" y2="6.6" stroke="currentColor" stroke-width="1" stroke-linecap="round"/>' +
+  '<line x1="9.2" y1="8.6" x2="13.4" y2="8.6" stroke="currentColor" stroke-width="1" stroke-linecap="round"/>' +
+  '<line x1="9.2" y1="10.6" x2="12.2" y2="10.6" stroke="currentColor" stroke-width="1" stroke-linecap="round"/>' +
+  '</svg>';
+
 export function victimIcon() { return VICTIM_HTML; }
 export function killerIcon() { return KILLER_HTML; }
+export function profileIcon() { return PROFILE_SVG; }
 
 export function badge({ victim = false, killer = false } = {}) {
   if (victim && killer) return VICTIM_HTML + KILLER_HTML;

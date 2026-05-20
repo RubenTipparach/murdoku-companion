@@ -71,7 +71,8 @@ export function renderGrid(container, handlers) {
   const placements = state.mode === 'play' ? lvl.playerPlacement : lvl.solution;
   const rowsOccupied = new Map(); // y → [charIds]
   const colsOccupied = new Map(); // x → [charIds]
-  if (state.showRowColMarks) {
+  const showRowCol = state.showRowColMarks || state.checkFeedbackRowCol;
+  if (showRowCol) {
     for (const k of Object.keys(placements)) {
       const [px, py] = k.split(',').map(Number);
       rowsOccupied.set(py, (rowsOccupied.get(py) || []).concat(placements[k]));
@@ -178,7 +179,7 @@ export function renderGrid(container, handlers) {
       //   cells in an occupied row or column get a faint accent X so
       //   the toggle visibly does something even when the layout has no
       //   conflicts. Valid placed suspects get NOTHING on top of them.
-      if (state.showRowColMarks) {
+      if (showRowCol) {
         const k = key(x, y);
         const placed = placements[k];
         const rowList = rowsOccupied.get(y) || [];

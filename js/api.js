@@ -90,7 +90,35 @@ export async function whoami(token) {
   }
 }
 
+// Mint a new device code for the calling profile. The server adds it
+// to the tokens table and returns the plaintext once. The calling
+// device's own token stays valid; the user pastes the new code into
+// "Claim now" on a second device to sign in there too. Returns the
+// 8-char code on success, null on failure.
+export async function issueDeviceCode(token) {
+  if (!apiAvailable()) return null;
+  try {
+    const res = await call('POST', '/tokens', { token });
+    if (!res.ok) return null;
+    const data = await res.json();
+    return data.token || null;
+  } catch {
+    return null;
+  }
+}
+
 // ----- Shared puzzles -----
+//
+// Two URL namespaces: /levels/:code for shipped samples (mN), and
+// /custom/:code for user-shared puzzles. The leaderboard, completions,
+// and record-completion routes mirror each other under both prefixes;
+// the per-puzzle wrappers below take a `namespace` argument so the
+// caller picks which prefix to hit. Custom CRUD routes only exist
+// under /custom.
+
+function nsPrefix(namespace) {
+  return namespace === 'sample' ? '/levels' : '/custom';
+}
 
 // Publish an authored level to the server. The server re-runs the
 // validator; on a 422 the caller gets the array of error strings
@@ -99,7 +127,7 @@ export async function whoami(token) {
 export async function shareLevel(token, level) {
   if (!apiAvailable()) return { ok: false, status: 0 };
   try {
-    const res = await call('POST', '/levels', { token, body: { level } });
+    const res = await call('POST', '/custom', { token, body: { level } });
     const data = await safeJson(res);
     if (res.status === 201) {
       return { ok: true, code: data.code, url: shareUrlFor(data.code) };
@@ -118,7 +146,7 @@ export async function shareLevel(token, level) {
 export async function updateSharedLevel(token, code, level) {
   if (!apiAvailable()) return { ok: false, status: 0 };
   try {
-    const res = await call('PUT', `/levels/${encodeURIComponent(code)}`, {
+    const res = await call('PUT', `/custom/${encodeURIComponent(code)}`, {
       token,
       body: { level },
     });
@@ -139,7 +167,7 @@ export async function updateSharedLevel(token, code, level) {
 export async function getSharedLevel(code) {
   if (!apiAvailable()) return null;
   try {
-    const res = await call('GET', `/levels/${encodeURIComponent(code)}`);
+    const res = await call('GET', `/custom/${encodeURIComponent(code)}`);
     if (!res.ok) return null;
     return await res.json();
   } catch {
@@ -152,19 +180,24 @@ export async function getSharedLevel(code) {
 export async function bumpPlays(code) {
   if (!apiAvailable()) return;
   try {
-    await call('POST', `/levels/${encodeURIComponent(code)}/plays`);
+    await call('POST', `/custom/${encodeURIComponent(code)}/plays`);
   } catch {
     // swallow; the count is best-effort
   }
 }
 
-// Post a completion record after a player wins a shared puzzle.
-export async function recordCompletion(token, code, durationMs, mistakes) {
+// Post a completion record after a player wins a puzzle. Namespace
+// must be either 'sample' (for shipped mN codes) or 'custom' (for
+// player-shared codes), the URL prefix is selected accordingly.
+// Pass `backfill: true` for pre-feature wins that don't have a real
+// duration or mistake count, the server stores those as flagged rows
+// and excludes them from the time / mistake leaderboards.
+export async function recordCompletion(token, code, namespace, durationMs, mistakes, { backfill = false } = {}) {
   if (!apiAvailable()) return false;
   try {
-    const res = await call('POST', '/completions', {
+    const res = await call('POST', `${nsPrefix(namespace)}/${encodeURIComponent(code)}/completions`, {
       token,
-      body: { code, durationMs, mistakes },
+      body: { durationMs, mistakes, backfill: backfill || undefined },
     });
     return res.ok;
   } catch {
@@ -175,13 +208,90 @@ export async function recordCompletion(token, code, durationMs, mistakes) {
 // Public leaderboard for a single puzzle. Returns the array of
 // entries (each { profile_name, best_ms, best_mistakes, first_at })
 // or null on failure.
-export async function getLeaderboard(code) {
+export async function getLeaderboard(code, namespace) {
   if (!apiAvailable()) return null;
   try {
-    const res = await call('GET', `/levels/${encodeURIComponent(code)}/leaderboard`);
+    const res = await call('GET', `${nsPrefix(namespace)}/${encodeURIComponent(code)}/leaderboard`);
     if (!res.ok) return null;
     const data = await res.json();
     return data.entries || [];
+  } catch {
+    return null;
+  }
+}
+
+// Full solver list for a puzzle. Newest first, one row per completion
+// (so a player who finishes twice shows up twice). Returns
+// { levelName, entries } where each entry has profile_name,
+// duration_ms, mistakes, completed_at. Returns null on failure.
+export async function getLevelCompletions(code, namespace) {
+  if (!apiAvailable()) return null;
+  try {
+    const res = await call('GET', `${nsPrefix(namespace)}/${encodeURIComponent(code)}/completions`);
+    if (!res.ok) return null;
+    return await res.json();
+  } catch {
+    return null;
+  }
+}
+
+// Global player rankings: who has solved the most puzzles, with total
+// guesses as the tiebreaker. Returns the array of entries (each
+// { name, completion_count, total_guesses }) or null on failure.
+export async function getRankings() {
+  if (!apiAvailable()) return null;
+  try {
+    const res = await call('GET', '/rankings');
+    if (!res.ok) return null;
+    const data = await res.json();
+    return data.entries || [];
+  } catch {
+    return null;
+  }
+}
+
+// Cross-namespace directory of every puzzle that has at least one
+// completion. Used by the global Leaderboards button so the player can
+// pick any active puzzle without remembering its code. Each entry
+// carries its own { code, namespace, name, completion_count,
+// last_completed_at }; namespace tells the caller which prefix to
+// hand back into the per-puzzle wrappers.
+export async function getPuzzles() {
+  if (!apiAvailable()) return null;
+  try {
+    const res = await call('GET', '/puzzles');
+    if (!res.ok) return null;
+    const data = await res.json();
+    return data.entries || [];
+  } catch {
+    return null;
+  }
+}
+
+// Public player directory. Returns the array of entries (each
+// { name, created_at, last_seen_at, completion_count, authored_count })
+// or null on failure.
+export async function getPlayers() {
+  if (!apiAvailable()) return null;
+  try {
+    const res = await call('GET', '/players');
+    if (!res.ok) return null;
+    const data = await res.json();
+    return data.entries || [];
+  } catch {
+    return null;
+  }
+}
+
+// Public profile view for a single player. Returns the full record
+// { name, createdAt, lastSeenAt, authoredCount, completions[] } or
+// null on a network or 404 failure.
+export async function getPlayerProfile(name) {
+  if (!apiAvailable()) return null;
+  try {
+    const res = await call('GET', `/players/${encodeURIComponent(name)}`);
+    if (!res.ok) return null;
+    return await res.json();
   } catch {
     return null;
   }

@@ -412,6 +412,125 @@ function drawSafe(cv, _rng) {
 
 // ---------- Roster ----------
 
+// Medieval / fantasy items, used by the medium-tier samples. These
+// are blocking furniture (the player can't stand on a hot brazier),
+// the validator categorises any unknown id as blocking by default.
+
+function drawAnvil(cv, _rng) {
+  cv.fillEllipse(16, 29, 11, 2, SHADOW);
+  const iron     = [70, 70, 84, 255];
+  const ironDk   = [40, 40, 52, 255];
+  const ironLt   = [110, 110, 124, 255];
+  // Wooden stump under the anvil.
+  cv.fillRect(10, 21, 12, 7, WOOD);
+  cv.fillRect(10, 21, 12, 1, WOOD_LIGHT);
+  cv.fillRect(10, 27, 12, 1, WOOD_DARK);
+  // Anvil body, hourglass profile.
+  cv.fillRect(8, 13, 16, 4, iron);
+  cv.fillRect(11, 17, 10, 3, iron);
+  cv.fillRect(8, 13, 16, 1, ironLt);
+  cv.fillRect(8, 16, 16, 1, ironDk);
+  // Pointed horn on the left.
+  cv.fillRect(5, 14, 4, 2, iron);
+  cv.set(4, 14, iron);
+  cv.set(4, 15, iron);
+  // Top hammer-face highlight.
+  cv.fillRect(9, 13, 14, 1, ironLt);
+}
+
+function drawCauldron(cv, _rng) {
+  cv.fillEllipse(16, 29, 11, 2, SHADOW);
+  const iron     = [42, 42, 50, 255];
+  const ironDk   = [22, 22, 28, 255];
+  const brew     = [70, 180, 110, 255];
+  const brewLt   = [140, 220, 170, 255];
+  // Belly of the pot.
+  cv.fillEllipse(16, 20, 11, 8, iron);
+  // Rim.
+  cv.fillRect(7, 11, 18, 2, ironDk);
+  cv.fillRect(8, 11, 16, 1, iron);
+  // Brew at the top.
+  cv.fillRect(9, 12, 14, 2, brew);
+  cv.fillRect(11, 12, 3, 1, brewLt);
+  cv.fillRect(17, 13, 3, 1, brewLt);
+  // Three squat legs.
+  cv.fillRect(8, 26, 2, 4, ironDk);
+  cv.fillRect(15, 26, 2, 4, ironDk);
+  cv.fillRect(22, 26, 2, 4, ironDk);
+  // Steam.
+  cv.set(12, 9, [230, 230, 230, 180]);
+  cv.set(16, 8, [230, 230, 230, 180]);
+  cv.set(20, 9, [230, 230, 230, 180]);
+}
+
+function drawBrazier(cv, _rng) {
+  cv.fillEllipse(16, 29, 10, 2, SHADOW);
+  const iron     = [80, 60, 40, 255];
+  const ironDk   = [40, 30, 20, 255];
+  const ember    = [240, 100, 30, 255];
+  const flame    = [255, 200, 60, 255];
+  // Three iron legs splaying down.
+  cv.fillRect(8, 18, 2, 10, ironDk);
+  cv.fillRect(22, 18, 2, 10, ironDk);
+  cv.fillRect(15, 19, 2, 10, ironDk);
+  // The bowl.
+  cv.fillEllipse(16, 16, 11, 4, iron);
+  cv.fillEllipse(16, 14, 10, 2, ironDk);
+  // Coals at the rim.
+  for (let x = 8; x <= 24; x += 2) cv.set(x, 13, ember);
+  // Flames above.
+  cv.fillRect(14, 9, 4, 4, flame);
+  cv.set(13, 11, ember);
+  cv.set(18, 11, ember);
+  cv.set(16, 7, ember);
+}
+
+function drawBanner(cv, _rng) {
+  // Wall-hanging, lives in front of the cell, non-blocking.
+  const pole     = [90, 70, 50, 255];
+  const cloth    = [140, 30, 40, 255];
+  const clothDk  = [90, 18, 26, 255];
+  const sigil    = [230, 200, 90, 255];
+  // Horizontal pole at the top.
+  cv.fillRect(4, 5, 24, 2, pole);
+  cv.fillEllipse(4, 6, 2, 1, pole);
+  cv.fillEllipse(28, 6, 2, 1, pole);
+  // The hanging cloth, slightly tapered at the bottom.
+  cv.fillRect(8, 7, 16, 18, cloth);
+  cv.fillRect(9, 25, 14, 1, clothDk);
+  cv.fillRect(10, 26, 12, 1, clothDk);
+  // Folds at the edges.
+  cv.fillRect(8, 7, 1, 19, clothDk);
+  cv.fillRect(23, 7, 1, 19, clothDk);
+  // A simple sigil at the centre, a sunburst.
+  cv.fillEllipse(16, 15, 3, 3, sigil);
+  cv.set(16, 11, sigil);
+  cv.set(16, 19, sigil);
+  cv.set(12, 15, sigil);
+  cv.set(20, 15, sigil);
+}
+
+function drawChest(cv, _rng) {
+  cv.fillEllipse(16, 28, 10, 2, SHADOW);
+  const wood     = WOOD;
+  const woodDk   = WOOD_DARK;
+  const woodLt   = WOOD_LIGHT;
+  const iron     = [60, 60, 70, 255];
+  // Base box.
+  cv.fillRect(6, 14, 20, 14, wood);
+  cv.fillRect(6, 14, 20, 1, woodLt);
+  cv.fillRect(6, 27, 20, 1, woodDk);
+  // Curved domed lid.
+  cv.fillEllipse(16, 13, 10, 5, wood);
+  cv.fillEllipse(16, 12, 9, 4, woodLt);
+  // Iron strap bands.
+  cv.fillRect(6, 18, 20, 1, iron);
+  cv.fillRect(15, 9, 2, 19, iron);
+  // The lock.
+  cv.fillRect(14, 19, 4, 4, iron);
+  cv.set(16, 21, [220, 200, 80, 255]);
+}
+
 const SPRITES = [
   { id: 'chair',      name: 'Chair',                 draw: drawChair },
   { id: 'armchair',   name: 'Armchair',              draw: drawArmchair },
@@ -431,6 +550,12 @@ const SPRITES = [
   { id: 'gramophone', name: 'Gramophone',            draw: drawGramophone },
   { id: 'typewriter', name: 'Typewriter',            draw: drawTypewriter },
   { id: 'safe',       name: 'Safe',                  draw: drawSafe },
+  // Medieval / fantasy. Used by medium-tier samples.
+  { id: 'anvil',      name: 'Anvil',                 draw: drawAnvil },
+  { id: 'cauldron',   name: 'Cauldron',              draw: drawCauldron },
+  { id: 'brazier',    name: 'Brazier',               draw: drawBrazier },
+  { id: 'banner',     name: 'Hanging banner',        draw: drawBanner },
+  { id: 'chest',      name: 'Iron-bound chest',      draw: drawChest },
 ];
 
 function main() {

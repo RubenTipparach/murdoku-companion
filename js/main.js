@@ -20,13 +20,15 @@ import {
   apiAvailable, probeServer, claimProfile,
   shareLevel, updateSharedLevel, getSharedLevel, bumpPlays,
   recordCompletion, getLeaderboard, shareUrlFor,
+  getLevelCompletions, getPlayers, getPlayerProfile, getPuzzles,
+  getRankings, issueDeviceCode,
 } from './api.js';
 import { validateLevel } from './validator.js';
 import { renderGrid } from './grid.js';
 import { loadCharacters, renderRoster } from './portraits.js';
 import { loadFurniture, normalizeLevel, rollAllRooms } from './decor.js';
 import { SAMPLES, buildSampleLevel } from './sample.js';
-import { victimIcon, killerIcon } from './icons.js';
+import { victimIcon, killerIcon, profileIcon } from './icons.js';
 import {
   selectTool,
   createRoom,
@@ -68,6 +70,26 @@ const levelsListEl = $('#levels-list');
 const winToast     = $('#win-toast');
 const winDetail    = $('#win-detail');
 const winLeaderboard = $('#win-leaderboard');
+const winViewLeaderboard = $('#win-view-leaderboard');
+const leaderboardModal = $('#leaderboard-modal');
+const lbModalTitle = $('#lb-modal-title');
+const lbTable = $('#lb-table');
+const lbTbody = $('#lb-tbody');
+const lbExtraCol = $('#lb-extra-col');
+const lbLoading = $('#lb-loading');
+const lbEmpty = $('#lb-empty');
+const lbError = $('#lb-error');
+const playersModal = $('#players-modal');
+const playersModalTitle = $('#players-modal-title');
+const playersList = $('#players-list');
+const playersLoading = $('#players-loading');
+const playersError = $('#players-error');
+const playersBack = $('#players-back');
+const puzzlesModal = $('#puzzles-modal');
+const puzzlesList = $('#puzzles-list');
+const puzzlesLoading = $('#puzzles-loading');
+const puzzlesError = $('#puzzles-error');
+const puzzlesHint = $('#puzzles-hint');
 const shareModal   = $('#share-modal');
 const shareErrors  = $('#share-errors');
 const shareSuccess = $('#share-success');
@@ -83,6 +105,15 @@ const metaHeading  = $('#meta-heading');
 const difficultyChip = $('#difficulty-chip');
 
 const DIFFICULTY_LABELS = {
+  // New primary tiers. Easy is the shipped on-ramp set; medium is the
+  // fantasy batch with non-rectangular rooms; hard is reserved for the
+  // forthcoming ability + house-modifier content.
+  easy: 'Easy',
+  medium: 'Medium',
+  hard: 'Hard',
+  // Legacy tier names still recognised so user-authored levels saved
+  // before the taxonomy change keep their chip + ordering. The shipped
+  // samples no longer use any of these.
   tutorial: 'Tutorial',
   gentle: 'Gentle',
   standard: 'Standard',
@@ -93,7 +124,10 @@ const DIFFICULTY_LABELS = {
 
 // Difficulty tier rendering order in the library. Tiers not present in
 // the current sample roster are silently skipped.
-const DIFFICULTY_ORDER = ['tutorial', 'gentle', 'standard', 'tricky', 'expert', 'fiendish'];
+const DIFFICULTY_ORDER = [
+  'easy', 'medium', 'hard',
+  'tutorial', 'gentle', 'standard', 'tricky', 'expert', 'fiendish',
+];
 
 // Profile name rules. Mirrors the server-side regex planned for Phase 12,
 // so a locally-created name is portable when the API ships.
@@ -110,6 +144,17 @@ function validateProfileName(name) {
 // ---------- Mode / tool switching ----------
 
 function setMode(mode) {
+  // Refuse to enter Edit on a shipped sample. The Edit-mode button is
+  // already disabled in rerender(), this is defense in depth for any
+  // code path that still tries (e.g. older saved activeId pointing at
+  // a sample that booted directly into edit).
+  if (mode === 'edit') {
+    const lvl = activeLevel();
+    if (lvl && lvl.isSample) {
+      flashStatus('Clone this sample first to edit it.');
+      mode = 'play';
+    }
+  }
   state.mode = mode;
   modeEditBtn.classList.toggle('active', mode === 'edit');
   modePlayBtn.classList.toggle('active', mode === 'play');
@@ -190,6 +235,14 @@ function rerender() {
   sampleBanner.classList.toggle('hidden', !(isSample && state.mode === 'edit'));
   // Lock the edit sidebar interactions when on a sample.
   editTools.classList.toggle('locked', isSample);
+  // The Edit-mode toggle is disabled on samples so a player can't
+  // accidentally enter a locked editor (and end up confused about
+  // why typing does nothing). Cloning is the only path to a
+  // writable copy of a shipped puzzle.
+  modeEditBtn.disabled = isSample;
+  modeEditBtn.title = isSample
+    ? 'This is a shipped sample. Clone it to enable editing.'
+    : 'Edit this house';
 
   renderLevelSelect();
   updateStatus();
@@ -357,7 +410,13 @@ function positionSelectedClue(charId) {
 // Repopulate the topbar level-select dropdown to mirror state.levels.
 function renderLevelSelect() {
   levelSelect.innerHTML = '';
+  // The dropdown is "your levels" + custom shared puzzles. Shipped
+  // samples are never editable, so we don't expose them here, the
+  // player picks samples from the start menu's library instead. If
+  // the current active level is a sample we still include it so the
+  // dropdown has a valid selected option while the player is on it.
   for (const lvl of state.levels) {
+    if (lvl.isSample && lvl.id !== state.activeId) continue;
     const opt = document.createElement('option');
     opt.value = lvl.id;
     opt.textContent = (lvl.isSample ? '🔒 ' : '') + (lvl.name || '(untitled)');
@@ -384,7 +443,10 @@ function updateStatus() {
   } else {
     const placed = Object.keys(lvl.playerPlacement).length;
     const sol = Object.keys(lvl.solution).length;
-    setStatus(`Play · placed ${placed} / ${sol} suspects`);
+    const guesses = playSession && playSession.levelId === lvl.id
+      ? ` · guesses ${playSession.mistakes}`
+      : '';
+    setStatus(`Play · placed ${placed} / ${sol} suspects${guesses}`);
   }
 }
 
@@ -497,12 +559,85 @@ function ensureAtLeastOneLevel({ seedSample = false } = {}) {
 
 // Load a fresh copy of the named sample (or the default if no key supplied).
 // The new copy gets a unique id and is marked isSample so the editor locks it
-// until the player clones.
+// until the player clones. If an instance for this sample already exists in
+// state.levels (e.g. the player previously played and didn't clone), we
+// reuse it and reset the play state instead of stacking another one, so
+// "Your levels" / the levels modal / the dropdown never see duplicates.
 function loadSampleAsNewLevel(sampleKey) {
+  const existing = state.levels.find((l) => l.isSample && l.sampleKey === sampleKey);
+  if (existing) {
+    existing.playerPlacement = {};
+    existing.playerKiller = null;
+    existing.updatedAt = Date.now();
+    state.activeId = existing.id;
+    state.selectedRoomId = null;
+    return;
+  }
   const lvl = buildSampleLevel(sampleKey);
   state.levels.push(lvl);
   state.activeId = lvl.id;
   state.selectedRoomId = null;
+}
+
+// One-time cleanup, called from boot(). Older saves stacked a new
+// instance every time a sample was played, so the levels modal and
+// the topbar dropdown can be cluttered with phantom duplicates of
+// the same shipped puzzle. Consolidate down to one instance per
+// sampleKey (keeping the most recently updated, so any in-flight
+// placements survive).
+function dedupeSamplePlayInstances() {
+  const bySample = new Map();
+  const survivors = [];
+  for (const lvl of state.levels) {
+    if (!lvl.isSample || !lvl.sampleKey) {
+      survivors.push(lvl);
+      continue;
+    }
+    const prior = bySample.get(lvl.sampleKey);
+    if (!prior || (lvl.updatedAt || 0) > (prior.updatedAt || 0)) {
+      bySample.set(lvl.sampleKey, lvl);
+    }
+  }
+  for (const lvl of bySample.values()) survivors.push(lvl);
+  if (survivors.length !== state.levels.length) {
+    // Keep activeId pointing at a surviving level, fall back to null
+    // so boot lands on the start menu rather than a dangling id.
+    const survivorIds = new Set(survivors.map((l) => l.id));
+    if (state.activeId && !survivorIds.has(state.activeId)) state.activeId = null;
+    state.levels = survivors;
+    saveLevels(state.levels);
+    saveActiveId(state.activeId);
+  }
+}
+
+// Sample puzzles are SOURCE-DEFINED, not user data. The rooms,
+// decorations, clues, solution, name, difficulty and grid size all
+// live in js/sample.js; the runtime instance only owns the player's
+// progress (where they've placed suspects, who they've accused, and
+// whether they've finished). On boot we walk every cached sample
+// instance and refresh its program-defined fields from SAMPLES so
+// shipped-sample edits propagate even when the player has the level
+// sitting in their localStorage.
+function refreshSampleLevelsFromSource() {
+  let dirty = false;
+  for (let i = 0; i < state.levels.length; i++) {
+    const lvl = state.levels[i];
+    if (!lvl.isSample || !lvl.sampleKey) continue;
+    const sample = SAMPLES.find((s) => s.key === lvl.sampleKey);
+    if (!sample) continue;
+    // Build a fresh sample-data view; carry over the runtime id and
+    // the player's progress so the user doesn't lose work in flight.
+    const fresh = sample.build();
+    fresh.id = lvl.id;
+    fresh.playerPlacement = lvl.playerPlacement || {};
+    fresh.playerKiller = lvl.playerKiller || null;
+    fresh.completed = !!lvl.completed;
+    fresh.createdAt = lvl.createdAt || fresh.createdAt;
+    fresh.updatedAt = lvl.updatedAt || fresh.updatedAt;
+    state.levels[i] = normalizeLevel(fresh);
+    dirty = true;
+  }
+  if (dirty) saveLevels(state.levels);
 }
 
 // Render the profile row at the top of the start menu. Three states:
@@ -528,27 +663,51 @@ function renderStartProfile() {
     startGated.classList.add('hidden');
     renderProfileCreateForm();
   }
+  // "Add new device" is only meaningful when the active profile is
+  // actually claimed on the server (and so the server knows about
+  // its token). Hide otherwise.
+  const addBtn = $('#btn-add-device');
+  if (addBtn) {
+    addBtn.classList.toggle('hidden', !(active && active.claimed));
+  }
 }
 
 function renderActiveProfileBar(profile) {
+  // Five chip states, in priority order so a permanent failure
+  // surfaces above the transient "claiming…" placeholder:
+  //   claimed            green badge, no action
+  //   name_taken         warn badge, no retry (the name is gone)
+  //   rate_limited       warn badge + Retry (user can try again later)
+  //   other claim error  warn badge + Retry
+  //   server unreachable dim badge "local only", no retry
+  //   pending            dim badge "claiming…", auto-resolves
   let chip = '';
-  if (!profile.claimed) {
-    if (state.serverReachable === true) {
-      chip = '<span class="profile-claim-pending claiming">claiming…</span>';
-    } else if (state.serverReachable === false) {
-      chip = '<span class="profile-claim-pending local-only">local only</span>';
-    } else {
-      chip = '<span class="profile-claim-pending unknown">checking…</span>';
-    }
-  } else {
+  let retry = '';
+  if (profile.claimed) {
     chip = '<span class="profile-claim-pending claimed">claimed</span>';
+  } else if (profile.claimError === 'name_taken') {
+    chip = '<span class="profile-claim-pending taken" title="Another device already claimed this name on the server.">name taken</span>';
+    retry = '<button id="btn-claim-now" class="profile-retry" title="Already claimed this name on another device? Sign in with that claim code.">Claim now</button>';
+  } else if (profile.claimError === 'rate_limited') {
+    chip = '<span class="profile-claim-pending failed">rate limited</span>';
+    retry = '<button id="btn-claim-retry" class="profile-retry" title="Try claiming this name again">Retry</button>';
+  } else if (profile.claimError) {
+    chip = `<span class="profile-claim-pending failed" title="Claim failed: ${escapeHtml(profile.claimError)}">claim failed</span>`;
+    retry = '<button id="btn-claim-retry" class="profile-retry" title="Try claiming this name again">Retry</button>';
+  } else if (state.serverReachable === false) {
+    chip = '<span class="profile-claim-pending local-only">local only</span>';
+  } else if (state.serverReachable === true) {
+    chip = '<span class="profile-claim-pending claiming">claiming…</span>';
+  } else {
+    chip = '<span class="profile-claim-pending unknown">checking…</span>';
   }
   startProfile.innerHTML = `
     <div class="profile-active">
       <div class="profile-info">
-        <span class="profile-icon">🪪</span>
+        <span class="profile-icon">${profileIcon()}</span>
         <span class="profile-name">@${escapeHtml(profile.name)}</span>
         ${chip}
+        ${retry}
       </div>
       <div class="profile-actions">
         <button id="btn-switch-profile" class="profile-switch" title="Sign out and pick a different profile">Switch</button>
@@ -569,6 +728,105 @@ function renderActiveProfileBar(profile) {
     state.menuView = 'main';
     renderStartMenu();
   });
+  const retryBtn = startProfile.querySelector('#btn-claim-retry');
+  if (retryBtn) {
+    retryBtn.addEventListener('click', () => {
+      profile.claimError = null;
+      saveProfiles(state.profiles);
+      renderActiveProfileBar(profile);
+      runServerClaim(profile);
+    });
+  }
+  const claimNowBtn = startProfile.querySelector('#btn-claim-now');
+  if (claimNowBtn) {
+    claimNowBtn.addEventListener('click', () => openClaimModal(profile));
+  }
+}
+
+// Open the "Claim this name" modal: the player pastes the token from
+// their already-claimed account on another device, we adopt it as our
+// local token and re-run the claim. On success, the server sees the
+// matching token-hash and 200s an idempotent re-claim.
+function openClaimModal(profile) {
+  const modal = $('#claim-modal');
+  const input = $('#claim-code-input');
+  const submit = $('#btn-claim-submit');
+  const status = $('#claim-status');
+  input.value = '';
+  status.textContent = '';
+  status.className = 'share-copy-status';
+  modal.classList.remove('hidden');
+  setTimeout(() => input.focus(), 50);
+  const onSubmit = async () => {
+    const code = input.value.trim();
+    // Accept both legacy 43-char base64url tokens and the new 8-char
+    // Crockford short codes the server now issues.
+    if (!/^([A-Za-z0-9_-]{43}|[0-9a-hjkmnp-tv-z]{8})$/.test(code)) {
+      status.textContent = 'That does not look like a device code. Paste the 8-character code from the other device.';
+      status.style.color = 'var(--bad)';
+      return;
+    }
+    const prevToken = profile.token;
+    profile.token = code;
+    profile.claimed = false;
+    profile.claimError = null;
+    saveProfiles(state.profiles);
+    status.textContent = 'Signing in...';
+    status.style.color = 'var(--ink-dim)';
+    submit.disabled = true;
+    await runServerClaim(profile);
+    submit.disabled = false;
+    if (profile.claimed) {
+      status.textContent = 'Signed in. You can close this dialog.';
+      status.style.color = 'var(--good)';
+      setTimeout(() => closeClaimModal(), 800);
+    } else {
+      // Restore the previous local token so the user isn't locked out
+      // by a typo.
+      profile.token = prevToken;
+      profile.claimError = null;
+      saveProfiles(state.profiles);
+      renderActiveProfileBar(profile);
+      status.textContent = 'That code did not match. Double-check it on the other device.';
+      status.style.color = 'var(--bad)';
+    }
+  };
+  submit.onclick = onSubmit;
+  input.onkeydown = (e) => { if (e.key === 'Enter') onSubmit(); };
+}
+
+function closeClaimModal() {
+  $('#claim-modal').classList.add('hidden');
+}
+
+// Open the "Add new device" modal: mint a fresh 8-char code on the
+// server and surface it once. The user types this on the second
+// device's "Claim now" prompt to sign in there. The calling device's
+// own token is untouched.
+async function openClaimCodeModal() {
+  const ap = activeProfile();
+  if (!ap || !ap.token) return;
+  const modal = $('#claim-code-modal');
+  $('#claim-code-name').textContent = ap.name;
+  const input = $('#claim-code-value');
+  const status = $('#claim-code-copy-status');
+  input.value = '';
+  status.textContent = 'Minting a new code...';
+  status.style.color = 'var(--ink-dim)';
+  modal.classList.remove('hidden');
+  const code = await issueDeviceCode(ap.token);
+  if (!code) {
+    status.textContent = 'Could not reach the server. Try again when you are online.';
+    status.style.color = 'var(--bad)';
+    return;
+  }
+  input.value = code;
+  status.textContent = '';
+  setTimeout(() => { input.focus(); input.select(); }, 50);
+}
+
+function closeClaimCodeModal() {
+  $('#claim-code-modal').classList.add('hidden');
 }
 
 function renderProfilePicker() {
@@ -579,7 +837,7 @@ function renderProfilePicker() {
     const status = p.claimed ? 'claimed on server' : 'local only';
     return `
       <button class="start-card profile-pick-card" data-action="pick-profile" data-profile-name="${escapeHtml(p.name)}">
-        <h3>🪪 @${escapeHtml(p.name)}</h3>
+        <h3>${profileIcon()} @${escapeHtml(p.name)}</h3>
         <p>Last seen ${last} · ${status}</p>
       </button>
     `;
@@ -679,14 +937,20 @@ async function runServerClaim(profile) {
   state.serverReachable = true;
   if (result.ok) {
     profile.claimed = true;
+    profile.claimError = null;
     saveProfiles(state.profiles);
+    // First-time claim from this device: pull any server-side
+    // completions so cross-device wins flow back in.
+    syncCompletionsFromServer(profile).catch(() => {});
   } else if (result.nameTaken) {
-    alert(
-      `The name @${profile.name} is already claimed on the server. ` +
-      `Your local progress stays under this name on this device, but ` +
-      `leaderboards will not show it. Pick a different name when you ` +
-      `next sign up.`
-    );
+    profile.claimError = 'name_taken';
+    saveProfiles(state.profiles);
+  } else if (result.status === 429) {
+    profile.claimError = 'rate_limited';
+    saveProfiles(state.profiles);
+  } else {
+    profile.claimError = `server_${result.status || 'unknown'}`;
+    saveProfiles(state.profiles);
   }
   renderServerBanner();
   if (activeProfile() && activeProfile().name === profile.name) {
@@ -736,6 +1000,10 @@ function onServerReachable() {
   // becomes reachable. Skipped on transitions from already-reachable
   // so we don't loop on a stuck name-taken collision.
   if (!wasReachable && cur && !cur.claimed) runServerClaim(cur);
+  // Pull completions from the server on every reach event for the
+  // current profile. Idempotent, only merges new server-side codes
+  // into local state. Cheap: one /players/:name fetch.
+  if (cur && cur.claimed) syncCompletionsFromServer(cur).catch(() => {});
 }
 
 function onServerUnreachable() {
@@ -831,10 +1099,18 @@ function renderStartLibrary() {
       card.dataset.action = 'open-authored';
       card.dataset.authoredId = lvl.id;
       const who = lvl.ownerName ? `@${escapeHtml(lvl.ownerName)}` : 'someone';
+      const lbBtn = lvl.code
+        ? `<button data-authored-action="leaderboard" data-authored-id="${escapeHtml(lvl.id)}" class="leaderboard-btn">🏆 Leaderboard</button>`
+        : '';
+      const solversBtn = lvl.code
+        ? `<button data-authored-action="solvers" data-authored-id="${escapeHtml(lvl.id)}" class="leaderboard-btn">👥 Players completed</button>`
+        : '';
       card.innerHTML = `
         <h3>🔗 ${escapeHtml(lvl.name || 'Shared puzzle')}</h3>
         <p>By ${who} · code <code>${escapeHtml(lvl.code || '')}</code></p>
         <div class="authored-actions">
+          ${lbBtn}
+          ${solversBtn}
           <button data-authored-action="clone" data-authored-id="${escapeHtml(lvl.id)}" class="clone-btn">Clone to edit</button>
         </div>
       `;
@@ -874,9 +1150,16 @@ function renderStartLibrary() {
       card.dataset.action = 'play-sample';
       card.dataset.sampleKey = s.key;
       const icon = done ? '✅' : '🔍';
+      const lbActions = s.code
+        ? `<div class="authored-actions">
+             <button data-sample-action="leaderboard" data-sample-key="${escapeHtml(s.key)}" class="leaderboard-btn">🏆 Leaderboard</button>
+             <button data-sample-action="solvers" data-sample-key="${escapeHtml(s.key)}" class="leaderboard-btn">👥 Players completed</button>
+           </div>`
+        : '';
       card.innerHTML = `
         <h3>${icon} ${escapeHtml(s.name)}</h3>
         <p>${escapeHtml(s.description)}</p>
+        ${lbActions}
       `;
       cards.appendChild(card);
     }
@@ -914,6 +1197,9 @@ function startPlaySession(level) {
 function bumpMistakes(n) {
   if (!playSession || !n) return;
   playSession.mistakes += n;
+  // Reflect the new count in the play-screen status line so the
+  // player can see their guess total live.
+  updateStatus();
 }
 
 async function openShareModal(authoredId) {
@@ -1002,6 +1288,31 @@ function cloneSharedLevelToAuthored(sharedId) {
   flashStatus(`Cloned "${src.name}" into your authored levels.`);
 }
 
+// Delete an authored level from the local library. If the level has
+// been published to the server (lvl.code is set), the confirm prompt
+// tells the player that an admin can restore the published copy
+// later, the public listing on the server is untouched. Local-only
+// authored levels just get a plain "are you sure" prompt.
+function deleteAuthoredLevel(authoredId) {
+  const lvl = state.levels.find((l) => l.id === authoredId);
+  if (!lvl) return;
+  const name = lvl.name || '(untitled)';
+  const message = lvl.code
+    ? `Delete "${name}" from this device?\n\n` +
+      `This level is published on the server (code ${lvl.code}). ` +
+      `The published copy stays online and an admin can retrieve it ` +
+      `for you at any time. Only the local copy on this device is ` +
+      `removed; you will not be able to edit or re-publish it from ` +
+      `this device unless an admin restores it.`
+    : `Delete "${name}"?\n\nThis cannot be undone.`;
+  if (!confirm(message)) return;
+  state.levels = state.levels.filter((l) => l.id !== authoredId);
+  if (state.activeId === authoredId) state.activeId = null;
+  persist();
+  renderStartMenu();
+  flashStatus(`Deleted "${name}".`);
+}
+
 // Pull a level by code from the server and merge into the local
 // library. If we already have it (matching code), just activate it.
 // If the active profile owns it, store it as an authored (editable)
@@ -1045,10 +1356,109 @@ async function applyPlayUrlParam() {
   flashStatus(`Loaded "${lvl.name}" from @${data.ownerName}.`);
 }
 
-// On a win for a shared puzzle, post the completion + show the
-// top-of-leaderboard inline in the win toast.
+// Derive a server namespace from a bare puzzle code. Sample codes are
+// the short mN tokens drawn from the SAMPLES manifest; anything else
+// is treated as a custom shared-puzzle code. Used when the server
+// returned a code without telling us which namespace it belongs to
+// (e.g. inside a player's completion history).
+function inferNamespace(code) {
+  if (!code) return 'custom';
+  return SAMPLES.some((s) => s.code === code) ? 'sample' : 'custom';
+}
+
+// Check-Solution feedback auto-clear: the green ✓ / red ✕ outlines
+// linger for 10 seconds, then fade so the board stops shouting at the
+// player while they're deciding what to move. Cancelled by the toast's
+// Clear button (immediate) or by a fresh Check click (rescheduled).
+const CHECK_FEEDBACK_TTL_MS = 10_000;
+let checkFeedbackTimer = null;
+function scheduleCheckFeedbackClear() {
+  cancelCheckFeedbackClear();
+  checkFeedbackTimer = setTimeout(() => {
+    checkFeedbackTimer = null;
+    highlightCells({});
+    winToast.classList.add('hidden');
+    if (state.checkFeedbackRowCol) {
+      state.checkFeedbackRowCol = false;
+      rerender();
+    }
+  }, CHECK_FEEDBACK_TTL_MS);
+}
+function cancelCheckFeedbackClear() {
+  if (checkFeedbackTimer) {
+    clearTimeout(checkFeedbackTimer);
+    checkFeedbackTimer = null;
+  }
+}
+
+// Two-way completion sync for the active profile. PULL: any sample
+// codes the server has but the local set doesn't get added so a
+// cross-device win lights up the green check on this device. PUSH:
+// any local sample wins the server doesn't know about are posted as
+// backfill rows (no time, no mistakes) so they count toward this
+// player's total-completed without polluting the per-puzzle time
+// leaderboard. Best-effort, swallows errors.
+async function syncCompletionsFromServer(profile) {
+  if (!profile || !apiAvailable()) return;
+  const data = await getPlayerProfile(profile.name);
+  if (!data || !Array.isArray(data.completions)) return;
+
+  // Pull: server → local
+  const serverCodes = new Set(data.completions.map((c) => c.level_code));
+  let pulled = 0;
+  for (const c of data.completions) {
+    const s = SAMPLES.find((x) => x.code === c.level_code);
+    if (s && !state.completedSamples.has(s.key)) {
+      state.completedSamples.add(s.key);
+      pulled++;
+    }
+  }
+  if (pulled > 0) {
+    saveCompletedSamples([...state.completedSamples]);
+    if (!startModal.classList.contains('hidden')) renderStartMenu();
+  }
+
+  // Push: local → server (backfill). Every sample the player has
+  // finished locally but the server has no record of gets a one-time
+  // backfill post. The server de-dupes per (profile, code) so a
+  // re-sync on another device is a no-op.
+  let pushed = 0;
+  for (const sampleKey of state.completedSamples) {
+    const s = SAMPLES.find((x) => x.key === sampleKey);
+    if (!s || !s.code) continue;
+    if (serverCodes.has(s.code)) continue;
+    const ok = await recordCompletion(profile.token, s.code, 'sample', 0, 0, { backfill: true });
+    if (ok) pushed++;
+  }
+
+  if (pulled > 0 || pushed > 0) {
+    const parts = [];
+    if (pulled > 0) parts.push(`pulled ${pulled}`);
+    if (pushed > 0) parts.push(`backfilled ${pushed}`);
+    flashStatus(`Synced completions, ${parts.join(', ')}.`);
+  }
+}
+
+// Resolve a level to its server target. Custom shared puzzles carry
+// their code directly; samples carry a sampleKey that we map back to
+// the canonical mN code via the SAMPLES manifest. Returns null for
+// authored-but-unshared levels (no leaderboard exists for those).
+function levelTarget(lvl) {
+  if (!lvl) return null;
+  if (lvl.code) return { code: lvl.code, namespace: 'custom', name: lvl.name };
+  if (lvl.sampleKey) {
+    const s = SAMPLES.find((x) => x.key === lvl.sampleKey);
+    if (s && s.code) return { code: s.code, namespace: 'sample', name: s.name };
+  }
+  return null;
+}
+
+// On a win, post the completion + show the top-of-leaderboard inline
+// in the win toast. Works for both shipped samples and custom shared
+// puzzles, the namespace is picked from levelTarget.
 async function postCompletionAndShowLeaderboard(lvl) {
-  if (!lvl || !lvl.code) return;
+  const tgt = levelTarget(lvl);
+  if (!tgt) return;
   const ap = activeProfile();
   if (!ap || !apiAvailable()) return;
   const session = playSession && playSession.levelId === lvl.id
@@ -1056,8 +1466,8 @@ async function postCompletionAndShowLeaderboard(lvl) {
     : null;
   const durationMs = session ? Math.max(1, Date.now() - session.startedAt) : 1000;
   const mistakes = session ? session.mistakes : 0;
-  await recordCompletion(ap.token, lvl.code, durationMs, mistakes);
-  const entries = await getLeaderboard(lvl.code);
+  await recordCompletion(ap.token, tgt.code, tgt.namespace, durationMs, mistakes);
+  const entries = await getLeaderboard(tgt.code, tgt.namespace);
   if (!entries || !entries.length) return;
   const top = entries.slice(0, 5);
   const items = top
@@ -1069,7 +1479,7 @@ async function postCompletionAndShowLeaderboard(lvl) {
       </li>`;
     })
     .join('');
-  winLeaderboard.innerHTML = `<h4>Leaderboard for "${escapeHtml(lvl.name || lvl.code)}"</h4><ol>${items}</ol>`;
+  winLeaderboard.innerHTML = `<h4>Leaderboard for "${escapeHtml(tgt.name || tgt.code)}"</h4><ol>${items}</ol>`;
   winLeaderboard.classList.remove('hidden');
 }
 
@@ -1079,6 +1489,266 @@ function formatMs(ms) {
   const m = Math.floor(totalSec / 60);
   const s = totalSec % 60;
   return `${m}:${s.toString().padStart(2, '0')}`;
+}
+
+// Format a millisecond timestamp as a short "Mon DD" string for the
+// completion list. Skips the year, the list is recency-ordered so the
+// year is obvious from context.
+function formatWhen(ms) {
+  if (!Number.isFinite(ms)) return '';
+  try {
+    return new Date(ms).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+  } catch {
+    return '';
+  }
+}
+
+// ---------- Leaderboard / completions modal ----------
+
+// Track the modal's current puzzle + namespace + tab so a re-fetch
+// after tab switch can be done without re-passing arguments.
+const lbState = { code: null, name: null, namespace: 'custom', tab: 'top' };
+
+async function openLeaderboardModal(code, fallbackName, { initialTab = 'top', namespace = 'custom' } = {}) {
+  if (!code) return;
+  lbState.code = code;
+  lbState.name = fallbackName || code;
+  lbState.namespace = namespace === 'sample' ? 'sample' : 'custom';
+  lbState.tab = initialTab === 'all' ? 'all' : 'top';
+  leaderboardModal.classList.remove('hidden');
+  lbModalTitle.textContent = `Leaderboard, "${fallbackName || code}"`;
+  for (const tab of leaderboardModal.querySelectorAll('.lb-tab')) {
+    tab.classList.toggle('active', tab.dataset.lbTab === lbState.tab);
+  }
+  await renderLeaderboardTab();
+}
+
+function closeLeaderboardModal() {
+  leaderboardModal.classList.add('hidden');
+  lbState.code = null;
+}
+
+async function renderLeaderboardTab() {
+  const { code, namespace, tab } = lbState;
+  if (!code) return;
+  lbTable.classList.add('hidden');
+  lbEmpty.classList.add('hidden');
+  lbError.classList.add('hidden');
+  lbLoading.classList.remove('hidden');
+  lbTbody.innerHTML = '';
+
+  if (tab === 'top') {
+    lbExtraCol.textContent = '';
+    const entries = await getLeaderboard(code, namespace);
+    lbLoading.classList.add('hidden');
+    if (entries === null) { lbError.classList.remove('hidden'); return; }
+    if (!entries.length) { lbEmpty.classList.remove('hidden'); return; }
+    const ap = activeProfile();
+    lbTbody.innerHTML = entries
+      .map((e, i) => {
+        const mine = ap && ap.name === e.profile_name;
+        return `<tr class="${mine ? 'lb-you' : ''}">
+          <td class="num">${i + 1}</td>
+          <td><button class="lb-player-btn" data-player-name="${escapeHtml(e.profile_name)}">${mine ? 'You' : '@' + escapeHtml(e.profile_name)}</button></td>
+          <td class="num">${formatMs(e.best_ms)}</td>
+          <td class="num">${e.best_mistakes ?? 0}</td>
+          <td></td>
+        </tr>`;
+      })
+      .join('');
+    lbTable.classList.remove('hidden');
+    return;
+  }
+
+  // 'all' tab: every completion, newest first.
+  lbExtraCol.textContent = 'When';
+  const data = await getLevelCompletions(code, namespace);
+  lbLoading.classList.add('hidden');
+  if (data === null) { lbError.classList.remove('hidden'); return; }
+  const entries = data.entries || [];
+  if (!entries.length) { lbEmpty.classList.remove('hidden'); return; }
+  const ap = activeProfile();
+  lbTbody.innerHTML = entries
+    .map((e, i) => {
+      const mine = ap && ap.name === e.profile_name;
+      return `<tr class="${mine ? 'lb-you' : ''}">
+        <td class="num">${i + 1}</td>
+        <td><button class="lb-player-btn" data-player-name="${escapeHtml(e.profile_name)}">${mine ? 'You' : '@' + escapeHtml(e.profile_name)}</button></td>
+        <td class="num">${formatMs(e.duration_ms)}</td>
+        <td class="num">${e.mistakes ?? 0}</td>
+        <td>${escapeHtml(formatWhen(e.completed_at))}</td>
+      </tr>`;
+    })
+    .join('');
+  lbTable.classList.remove('hidden');
+}
+
+// ---------- Players directory modal ----------
+
+async function openPlayersModal({ initialPlayer } = {}) {
+  playersModal.classList.remove('hidden');
+  if (initialPlayer) {
+    await renderPlayerDetail(initialPlayer);
+    return;
+  }
+  playersModalTitle.textContent = 'Players';
+  playersBack.classList.add('hidden');
+  await renderPlayersDirectory();
+}
+
+function closePlayersModal() {
+  playersModal.classList.add('hidden');
+}
+
+async function renderPlayersDirectory() {
+  playersList.innerHTML = '';
+  playersError.classList.add('hidden');
+  playersLoading.classList.remove('hidden');
+  const entries = await getPlayers();
+  playersLoading.classList.add('hidden');
+  if (entries === null) { playersError.classList.remove('hidden'); return; }
+  if (!entries.length) {
+    playersList.innerHTML = '<p class="lb-empty">No players yet.</p>';
+    return;
+  }
+  const ap = activeProfile();
+  playersList.innerHTML = entries
+    .map((p) => {
+      const mine = ap && ap.name === p.name;
+      const seen = formatWhen(p.last_seen_at);
+      return `<button class="player-row ${mine ? 'player-you' : ''}" data-player-name="${escapeHtml(p.name)}">
+        <span>
+          <strong>${mine ? 'You · ' : ''}@${escapeHtml(p.name)}</strong>
+          <span class="player-meta">last seen ${escapeHtml(seen)}</span>
+        </span>
+        <span class="player-stats">
+          ${p.completion_count} solved · ${p.authored_count} authored
+        </span>
+      </button>`;
+    })
+    .join('');
+}
+
+async function renderPlayerDetail(name) {
+  playersBack.classList.remove('hidden');
+  playersModalTitle.textContent = `@${name}`;
+  playersList.innerHTML = '';
+  playersError.classList.add('hidden');
+  playersLoading.classList.remove('hidden');
+  const data = await getPlayerProfile(name);
+  playersLoading.classList.add('hidden');
+  if (!data) { playersError.classList.remove('hidden'); return; }
+  const head = document.createElement('div');
+  head.className = 'player-detail-head';
+  head.innerHTML = `
+    <h3>@${escapeHtml(data.name)}</h3>
+    <p>Joined ${escapeHtml(formatWhen(data.createdAt))} ·
+       last seen ${escapeHtml(formatWhen(data.lastSeenAt))} ·
+       ${data.completions.length} solve(s) ·
+       ${data.authoredCount} authored
+    </p>
+  `;
+  playersList.appendChild(head);
+  if (!data.completions.length) {
+    const empty = document.createElement('p');
+    empty.className = 'lb-empty';
+    empty.textContent = 'No solves logged yet.';
+    playersList.appendChild(empty);
+    return;
+  }
+  const table = document.createElement('table');
+  table.className = 'lb-table';
+  table.innerHTML = `
+    <thead>
+      <tr>
+        <th>Puzzle</th>
+        <th class="num">Time</th>
+        <th class="num">Mistakes</th>
+        <th>When</th>
+      </tr>
+    </thead>
+    <tbody>
+      ${data.completions
+        .map((c) => `<tr>
+          <td><button class="lb-player-btn" data-level-code="${escapeHtml(c.level_code)}" data-level-name="${escapeHtml(c.level_name || c.level_code)}">${escapeHtml(c.level_name || c.level_code)}</button></td>
+          <td class="num">${formatMs(c.duration_ms)}</td>
+          <td class="num">${c.mistakes ?? 0}</td>
+          <td>${escapeHtml(formatWhen(c.completed_at))}</td>
+        </tr>`)
+        .join('')}
+    </tbody>
+  `;
+  playersList.appendChild(table);
+}
+
+// ---------- Global Leaderboards modal (two tabs: rankings + puzzles) ----------
+
+const puzzlesState = { tab: 'ranked' };
+
+async function openPuzzlesModal() {
+  puzzlesState.tab = 'ranked';
+  puzzlesModal.classList.remove('hidden');
+  for (const t of puzzlesModal.querySelectorAll('.lb-tab')) {
+    t.classList.toggle('active', t.dataset.puzzlesTab === 'ranked');
+  }
+  await renderPuzzlesModalTab();
+}
+
+function closePuzzlesModal() {
+  puzzlesModal.classList.add('hidden');
+}
+
+async function renderPuzzlesModalTab() {
+  puzzlesList.innerHTML = '';
+  puzzlesError.classList.add('hidden');
+  puzzlesLoading.classList.remove('hidden');
+
+  if (puzzlesState.tab === 'ranked') {
+    puzzlesHint.textContent = 'Players ranked by puzzles completed, total guesses break ties.';
+    const entries = await getRankings();
+    puzzlesLoading.classList.add('hidden');
+    if (entries === null) { puzzlesError.classList.remove('hidden'); return; }
+    if (!entries.length) {
+      puzzlesList.innerHTML = '<p class="lb-empty">No solves recorded yet. Be the first.</p>';
+      return;
+    }
+    const ap = activeProfile();
+    puzzlesList.innerHTML = entries
+      .map((p, i) => {
+        const mine = ap && ap.name === p.name;
+        return `<button class="player-row ${mine ? 'player-you' : ''}" data-player-name="${escapeHtml(p.name)}">
+          <span>
+            <strong>#${i + 1} ${mine ? 'You · ' : ''}@${escapeHtml(p.name)}</strong>
+            <span class="player-meta">${p.total_guesses} total guess${p.total_guesses === 1 ? '' : 'es'}</span>
+          </span>
+          <span class="player-stats">${p.completion_count} puzzle${p.completion_count === 1 ? '' : 's'}</span>
+        </button>`;
+      })
+      .join('');
+    return;
+  }
+
+  // 'puzzles' tab
+  puzzlesHint.textContent = 'Every puzzle with at least one recorded solve. Pick one to see its leaderboard.';
+  const entries = await getPuzzles();
+  puzzlesLoading.classList.add('hidden');
+  if (entries === null) { puzzlesError.classList.remove('hidden'); return; }
+  if (!entries.length) {
+    puzzlesList.innerHTML = '<p class="lb-empty">No puzzles have been solved yet.</p>';
+    return;
+  }
+  puzzlesList.innerHTML = entries
+    .map((p) => {
+      const ns = p.namespace === 'sample' ? 'Sample' : 'Custom';
+      return `<button class="player-row" data-puzzle-code="${escapeHtml(p.code)}" data-puzzle-namespace="${escapeHtml(p.namespace)}" data-puzzle-name="${escapeHtml(p.name || p.code)}">
+        <span>
+          <strong>${escapeHtml(p.name || p.code)}</strong>
+          <span class="player-meta">${ns} · code <code>${escapeHtml(p.code)}</code> · last solve ${escapeHtml(formatWhen(p.last_completed_at))}</span>
+        </span>
+        <span class="player-stats">${p.completion_count} solve${p.completion_count === 1 ? '' : 's'}</span>
+      </button>`;
+    })
+    .join('');
 }
 
 // Self-authored levels (the "Your levels" section). Always shows a
@@ -1112,11 +1782,13 @@ function renderStartAuthored() {
     const shareBtn = canShare
       ? `<button data-authored-action="share" data-authored-id="${escapeHtml(lvl.id)}" class="share-btn">${lvl.code ? 'Re-publish' : 'Share'}</button>`
       : `<span class="share-btn-disabled" title="Sign in and connect to the server first.">Share</span>`;
+    const deleteBtn = `<button data-authored-action="delete" data-authored-id="${escapeHtml(lvl.id)}" class="delete-btn">Delete</button>`;
     card.innerHTML = `
       <h3>✏ ${escapeHtml(lvl.name || 'Untitled level')} ${chip} ${sharedChip}</h3>
       <p>Last edited ${updated.toLocaleDateString()}</p>
       <div class="authored-actions">
         ${shareBtn}
+        ${deleteBtn}
       </div>
     `;
     startAuthored.appendChild(card);
@@ -1134,7 +1806,11 @@ function renderStartAuthored() {
 
 function renderLevelsList() {
   levelsListEl.innerHTML = '';
-  for (const lvl of state.levels) {
+  // Shipped samples are managed from the start menu library, not
+  // the levels modal, so they don't appear here. Authored levels +
+  // clones + custom shared puzzles do.
+  const managed = state.levels.filter((l) => !l.isSample);
+  for (const lvl of managed) {
     const li = document.createElement('li');
     if (lvl.id === state.activeId) li.classList.add('active');
 
@@ -1212,6 +1888,12 @@ function openStartMenu() {
 }
 function closeStartMenu() {
   startModal.classList.add('hidden');
+  // The Players / Leaderboards / per-puzzle leaderboard modals are
+  // start-menu surfaces; dismiss anything still open so they don't
+  // hang over the game grid once the player enters a level.
+  puzzlesModal.classList.add('hidden');
+  playersModal.classList.add('hidden');
+  leaderboardModal.classList.add('hidden');
   document.body.classList.remove('menu-active');
 }
 
@@ -1228,6 +1910,9 @@ function handleStartAction(action, opts = {}) {
     saveActiveProfileName(p.name);
     // If the chosen profile hasn't been claimed yet, attempt now.
     if (!p.claimed) runServerClaim(p);
+    // Pull this profile's server-side completions so the start-menu
+    // ✅ checks reflect cross-device wins right away.
+    if (p.claimed && state.serverReachable) syncCompletionsFromServer(p).catch(() => {});
     renderStartMenu();
     return;
   }
@@ -1288,6 +1973,16 @@ async function boot() {
   state.levels = loadLevels().map(normalizeLevel);
   state.activeId = loadActiveId();
   state.completedSamples = new Set(loadCompletedSamples());
+  // Older saves stacked a fresh instance every time a shipped sample
+  // was played; collapse those down so the levels modal + dropdown
+  // never show phantom duplicates of the same case.
+  dedupeSamplePlayInstances();
+  // Shipped samples are program-defined: their rooms / decorations /
+  // clues / solution all live in js/sample.js and should never be
+  // served from localStorage. Refresh every cached sample-play
+  // instance from the current SAMPLES manifest, preserving only the
+  // player's progress (placements, killer accusation, completed flag).
+  refreshSampleLevelsFromSource();
   state.profiles = loadProfiles();
   state.activeProfileName = loadActiveProfileName();
   // Verify the stored active-profile name still matches an entry.
@@ -1361,8 +2056,20 @@ async function boot() {
     rerender();
   });
 
-  // Topbar Clone (also exposed on the in-grid sample banner).
+  // Topbar Clone (also exposed on the in-grid sample banner). Cloning
+  // a shipped sample is the only path to an editable copy, so we ask
+  // for explicit confirmation before doing it, otherwise an accidental
+  // tap silently spawns a level the player didn't mean to author.
   const cloneCurrent = () => {
+    const src = activeLevel();
+    if (!src) return;
+    if (src.isSample) {
+      const ok = confirm(
+        `Clone "${src.name}" into your own editable copy?\n\n` +
+        `The original sample stays untouched. The copy goes into Your levels.`
+      );
+      if (!ok) return;
+    }
     const cloned = cloneActiveLevel();
     if (!cloned) return;
     persist();
@@ -1430,6 +2137,122 @@ async function boot() {
   for (const c of document.querySelectorAll('[data-close="help"]')) c.addEventListener('click', closeHelp);
   helpModal.addEventListener('click', (e) => { if (e.target === helpModal) closeHelp(); });
 
+  // Claim-now modal close + backdrop click.
+  const claimModalEl = $('#claim-modal');
+  for (const c of document.querySelectorAll('[data-close="claim"]')) c.addEventListener('click', closeClaimModal);
+  claimModalEl.addEventListener('click', (e) => { if (e.target === claimModalEl) closeClaimModal(); });
+
+  // Get-claim-code modal: footer button + copy + close + backdrop.
+  const claimCodeModalEl = $('#claim-code-modal');
+  $('#btn-add-device').addEventListener('click', openClaimCodeModal);
+  for (const c of document.querySelectorAll('[data-close="claim-code"]')) c.addEventListener('click', closeClaimCodeModal);
+  claimCodeModalEl.addEventListener('click', (e) => { if (e.target === claimCodeModalEl) closeClaimCodeModal(); });
+  $('#btn-copy-claim-code').addEventListener('click', async () => {
+    const input = $('#claim-code-value');
+    const status = $('#claim-code-copy-status');
+    try {
+      await navigator.clipboard.writeText(input.value);
+      status.textContent = 'Copied. Paste into "Claim this name" on the other device.';
+    } catch {
+      input.select();
+      try {
+        document.execCommand('copy');
+        status.textContent = 'Copied. Paste into "Claim this name" on the other device.';
+      } catch {
+        status.textContent = 'Press Ctrl-C / Cmd-C to copy.';
+      }
+    }
+  });
+
+  // Leaderboard modal close + tab switching + player drill-down. The
+  // table is rebuilt by renderLeaderboardTab so we don't need to listen
+  // per-row, instead delegate at the modal root.
+  for (const c of document.querySelectorAll('[data-close="leaderboard"]')) c.addEventListener('click', closeLeaderboardModal);
+  leaderboardModal.addEventListener('click', (e) => {
+    if (e.target === leaderboardModal) { closeLeaderboardModal(); return; }
+    const tab = e.target.closest('.lb-tab');
+    if (tab) {
+      lbState.tab = tab.dataset.lbTab;
+      for (const t of leaderboardModal.querySelectorAll('.lb-tab')) {
+        t.classList.toggle('active', t === tab);
+      }
+      renderLeaderboardTab();
+      return;
+    }
+    const playerBtn = e.target.closest('.lb-player-btn[data-player-name]');
+    if (playerBtn) {
+      // Cross-open: close leaderboard, jump straight into the detail
+      // view so the directory list never flashes underneath.
+      const name = playerBtn.dataset.playerName;
+      closeLeaderboardModal();
+      openPlayersModal({ initialPlayer: name });
+    }
+  });
+
+  // Global Leaderboards button: opens the cross-namespace puzzles
+  // directory. Rows click through into the per-puzzle leaderboard.
+  $('#btn-leaderboards-global').addEventListener('click', () => openPuzzlesModal());
+  for (const c of document.querySelectorAll('[data-close="puzzles"]')) c.addEventListener('click', closePuzzlesModal);
+  puzzlesModal.addEventListener('click', (e) => {
+    if (e.target === puzzlesModal) { closePuzzlesModal(); return; }
+    const tab = e.target.closest('.lb-tab[data-puzzles-tab]');
+    if (tab) {
+      puzzlesState.tab = tab.dataset.puzzlesTab;
+      for (const t of puzzlesModal.querySelectorAll('.lb-tab')) {
+        t.classList.toggle('active', t === tab);
+      }
+      renderPuzzlesModalTab();
+      return;
+    }
+    const puzzleRow = e.target.closest('.player-row[data-puzzle-code]');
+    if (puzzleRow) {
+      const code = puzzleRow.dataset.puzzleCode;
+      const name = puzzleRow.dataset.puzzleName;
+      const namespace = puzzleRow.dataset.puzzleNamespace;
+      closePuzzlesModal();
+      openLeaderboardModal(code, name, { namespace });
+      return;
+    }
+    const playerRow = e.target.closest('.player-row[data-player-name]');
+    if (playerRow) {
+      const name = playerRow.dataset.playerName;
+      closePuzzlesModal();
+      openPlayersModal({ initialPlayer: name });
+    }
+  });
+
+  // Players directory modal: open button, close, back, and delegated
+  // clicks for player rows + level codes (when drilled into a profile).
+  $('#btn-players').addEventListener('click', () => openPlayersModal());
+  for (const c of document.querySelectorAll('[data-close="players"]')) c.addEventListener('click', closePlayersModal);
+  playersModal.addEventListener('click', (e) => {
+    if (e.target === playersModal) { closePlayersModal(); return; }
+    if (e.target === playersBack) {
+      playersModalTitle.textContent = 'Players';
+      playersBack.classList.add('hidden');
+      renderPlayersDirectory();
+      return;
+    }
+    const row = e.target.closest('.player-row[data-player-name]');
+    if (row) { renderPlayerDetail(row.dataset.playerName); return; }
+    const lvlBtn = e.target.closest('.lb-player-btn[data-level-code]');
+    if (lvlBtn) {
+      // Cross-open: close players, open the leaderboard for that puzzle.
+      const code = lvlBtn.dataset.levelCode;
+      const name = lvlBtn.dataset.levelName;
+      closePlayersModal();
+      openLeaderboardModal(code, name, { namespace: inferNamespace(code) });
+    }
+  });
+
+  // "See full leaderboard" link inside the win toast. The button is
+  // revealed for any level that has a server-side target (samples or
+  // shared puzzles); set by the win handler below.
+  winViewLeaderboard.addEventListener('click', () => {
+    const tgt = levelTarget(activeLevel());
+    if (tgt) openLeaderboardModal(tgt.code, tgt.name, { namespace: tgt.namespace });
+  });
+
   // Reset all data, wipes every saved level, the profile, and progress
   // flags. Confirmed twice because there is no undo.
   $('#btn-reset-all').addEventListener('click', () => {
@@ -1460,6 +2283,19 @@ async function boot() {
   // Start-menu card delegation. Buttons inside an authored card are
   // detected first so the click doesn't bubble into the card itself.
   startModal.addEventListener('click', (e) => {
+    const sampleBtn = e.target.closest('[data-sample-action]');
+    if (sampleBtn) {
+      e.stopPropagation();
+      const s = SAMPLES.find((x) => x.key === sampleBtn.dataset.sampleKey);
+      if (s && s.code) {
+        const act = sampleBtn.dataset.sampleAction;
+        openLeaderboardModal(s.code, s.name, {
+          initialTab: act === 'solvers' ? 'all' : 'top',
+          namespace: 'sample',
+        });
+      }
+      return;
+    }
     const authoredBtn = e.target.closest('[data-authored-action]');
     if (authoredBtn) {
       if (authoredBtn.disabled) return;
@@ -1471,6 +2307,16 @@ async function boot() {
         openShareModal(authoredBtn.dataset.authoredId);
       } else if (act === 'clone') {
         cloneSharedLevelToAuthored(authoredBtn.dataset.authoredId);
+      } else if (act === 'leaderboard') {
+        const lvl = state.levels.find((l) => l.id === authoredBtn.dataset.authoredId);
+        const tgt = levelTarget(lvl);
+        if (tgt) openLeaderboardModal(tgt.code, tgt.name, { namespace: tgt.namespace });
+      } else if (act === 'solvers') {
+        const lvl = state.levels.find((l) => l.id === authoredBtn.dataset.authoredId);
+        const tgt = levelTarget(lvl);
+        if (tgt) openLeaderboardModal(tgt.code, tgt.name, { initialTab: 'all', namespace: tgt.namespace });
+      } else if (act === 'delete') {
+        deleteAuthoredLevel(authoredBtn.dataset.authoredId);
       }
       return;
     }
@@ -1563,9 +2409,12 @@ async function boot() {
       winDetail.textContent = baseLine + elapsed;
       winLeaderboard.classList.add('hidden');
       winLeaderboard.innerHTML = '';
+      const tgt = levelTarget(lvl);
+      winViewLeaderboard.classList.toggle('hidden', !tgt);
       winToast.classList.remove('hidden', 'bad');
-      // Post completion + render leaderboard for shared puzzles.
-      if (lvl && lvl.code) postCompletionAndShowLeaderboard(lvl);
+      // Post completion + render leaderboard for any level with a
+      // server-side target (samples or custom shared puzzles).
+      if (tgt) postCompletionAndShowLeaderboard(lvl);
       // Outline only the cells the player actually placed, all correct on a win.
       highlightCells({ correct: result.correct, wrong: [] });
     } else {
@@ -1587,23 +2436,41 @@ async function boot() {
         msg = 'No solution has been set for this level yet.';
       }
       winDetail.textContent = msg;
+      winViewLeaderboard.classList.add('hidden');
       winToast.classList.remove('hidden');
       winToast.classList.add('bad');
       // Outline only placed cells: green if right, red if wrong. NEVER
       // outline cells the player hasn't placed on, they're not feedback.
       highlightCells({ correct: result.correct, wrong: result.wrong });
+      // Also light up the row/col X overlay so the player can see which
+      // rows + columns are already claimed. Persists until auto-clear /
+      // toast close / Clear, same lifecycle as the red/green outlines.
+      state.checkFeedbackRowCol = true;
+      rerender();
+      // Auto-clear the check feedback after 10s so a half-solved board
+      // doesn't stay smeared with red Xs while the player thinks.
+      scheduleCheckFeedbackClear();
     }
   });
   for (const c of document.querySelectorAll('[data-close="toast"]')) {
     c.addEventListener('click', () => {
       winToast.classList.add('hidden');
       highlightCells({});
+      cancelCheckFeedbackClear();
+      if (state.checkFeedbackRowCol) {
+        state.checkFeedbackRowCol = false;
+        rerender();
+      }
     });
   }
 
   $('#btn-reset-play').addEventListener('click', () => {
     clearPlayBoard();
     persist();
+    state.checkFeedbackRowCol = false;
+    winToast.classList.add('hidden');
+    highlightCells({});
+    cancelCheckFeedbackClear();
     rerender();
   });
 

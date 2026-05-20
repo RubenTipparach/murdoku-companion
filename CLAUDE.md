@@ -206,18 +206,135 @@ levels are no exception, a new player is one click away from the rules.
 
 ### Every shipped sample carries a `difficulty` tier.
 
-Allowed values: `'tutorial' | 'gentle' | 'standard' | 'tricky' |
-'expert' | 'fiendish'`. The chip renders on the start-menu sample
-card and in the case-file header. Use `tutorial` only for a single
-on-ramp level. Tiering rough rubric:
-- **tutorial**: one shipped level. Smallest cast, most generous clues.
-- **gentle**: 3-4 suspects, every anchor is unique furniture.
-- **standard**: 5 suspects, one or two duplicate furniture pieces.
-- **tricky**: 6-7 suspects, twin rooms or duplicated anchors force
-  row/column deduction. Larger 12x12 maps belong here by default.
-- **expert**: 8+ suspects, relational chains, near-empty unique
-  anchors. Optional special-character cards begin here.
-- **fiendish**: full row/column saturation, multiple cards in play.
+Primary tiers in order: `'easy' | 'medium' | 'hard'`. Legacy values
+`'tutorial' | 'gentle' | 'standard' | 'tricky' | 'expert' |
+'fiendish'` are still recognised in the labels map for backward
+compatibility with user-authored levels saved before the rename, but
+new shipped samples use only the three primary tiers. The chip
+renders on the start-menu sample card and in the case-file header.
+
+Tiering rough rubric:
+- **easy** (the m1-m9 samples): rectangular rooms, 3-5 suspects, most
+  anchors are unique furniture, generous clues. The killer's clue may
+  name a unique anchor in their room. The on-ramp set.
+- **medium** (the m10-m16 samples): non-rectangular rooms (L, T, plus,
+  U, S shapes), 5-8 suspects, duplicate furniture forcing row / column
+  deduction, medieval-fantasy flavour. Every clue (including the
+  killer's) must have two or more candidate cells on its own. The
+  killer's duplicates should sit in different rooms so the killer's
+  room is itself a deduction. See "Every clue matches at least two
+  cells".
+- **hard** (planned, no shipped samples yet): introduces the special
+  character cards and house modifiers. Every suspect with two-plus
+  candidate cells, several anchors duplicated three-plus times,
+  multiple suspects with overlapping candidate sets.
+
+### Row / column uniqueness is implicit, never spelled out in a clue.
+
+This is a logic puzzle. Every suspect sits on a unique row and a
+unique column - that rule lives in the help screen, NOT in any clue.
+A clue must never read "in the row directly above [Name]'s" or "in
+the column directly to the right of [Name]'s" or any equivalent
+phrasing that references another suspect's row or column. The
+player applies the unique-row / unique-column rule themselves by
+working through the cast.
+
+❌ "Penn was in an armchair, in the row directly below Sable's,
+   with a table directly to his right."
+❌ "Voss was on a rug, in the column directly to the left of
+   Quint's, with a writing desk to her right."
+
+✅ "Penn was in an armchair, with a table directly to his right."
+   (matches multiple cells - duplicate tables exist - and the
+   player resolves it by applying unique-row / unique-column +
+   killer-alone-with-victim to the whole cast.)
+✅ "Voss was on a rug, with a writing desk directly to her right
+   and a heavy dresser directly below."
+   (matches multiple cells; the row / column rule pins it down.)
+
+Clues describe what's around a suspect (furniture, adjacency,
+ambiguous anchors). Clues do NOT describe another suspect's row or
+column. If the puzzle can only be solved by spelling out the row /
+column relationship in a clue, the puzzle is under-constrained -
+add ambiguous furniture or move suspects until the implicit logic
+suffices, don't bolt on a pinch.
+
+### Every clue matches at least two cells. Killer ambiguity scales.
+
+The whole heart of the puzzle is: each clue's description fits two
+or more cells on the board, and the player narrows them to one by
+applying unique-row / unique-column across the cast (plus killer-
+alone-with-victim for the killer). If any clue uniquely identifies
+a single cell on its own, that suspect is a freebie and the puzzle
+loses its bite.
+
+Mechanism: **duplicate every clue's anchor.** If a clue says "with
+a table directly to his right", the level must contain at least two
+armchair-with-table-to-the-right cells, in different rooms. The
+player has to deduce which one by working out where every other
+suspect sits.
+
+Killer-specific: because the killer must share a room with the
+victim, the killer's clue is most powerful when its duplicate
+anchors live in different rooms. The player sees the clue matches
+(say) two cells, one in Room A and one in Room B, and only resolves
+which is the killer by working out where the victim is and
+applying killer-alone-with-victim. The killer's *room* becomes a
+deduction, not a giveaway.
+
+Disallowed in any clue:
+- "with the only X in the [building]" for any anchor that exists
+  only in one room. Add a duplicate of the anchor elsewhere instead.
+- Naming a piece of furniture that exists in exactly one room
+  ("the war table", "the scrying table") unless a duplicate of
+  the same furniture exists somewhere else.
+- Any explicit row / column reference to another suspect (see the
+  rule above). The row / column constraint is the player's tool,
+  not the author's narrative device.
+
+**Difficulty scaling.** The amount of ambiguity scales with tier:
+
+- **easy:** clues may name a unique anchor for that suspect's
+  room ("the only piano in the house"). The puzzle is mostly about
+  placing the others around them.
+- **medium:** every clue must have at least two candidate cells
+  consistent with the description alone. The killer's two
+  candidates should be in different rooms so the killer's room is
+  also a deduction.
+- **hard:** every suspect has two or more candidate cells, AND at
+  least one pair of suspects has overlapping candidates (so the
+  player must use elimination across multiple suspects to break
+  the tie). Several anchors duplicated three or more times.
+
+### The house outline must NEVER be a plain rectangle.
+
+When the union of all room cells forms a perfect rectangle the level
+looks like a generic grid, not a house. Every shipped sample's
+combined outline must be a non-rectangular shape: T, L, plus / cross,
+U, irregular polyomino. The interior partition into rooms can use any
+shape (rectangles, L-shapes, donuts, etc.), but the *outer perimeter*
+of all-rooms-combined must have at least one notch.
+
+### Use the house-first authoring method.
+
+Author every new level in two steps:
+
+1. **Define the house outline.** Pick the cells the building occupies
+   on the grid. Make it a non-rectangular polyomino (T, L, plus,
+   cross, irregular). All cells in this outline must be orthogonally
+   connected; no floating islands.
+
+2. **Partition the outline into rooms.** Carve the outline into
+   N room polyominoes that tile the outline exactly: every cell of
+   the outline belongs to exactly one room, every interior edge is
+   the boundary of two rooms (no gap cells between rooms inside the
+   house). Room shapes are free, mix solid rectangles with L's,
+   donuts, T's; just keep them connected.
+
+This guarantees the packing invariant (every room shares at least one
+wall with another) and the non-rectangular outline together. The
+`scripts/check-packed.mjs` validator enforces step 2; the
+non-rectangular outline of step 1 is on the author.
 
 ### Check Solution highlighting, only highlight what the player placed.
 
