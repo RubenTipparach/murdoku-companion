@@ -224,6 +224,36 @@ Tiering rough rubric:
   character cards and house modifiers. Full row / column saturation,
   multiple cards in play per puzzle.
 
+### The house outline must NEVER be a plain rectangle.
+
+When the union of all room cells forms a perfect rectangle the level
+looks like a generic grid, not a house. Every shipped sample's
+combined outline must be a non-rectangular shape: T, L, plus / cross,
+U, irregular polyomino. The interior partition into rooms can use any
+shape (rectangles, L-shapes, donuts, etc.), but the *outer perimeter*
+of all-rooms-combined must have at least one notch.
+
+### Use the house-first authoring method.
+
+Author every new level in two steps:
+
+1. **Define the house outline.** Pick the cells the building occupies
+   on the grid. Make it a non-rectangular polyomino (T, L, plus,
+   cross, irregular). All cells in this outline must be orthogonally
+   connected; no floating islands.
+
+2. **Partition the outline into rooms.** Carve the outline into
+   N room polyominoes that tile the outline exactly: every cell of
+   the outline belongs to exactly one room, every interior edge is
+   the boundary of two rooms (no gap cells between rooms inside the
+   house). Room shapes are free, mix solid rectangles with L's,
+   donuts, T's; just keep them connected.
+
+This guarantees the packing invariant (every room shares at least one
+wall with another) and the non-rectangular outline together. The
+`scripts/check-packed.mjs` validator enforces step 2; the
+non-rectangular outline of step 1 is on the author.
+
 ### Check Solution highlighting, only highlight what the player placed.
 
 When the player hits **Check solution** and is wrong, the grid must
