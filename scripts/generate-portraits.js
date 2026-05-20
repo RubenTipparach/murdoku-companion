@@ -107,9 +107,10 @@ function drawPortrait(seed) {
     cv.fillRect(22, 10, 2, 8, hair);
   } else if (style === 2) {
     drawHairCap();
-    cv.fillRect(8, 10, 2, 12, hair);  // Long, past shoulders.
-    cv.fillRect(22, 10, 2, 12, hair);
-    cv.fillRect(9, 21, 14, 2, hair);
+    cv.fillRect(8, 10, 2, 14, hair);  // Long, down past the shoulders.
+    cv.fillRect(22, 10, 2, 14, hair);
+    // No chin-level connector, that horizontal bar at y=21 read as
+    // a beard rather than as hair falling behind the head.
   } else if (style === 3) {
     // Hood: dark cloth pulled over the head and shoulders.
     const cloth = darken(rgba(pick(rng, BG_COLORS)), 0.6);
