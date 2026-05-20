@@ -610,6 +610,36 @@ function dedupeSamplePlayInstances() {
   }
 }
 
+// Sample puzzles are SOURCE-DEFINED, not user data. The rooms,
+// decorations, clues, solution, name, difficulty and grid size all
+// live in js/sample.js; the runtime instance only owns the player's
+// progress (where they've placed suspects, who they've accused, and
+// whether they've finished). On boot we walk every cached sample
+// instance and refresh its program-defined fields from SAMPLES so
+// shipped-sample edits propagate even when the player has the level
+// sitting in their localStorage.
+function refreshSampleLevelsFromSource() {
+  let dirty = false;
+  for (let i = 0; i < state.levels.length; i++) {
+    const lvl = state.levels[i];
+    if (!lvl.isSample || !lvl.sampleKey) continue;
+    const sample = SAMPLES.find((s) => s.key === lvl.sampleKey);
+    if (!sample) continue;
+    // Build a fresh sample-data view; carry over the runtime id and
+    // the player's progress so the user doesn't lose work in flight.
+    const fresh = sample.build();
+    fresh.id = lvl.id;
+    fresh.playerPlacement = lvl.playerPlacement || {};
+    fresh.playerKiller = lvl.playerKiller || null;
+    fresh.completed = !!lvl.completed;
+    fresh.createdAt = lvl.createdAt || fresh.createdAt;
+    fresh.updatedAt = lvl.updatedAt || fresh.updatedAt;
+    state.levels[i] = normalizeLevel(fresh);
+    dirty = true;
+  }
+  if (dirty) saveLevels(state.levels);
+}
+
 // Render the profile row at the top of the start menu. Three states:
 //   1. Active profile: name chip + Switch + Sign out. Gated sections
 //      below become visible.
@@ -1943,6 +1973,12 @@ async function boot() {
   // was played; collapse those down so the levels modal + dropdown
   // never show phantom duplicates of the same case.
   dedupeSamplePlayInstances();
+  // Shipped samples are program-defined: their rooms / decorations /
+  // clues / solution all live in js/sample.js and should never be
+  // served from localStorage. Refresh every cached sample-play
+  // instance from the current SAMPLES manifest, preserving only the
+  // player's progress (placements, killer accusation, completed flag).
+  refreshSampleLevelsFromSource();
   state.profiles = loadProfiles();
   state.activeProfileName = loadActiveProfileName();
   // Verify the stored active-profile name still matches an entry.
