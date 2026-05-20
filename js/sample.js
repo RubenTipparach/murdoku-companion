@@ -433,6 +433,9 @@ const COASTAL_HOTEL = {
   description:
     'Captain Ardent is dead in his hotel suite. Six other guests were ' +
     'staying tonight. A larger case across twelve rooms and twelve rows.',
+  // Three bands tiled into a 12x10 footprint with no gap rows. Each
+  // room shares walls with its neighbours, the whole house is one
+  // connected blob.
   rooms: [
     { id: 'r1', name: 'Lobby', description: 'A wide foyer with a single armchair near the door.',
       color: '#c4937b', tilePattern: 'marble',
@@ -452,43 +455,47 @@ const COASTAL_HOTEL = {
       ] },
     { id: 'r3', name: 'Suite', description: 'A four-poster bed and a single dresser.',
       color: '#9c7bc4', tilePattern: 'stripe-v',
-      cells: [[0,5],[1,5],[2,5],[0,6],[1,6],[2,6],[0,7],[1,7],[2,7]] },
+      cells: [[0,4],[1,4],[2,4],[0,5],[1,5],[2,5],[0,6],[1,6],[2,6]] },
     { id: 'r4', name: 'Hall', description: 'A patterned runner, a clock, a wall mirror.',
       color: '#a87bc4', tilePattern: 'herringbone',
       cells: [
+        [3,4],[4,4],[5,4],[6,4],[7,4],[8,4],
         [3,5],[4,5],[5,5],[6,5],[7,5],[8,5],
         [3,6],[4,6],[5,6],[6,6],[7,6],[8,6],
-        [3,7],[4,7],[5,7],[6,7],[7,7],[8,7],
       ] },
     { id: 'r5', name: 'Kitchen', description: 'A small worktable, a dresser, a stove.',
       color: '#c4a87b', tilePattern: 'square',
-      cells: [[9,5],[10,5],[11,5],[9,6],[10,6],[11,6],[9,7],[10,7],[11,7]] },
+      cells: [[9,4],[10,4],[11,4],[9,5],[10,5],[11,5],[9,6],[10,6],[11,6]] },
     { id: 'r6', name: 'Garden', description: 'A single potted plant.',
       color: '#7bc48f', tilePattern: 'square',
       cells: [
+        [0,7],[1,7],[2,7],[3,7],[4,7],[5,7],
+        [0,8],[1,8],[2,8],[3,8],[4,8],[5,8],
         [0,9],[1,9],[2,9],[3,9],[4,9],[5,9],
-        [0,10],[1,10],[2,10],[3,10],[4,10],[5,10],
-        [0,11],[1,11],[2,11],[3,11],[4,11],[5,11],
       ] },
     { id: 'r7', name: 'Drawing Room', description: 'A piano, a sofa, a fireplace.',
       color: '#7b9ed1', tilePattern: 'parquet',
       cells: [
+        [6,7],[7,7],[8,7],[9,7],[10,7],[11,7],
+        [6,8],[7,8],[8,8],[9,8],[10,8],[11,8],
         [6,9],[7,9],[8,9],[9,9],[10,9],[11,9],
-        [6,10],[7,10],[8,10],[9,10],[10,10],[11,10],
-        [6,11],[7,11],[8,11],[9,11],[10,11],[11,11],
       ] },
   ],
-  doorways: ['v:5,2','v:2,5','v:8,5','v:5,11'],
+  doorways: [
+    'v:5,2','v:2,5','v:8,5','v:5,8',           // intra-band doors
+    'h:1,3','h:4,3','h:10,3',                  // band 1 / band 2 doors
+    'h:1,6','h:4,6','h:10,6',                  // band 2 / band 3 doors
+  ],
   victim: 'char-08',
   killerSolution: 'char-18',
   solution: {
-    '1,6': 'char-08', // Captain (victim) in the only bed
-    '2,5': 'char-18', // Knox (killer) at a chair above the dresser
+    '1,5': 'char-08', // Captain (victim) in the only bed
+    '2,4': 'char-18', // Knox (killer) at a chair above the dresser
     '0,0': 'char-01', // Eveline in the only armchair
     '10,2': 'char-06', // Glover at the long table flanked by chairs
-    '9,7': 'char-13', // Bramwell at a small table beside a dresser
-    '3,11': 'char-15', // Yew at the only potted plant in the building
-    '8,9': 'char-17', // Genevieve at the only piano
+    '9,6': 'char-13', // Bramwell at a small table beside a dresser
+    '3,9': 'char-15', // Yew at the only potted plant in the building
+    '8,7': 'char-17', // Genevieve at the only piano
   },
   decorations: {
     '0,0': 'armchair',
@@ -498,23 +505,23 @@ const COASTAL_HOTEL = {
     '9,2': 'chair',
     '10,2': 'table',
     '11,2': 'chair',
-    '1,6': 'bed',
-    '2,5': 'chair',
-    '2,6': 'dresser',
-    '0,7': 'mirror',
-    '5,6': 'clock',
-    '6,5': 'rug',
-    '7,7': 'mirror',
-    '9,7': 'table',
-    '10,7': 'dresser',
-    '11,5': 'safe',
-    '3,11': 'plant',
-    '0,9': 'bookshelf',
-    '1,10': 'rug',
-    '8,9': 'piano',
-    '10,11': 'sofa',
-    '11,9': 'bookshelf',
-    '8,11': 'fireplace',
+    '1,5': 'bed',
+    '2,4': 'chair',
+    '2,5': 'dresser',
+    '0,6': 'mirror',
+    '5,5': 'clock',
+    '6,4': 'rug',
+    '7,6': 'mirror',
+    '9,6': 'table',
+    '10,6': 'dresser',
+    '11,4': 'safe',
+    '3,9': 'plant',
+    '0,7': 'bookshelf',
+    '1,8': 'rug',
+    '8,7': 'piano',
+    '10,9': 'sofa',
+    '11,7': 'bookshelf',
+    '8,9': 'fireplace',
   },
   clues: {
     'char-08':
@@ -577,24 +584,26 @@ const SPEAKEASY = {
     { id: 'r6', name: 'Stage', description: 'A piano on a small platform.',
       color: '#7b9ed1', tilePattern: 'parquet',
       cells: [
+        [0,8],[1,8],[2,8],[3,8],
         [0,9],[1,9],[2,9],[3,9],
         [0,10],[1,10],[2,10],[3,10],
-        [0,11],[1,11],[2,11],[3,11],
       ] },
     { id: 'r7', name: 'Vault', description: 'Lined with shelves and a heavy door.',
       color: '#9c7bc4', tilePattern: 'marble',
       cells: [
+        [8,8],[9,8],[10,8],[11,8],
         [8,9],[9,9],[10,9],[11,9],
         [8,10],[9,10],[10,10],[11,10],
-        [8,11],[9,11],[10,11],[11,11],
       ] },
   ],
-  doorways: ['h:3,2','v:2,5','v:8,5'],
+  // Stage and Vault now share walls with the Bar / Hallway / Office
+  // cluster directly above; no more isolated bands.
+  doorways: ['h:3,2','v:2,5','v:8,5','h:1,7','h:3,7','h:8,7','h:10,7'],
   victim: 'char-04',
   killerSolution: 'char-12',
   solution: {
-    '1,10': 'char-04', // Penn (victim) at the piano
-    '3,11': 'char-12', // Hask (killer) at a chair with painting to his left
+    '1,9': 'char-04', // Penn (victim) at the piano
+    '3,10': 'char-12', // Hask (killer) at a chair with painting to his left
     '2,6': 'char-09', // Vivienne at the only table
     '10,5': 'char-16', // Silas at the only safe
     '0,0': 'char-18', // Knox in the only armchair
@@ -613,13 +622,13 @@ const SPEAKEASY = {
     '10,5': 'safe',
     '11,7': 'typewriter',
     '9,6': 'chair',
-    '1,10': 'piano',
-    '2,11': 'painting',
-    '3,11': 'chair',
-    '0,11': 'lamp',
-    '8,9': 'dresser',
-    '11,11': 'plant',
-    '10,10': 'mirror',
+    '1,9': 'piano',
+    '2,10': 'painting',
+    '3,10': 'chair',
+    '0,10': 'lamp',
+    '8,8': 'dresser',
+    '11,10': 'plant',
+    '10,9': 'mirror',
   },
   clues: {
     'char-04':

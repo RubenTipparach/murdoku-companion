@@ -47,19 +47,38 @@ for (const s of SAMPLES) {
   }
   const isolated = [...adj.entries()].filter(([, n]) => n.size === 0).map(([id]) => id);
 
-  // BFS from the first room; flag any unreached room as a separate cluster.
-  const seen = new Set([lvl.rooms[0].id]);
-  const stack = [lvl.rooms[0].id];
-  while (stack.length) {
-    const cur = stack.pop();
-    for (const n of adj.get(cur)) if (!seen.has(n)) { seen.add(n); stack.push(n); }
+  // Enumerate every connected component of the room-adjacency
+  // graph so we can report how many disjoint clusters there are,
+  // not just "everything that isn't in the first cluster".
+  const remaining = new Set(lvl.rooms.map((r) => r.id));
+  const clusters = [];
+  while (remaining.size > 0) {
+    const seed = remaining.values().next().value;
+    const seen = new Set([seed]);
+    const stack = [seed];
+    while (stack.length) {
+      const cur = stack.pop();
+      for (const n of adj.get(cur)) if (!seen.has(n)) { seen.add(n); stack.push(n); }
+    }
+    clusters.push([...seen]);
+    for (const id of seen) remaining.delete(id);
   }
-  const disconnected = lvl.rooms.filter((r) => !seen.has(r.id)).map((r) => r.id);
 
-  const ok = isolated.length === 0 && disconnected.length === 0;
-  console.log(`${ok ? 'PACKED' : 'SPREAD'} ${s.code} ${s.name}  (${roomCells} room cells in ${bboxArea}, ${density} dense)`);
+  // Minimum room-cell-count target per difficulty tier. Easy levels
+  // need to feel like a real house; medium levels need more space
+  // to host the harder puzzles. Below threshold is a validator fail.
+  const minCells = s.difficulty === 'medium' ? 80 : 50;
+  const sizeOk = roomCells >= minCells;
+
+  const ok = isolated.length === 0 && clusters.length === 1 && sizeOk;
+  console.log(`${ok ? 'PACKED' : 'SPREAD'} ${s.code} ${s.name}  (${roomCells} room cells, target >= ${minCells}; ${clusters.length} cluster${clusters.length === 1 ? '' : 's'}, ${density} dense)`);
+  if (!sizeOk) console.log(`  TOO SMALL: ${roomCells} < ${minCells} room cells for tier "${s.difficulty}"`);
   if (isolated.length) console.log(`  ISOLATED rooms: ${isolated.join(', ')}`);
-  if (disconnected.length) console.log(`  DISCONNECTED clusters: ${disconnected.join(', ')}`);
+  if (clusters.length > 1) {
+    for (let i = 0; i < clusters.length; i++) {
+      console.log(`  cluster ${i + 1}: ${clusters[i].join(', ')}`);
+    }
+  }
   if (!ok) bad++;
 }
 process.exit(bad === 0 ? 0 : 1);
