@@ -86,8 +86,10 @@ function drawPortrait(seed) {
       if ((dx * dx) / 49 + (dy * dy) / 64 <= 1) cv.set(x, y, skinShadow);
     }
 
-  // Hair, pick a style.
-  const style = Math.floor(rng() * 6);
+  // Hair / headgear, pick a style. Medieval-themed roster: short
+  // hair, long hair, bald + circlet, hood, knight's helm, wizard's
+  // pointy hat, gold crown.
+  const style = Math.floor(rng() * 7);
   const drawHairCap = () => {
     for (let y = 5; y <= 11; y++)
       for (let x = 9; x <= 23; x++) {
@@ -109,21 +111,59 @@ function drawPortrait(seed) {
     cv.fillRect(22, 10, 2, 12, hair);
     cv.fillRect(9, 21, 14, 2, hair);
   } else if (style === 3) {
-    // Bald-ish: just a ring of hair.
-    cv.fillRect(9, 11, 14, 1, hair);
+    // Hood: dark cloth pulled over the head and shoulders.
+    const cloth = darken(rgba(pick(rng, BG_COLORS)), 0.6);
+    cv.fillRect(7, 7, 18, 4, cloth);
+    cv.fillRect(6, 9, 3, 12, cloth);
+    cv.fillRect(23, 9, 3, 12, cloth);
+    cv.fillRect(8, 8, 16, 1, lighten(cloth, 0.2));
+    // Face peeks through, restore skin under the hood mouth.
+    cv.fillEllipse(16, 13, 6, 6, skin);
   } else if (style === 4) {
-    // Hat: solid block over the scalp.
-    cv.fillRect(9, 5, 14, 4, darken(hair, 0.5));
-    cv.fillRect(8, 8, 16, 2, darken(hair, 0.4));
-  } else {
-    // Curly: dotted hair cap.
-    for (let y = 5; y <= 11; y++)
-      for (let x = 9; x <= 23; x++) {
-        const dx = x - 16, dy = y - 13;
-        if ((dx * dx) / 49 + (dy * dy) / 64 <= 1 && y <= 10 && (x + y) % 2 === 0)
-          cv.set(x, y, hair);
-      }
-    cv.fillRect(10, 10, 12, 2, hair);
+    // Knight's helm: steel-grey skull cap with a slit visor.
+    const steel = [150, 150, 165, 255];
+    const steelDk = [80, 80, 95, 255];
+    cv.fillRect(8, 4, 16, 8, steel);
+    cv.fillRect(8, 4, 16, 1, steelDk);
+    cv.fillRect(8, 11, 16, 1, steelDk);
+    cv.fillRect(8, 4, 1, 8, steelDk);
+    cv.fillRect(23, 4, 1, 8, steelDk);
+    // Visor slit.
+    cv.fillRect(11, 8, 10, 1, steelDk);
+    cv.fillRect(11, 9, 10, 1, [40, 40, 50, 255]);
+    // Cheek guards over the sides.
+    cv.fillRect(9, 12, 2, 6, steel);
+    cv.fillRect(21, 12, 2, 6, steel);
+  } else if (style === 5) {
+    // Wizard's pointy hat with a brim.
+    const cloth = rgba(pick(rng, [
+      [70, 50, 110, 255], [40, 60, 110, 255], [110, 60, 50, 255], [40, 40, 60, 255],
+    ]));
+    // Brim.
+    cv.fillRect(6, 9, 20, 2, darken(cloth, 0.7));
+    cv.fillRect(6, 10, 20, 1, darken(cloth, 0.5));
+    // Tapered cone.
+    cv.fillRect(10, 7, 12, 2, cloth);
+    cv.fillRect(12, 5, 8, 2, cloth);
+    cv.fillRect(14, 3, 4, 2, cloth);
+    cv.fillRect(15, 1, 2, 2, cloth);
+    // Star or buckle.
+    cv.set(16, 8, [240, 220, 120, 255]);
+  } else if (style === 6) {
+    // Gold crown over short hair.
+    drawHairCap();
+    const gold = [220, 190, 80, 255];
+    const goldDk = [160, 130, 50, 255];
+    cv.fillRect(8, 7, 16, 2, gold);
+    cv.fillRect(8, 7, 16, 1, goldDk);
+    // Spikes.
+    cv.fillRect(9, 5, 1, 2, gold);
+    cv.fillRect(12, 4, 1, 3, gold);
+    cv.fillRect(15, 3, 2, 4, gold);
+    cv.fillRect(19, 4, 1, 3, gold);
+    cv.fillRect(22, 5, 1, 2, gold);
+    // Jewel at the centre.
+    cv.set(16, 6, [200, 80, 100, 255]);
   }
 
   // Eyes.
@@ -156,22 +196,10 @@ function drawPortrait(seed) {
     cv.set(18, 19, lip);
   }
 
-  // Optional facial hair. The beard frames the jaw rather than covering
-  // the face, a 1px sideburn down each cheek, then a tapered chin patch.
-  if (rng() < 0.25) {
-    cv.fillRect(13, 17, 6, 1, hair); // Mustache.
-  }
-  if (rng() < 0.2) {
-    // Sideburns / jaw line, single column down each cheek.
-    cv.set(11, 16, hair); cv.set(11, 17, hair); cv.set(11, 18, hair);
-    cv.set(21, 16, hair); cv.set(21, 17, hair); cv.set(21, 18, hair);
-    // Tapered chin patch.
-    cv.fillRect(13, 19, 6, 1, hair);
-    cv.fillRect(14, 20, 4, 1, hair);
-    cv.set(15, 21, hair); cv.set(16, 21, hair);
-    // Mouth stays visible.
-    cv.fillRect(14, 18, 4, 1, lip);
-  }
+  // Facial hair intentionally disabled, the box-jawline beard read
+  // as a tofu-glyph at portrait size and confused the silhouette
+  // with long hair. Mediaeval-styled headgear (helm, hood, crown,
+  // wizard hat) is enough character signal on its own.
 
   // Optional glasses.
   if (rng() < 0.3) {

@@ -14,7 +14,7 @@
   {
     "id": "char-03",
     "name": "Dr. Marisol Quint",
-    "description": "The household physician ,  knows whose pills are whose.",
+    "description": "The household physician, knows whose pills are whose.",
     "portrait": "assets/portraits/char-03.png"
   },
   {
@@ -62,7 +62,7 @@
   {
     "id": "char-11",
     "name": "Sister Adelheid Voss",
-    "description": "A novice nun on retreat ,  quieter than the wallpaper.",
+    "description": "A novice nun on retreat, quieter than the wallpaper.",
     "portrait": "assets/portraits/char-11.png"
   },
   {
@@ -110,7 +110,7 @@
   {
     "id": "char-19",
     "name": "Imogen Sarsfield",
-    "description": "Photographer covering the soirée ,  every flash is alibi or evidence.",
+    "description": "Photographer covering the soirée, every flash is alibi or evidence.",
     "portrait": "assets/portraits/char-19.png"
   },
   {
