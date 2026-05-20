@@ -661,9 +661,9 @@ const WITCHSTONE_SANCTUM = {
     { id: 'r1', name: 'Scrying Chamber', description: 'A T of black flagstone around the scrying table.',
       color: '#7b5db5', tilePattern: 'flagstone',
       cells: [[3,0],[4,0],[5,0],[3,1],[4,1],[5,1],[3,2],[4,2],[5,2],[4,3]] },
-    { id: 'r2', name: 'Hearthroom', description: 'An L of soot-dark cobble, hung with charm bundles.',
+    { id: 'r2', name: 'Hearthroom', description: 'A long L of soot-dark cobble, hung with charm bundles.',
       color: '#c97b5d', tilePattern: 'cobble',
-      cells: [[0,0],[1,0],[2,0],[0,1],[0,2],[0,3]] },
+      cells: [[0,0],[1,0],[2,0],[0,1],[0,2],[0,3],[0,4]] },
     { id: 'r3', name: 'Reliquary', description: 'A hollow square of niched stone, lined with reliquaries of antler and ash.',
       color: '#5da8c4', tilePattern: 'brick',
       cells: [[6,0],[7,0],[8,0],[6,1],[7,1],[8,1],[6,2],[7,2],[8,2],[6,3],[8,3]] },
@@ -786,108 +786,134 @@ const SUNKEN_LIBRARY = {
   description:
     'Beneath the seacliff the Lorewarden kept his stacks. He was found ' +
     'cold at his reading desk, ink still pooling on a half-finished page. ' +
-    'Six scholars were in the library tonight.',
+    'Five of his scholars remained inside the library tonight.',
+  // Five rooms tile a packed 11x7 grid in two bands. The Reading Hall
+  // is a hollow rectangle across the top; the lower band tiles into
+  // Western Stacks, Cartographers Round, and Saltwater Garden, all
+  // donuts so each room has an open interior reading-pit that renders
+  // as outside-the-room. The Scribes Loft anchors the upper-left
+  // corner and shares its right wall with Reading Hall.
   rooms: [
-    { id: 'r1', name: 'Reading Hall', description: 'A long T of desks, ink and lamplight.',
-      color: '#a87bc4', tilePattern: 'wood',
-      cells: [[3,0],[4,0],[5,0],[6,0],[7,0],[5,1],[5,2],[5,3]] },
-    { id: 'r2', name: 'Scribes Loft', description: 'An L of slanted desks under a clerestory.',
-      color: '#c4a87b', tilePattern: 'stripe-v',
-      cells: [[0,0],[1,0],[2,0],[0,1],[0,2]] },
-    { id: 'r3', name: 'Stacks of the West', description: 'A plus of bookshelves rising two stories.',
-      color: '#7b9ed1', tilePattern: 'square',
-      cells: [[1,5],[0,6],[1,6],[2,6],[1,7]] },
-    { id: 'r4', name: 'Stacks of the East', description: 'A second plus of shelves, slightly higher than its western twin.',
-      color: '#7b9ed1', tilePattern: 'square',
-      cells: [[9,3],[8,4],[9,4],[10,4],[9,5]] },
-    { id: 'r5', name: 'Cartographers Round', description: 'A small square strewn with parchment and a great safe.',
-      color: '#c4937b', tilePattern: 'check',
-      cells: [[3,8],[4,8],[5,8],[3,9],[4,9],[5,9],[3,10],[4,10],[5,10]] },
-    { id: 'r6', name: 'Saltwater Garden', description: 'An S-shaped sluice of seawater pools and ferns.',
-      color: '#7bc48f', tilePattern: 'dots',
-      cells: [[7,8],[8,8],[8,9],[9,9],[9,10],[10,10]] },
+    { id: 'r2', name: 'Scribes Loft', description: 'A donut of slanted desks under a clerestory.',
+      color: '#c4a87b', tilePattern: 'parquet',
+      cells: [[0,0],[1,0],[2,0],[0,1],[2,1],[0,2],[1,2],[2,2]] },
+    { id: 'r1', name: 'Reading Hall', description: 'A hollow ribbon of reading desks running the length of the upper hall.',
+      color: '#a87bc4', tilePattern: 'flagstone',
+      cells: [[3,0],[4,0],[5,0],[6,0],[7,0],[8,0],[9,0],[10,0],[3,1],[10,1],[3,2],[4,2],[5,2],[6,2],[7,2],[8,2],[9,2],[10,2]] },
+    { id: 'r3', name: 'Western Stacks', description: 'A square of floor-to-ceiling shelves around a reading pit.',
+      color: '#7b9ed1', tilePattern: 'brick',
+      cells: [[0,3],[1,3],[2,3],[3,3],[0,4],[3,4],[0,5],[3,5],[0,6],[1,6],[2,6],[3,6]] },
+    { id: 'r5', name: 'Cartographers Round', description: 'A square chartroom around a great open chart-pit.',
+      color: '#c4937b', tilePattern: 'cobble',
+      cells: [[4,3],[5,3],[6,3],[7,3],[4,4],[7,4],[4,5],[7,5],[4,6],[5,6],[6,6],[7,6]] },
+    { id: 'r6', name: 'Saltwater Garden', description: 'A walled garden around a saltwater pool, ferns in every cell.',
+      color: '#7bc48f', tilePattern: 'rushes',
+      cells: [[8,3],[9,3],[10,3],[8,4],[10,4],[8,5],[10,5],[8,6],[9,6],[10,6]] },
   ],
   doorways: [],
   victim: 'char-17',
   killerSolution: 'char-14',
   solution: {
-    '5,1': 'char-17', // Dame Genevieve Pell, victim, directly below the reading desk
-    '7,0': 'char-14', // Mortimer Finch, killer, far end of the long row of desks
-    '0,2': 'char-11', // Sister Adelheid Voss in the scribes loft
-    '1,6': 'char-03', // Dr. Quint among the western stacks
-    '9,4': 'char-02', // Inspector Brand among the eastern stacks
-    '4,9': 'char-09', // Vivienne Marchand at the cartographers table
-    '8,8': 'char-15', // Constance Yew in the saltwater garden
+    '5,0': 'char-17', // Pell, victim, slumped on a rug between two desks
+    '7,2': 'char-14', // Finch, killer, in an armchair flanked by desks
+    '0,1': 'char-11', // Voss on a rug between bookshelves in the scribes loft
+    '1,3': 'char-03', // Quint on a rug flanked by bookshelves in the western stacks
+    '4,4': 'char-09', // Marchand in an armchair under a tall bookshelf
+    '8,5': 'char-15', // Yew on a rug among the saltwater ferns
   },
   decorations: {
-    // Reading Hall, T-shape: the Lorewarden's reading desk at the top
-    // of the stem, three more desks across the top, lamps and a rug.
-    '5,0': 'table',
-    '3,0': 'table',
-    '4,0': 'lamp',
-    '6,0': 'lamp',
-    '7,0': 'armchair',
-    '5,2': 'rug',
-    '5,3': 'rug',
-    // Scribes Loft, L-shape: a writing desk, a typewriter, an armchair.
-    // Voss sits in the armchair at the foot of the L.
-    '0,0': 'table',
+    // Scribes Loft, donut: bookshelves on the corners, a writing desk,
+    // a chest, Voss on a rug between two bookshelves.
+    '0,0': 'bookshelf',
+    '1,0': 'table',
     '2,0': 'bookshelf',
-    '0,1': 'typewriter',
-    '0,2': 'armchair',
-    // Western Stacks, plus-shape: three bookshelves and a typewriter
-    // around a reading armchair. The typewriter is what marks this
-    // plus apart from its eastern twin.
-    '1,5': 'typewriter',
+    '0,1': 'rug',
+    '2,1': 'chest',
+    '0,2': 'dresser',
+    '1,2': 'mirror',
+    '2,2': 'bookshelf',
+    // Reading Hall, hollow ribbon: desks in a long row with Pell's rug
+    // wedged between two, an armchair for Finch at one of the inside
+    // bookends. Brazier and banners along the back wall.
+    '3,0': 'banner',
+    '4,0': 'table',
+    '5,0': 'rug',
+    '6,0': 'table',
+    '7,0': 'banner',
+    '8,0': 'table',
+    '9,0': 'banner',
+    '10,0': 'table',
+    '3,1': 'banner',
+    '10,1': 'banner',
+    '3,2': 'chair',
+    '4,2': 'table',
+    '5,2': 'chair',
+    '6,2': 'table',
+    '7,2': 'armchair',
+    '8,2': 'table',
+    '9,2': 'chair',
+    '10,2': 'brazier',
+    // Western Stacks, donut: bookshelves on every outer cell save
+    // Quint's rug.
+    '0,3': 'bookshelf',
+    '1,3': 'rug',
+    '2,3': 'bookshelf',
+    '3,3': 'bookshelf',
+    '0,4': 'bookshelf',
+    '3,4': 'bookshelf',
+    '0,5': 'bookshelf',
+    '3,5': 'bookshelf',
     '0,6': 'bookshelf',
+    '1,6': 'bookshelf',
     '2,6': 'bookshelf',
-    '1,6': 'armchair',
-    '1,7': 'bookshelf',
-    // Eastern Stacks, plus-shape: four bookshelves around an armchair.
-    // No typewriter, so flanked-on-four-sides uniquely identifies it.
-    '9,3': 'bookshelf',
-    '8,4': 'bookshelf',
-    '10,4': 'bookshelf',
-    '9,4': 'armchair',
-    '9,5': 'bookshelf',
-    // Cartographers Round: a great safe, a chart table with a chair,
-    // a standing lamp.
-    '3,8': 'safe',
-    '4,8': 'lamp',
-    '5,8': 'plant',
-    '3,9': 'table',
-    '4,9': 'chair',
-    '5,9': 'bookshelf',
-    '5,10': 'plant',
-    // Saltwater Garden: ferns line the sluice, with a low sofa at one end.
-    '7,8': 'plant',
-    '8,8': 'sofa',
-    '9,9': 'plant',
-    '10,10': 'plant',
+    '3,6': 'bookshelf',
+    // Cartographers Round, donut: chart tables on the top wall, an
+    // armchair under a bookshelf for Marchand, a cauldron of ink.
+    '4,3': 'bookshelf',
+    '5,3': 'table',
+    '6,3': 'table',
+    '7,3': 'bookshelf',
+    '4,4': 'armchair',
+    '7,4': 'cauldron',
+    '4,5': 'chest',
+    '7,5': 'table',
+    '4,6': 'bookshelf',
+    '5,6': 'dresser',
+    '6,6': 'dresser',
+    '7,6': 'bookshelf',
+    // Saltwater Garden, donut: ferns in nearly every cell, a single
+    // rug Yew stands on, a low chair on the wall opposite.
+    '8,3': 'plant',
+    '9,3': 'plant',
+    '10,3': 'plant',
+    '8,4': 'plant',
+    '10,4': 'chair',
+    '8,5': 'rug',
+    '10,5': 'plant',
+    '8,6': 'plant',
+    '9,6': 'plant',
+    '10,6': 'plant',
   },
   clues: {
     'char-17':
-      'Dame Pell was slumped directly below a table flanked left and ' +
-      'right by standing lamps. She was alone in the room with the ' +
-      'killer.',
+      'Dame Pell was slumped on a rug, flanked left and right by ' +
+      'writing desks. She was alone in the room with the killer.',
     'char-14':
-      'Mortimer Finch sat in an armchair at the far end of a long row of ' +
-      'desks, directly to the right of a low standing lamp.',
+      'Mortimer Finch was curled in an armchair, flanked left and ' +
+      'right by writing desks, with a heavy brazier directly to his ' +
+      'right.',
     'char-11':
-      'Sister Voss was curled in an armchair, with a typewriter directly ' +
-      'above her.',
+      'Sister Voss was curled on a rug, with a writing desk directly ' +
+      'above her and a heavy dresser directly below.',
     'char-03':
-      'Dr. Quint was reading in an armchair, with a typewriter directly ' +
-      'above him and tall bookshelves on the other three sides.',
-    'char-02':
-      'Inspector Brand was curled in an armchair, flanked on all four ' +
-      'sides by tall bookshelves.',
+      'Dr. Quint stood on a rug, flanked left and right by tall ' +
+      'bookshelves.',
     'char-09':
-      'Vivienne Marchand was at a chair pulled up to a chart table, ' +
-      'diagonally adjacent to a great iron safe.',
+      'Vivienne Marchand was curled in an armchair, directly below a ' +
+      'tall bookshelf.',
     'char-15':
-      'Constance Yew was thrown across a sofa, with potted ferns at the ' +
-      'far end of the sluice.',
+      'Constance Yew stood on a rug, flanked above and below by ' +
+      'potted ferns.',
   },
 };
 
@@ -901,125 +927,175 @@ const IRON_CITADEL = {
     'In the high citadel the Marshal kept his war. He was found at dawn ' +
     'slumped across his war table, with seven of his banner captains ' +
     'still within the walls.',
+  // Seven rooms tile a 9x11 packed grid: Banner Hall as the full top
+  // row, three rooms (West Battlement, War Room, East Battlement) on
+  // rows 1-4, three more (Solar, Postern, Iron Armoury) on rows 5-8.
+  // Every boundary between two rooms is a shared wall, no gap cells
+  // between them. Donut interiors (the four open "courtyards") render
+  // as outside / unreachable.
   rooms: [
-    { id: 'r1', name: 'War Room', description: 'A square strategy chamber with the great war table at its centre.',
-      color: '#c47b7b', tilePattern: 'check',
-      cells: [[4,4],[5,4],[6,4],[4,5],[5,5],[6,5],[4,6],[5,6],[6,6]] },
-    { id: 'r2', name: 'Banner Hall', description: 'A wide T of stone, hung with the captains banners.',
-      color: '#7b9ed1', tilePattern: 'stripe-h',
-      cells: [[1,0],[2,0],[3,0],[4,0],[5,0],[6,0],[7,0],[8,0],[9,0],[5,1]] },
-    { id: 'r3', name: 'East Battlement', description: 'An L of walkway and watch-niches above the eastern gate.',
-      color: '#a87bc4', tilePattern: 'square',
-      cells: [[9,2],[9,3],[9,4],[9,5],[10,5]] },
-    { id: 'r4', name: 'West Battlement', description: 'Mirror to the east, an L of walkway above the western gate.',
-      color: '#a87bc4', tilePattern: 'square',
-      cells: [[1,2],[1,3],[1,4],[1,5],[0,5]] },
-    { id: 'r5', name: 'Iron Armoury', description: 'A square smithy of standing weapons and a long workbench.',
-      color: '#c4a87b', tilePattern: 'diamond',
-      cells: [[7,7],[8,7],[9,7],[7,8],[8,8],[9,8]] },
-    { id: 'r6', name: 'Solar', description: 'A plus-shaped private chamber with a bed and a hearth.',
-      color: '#c4937b', tilePattern: 'wood',
-      cells: [[3,9],[2,10],[3,10],[4,10],[3,8]] },
-    { id: 'r7', name: 'Postern', description: 'A long S of stone passageways from the postern gate.',
-      color: '#7bc48f', tilePattern: 'dots',
-      cells: [[5,8],[5,9],[6,9],[6,10],[7,10]] },
+    { id: 'r2', name: 'Banner Hall', description: 'A long ribbon along the front wall, hung with captains banners.',
+      color: '#7b9ed1', tilePattern: 'brick',
+      cells: [[0,0],[1,0],[2,0],[3,0],[4,0],[5,0],[6,0],[7,0],[8,0],[9,0],[10,0]] },
+    { id: 'r4', name: 'West Battlement', description: 'A square watch-block with an open courtyard at its heart.',
+      color: '#a87bc4', tilePattern: 'flagstone',
+      cells: [[0,1],[1,1],[2,1],[3,1],[0,2],[3,2],[0,3],[3,3],[0,4],[1,4],[2,4],[3,4]] },
+    { id: 'r1', name: 'War Room', description: 'A solid square strategy chamber with the great war table at its centre.',
+      color: '#c47b7b', tilePattern: 'cobble',
+      cells: [[4,1],[5,1],[6,1],[4,2],[5,2],[6,2],[4,3],[5,3],[6,3],[4,4],[5,4],[6,4]] },
+    { id: 'r3', name: 'East Battlement', description: 'Mirror to the west, a watch-block with an open courtyard at its heart.',
+      color: '#a87bc4', tilePattern: 'flagstone',
+      cells: [[7,1],[8,1],[9,1],[10,1],[7,2],[10,2],[7,3],[10,3],[7,4],[8,4],[9,4],[10,4]] },
+    { id: 'r6', name: 'Solar', description: 'A square private quarters with an open hearth-pit at its centre.',
+      color: '#c4937b', tilePattern: 'rushes',
+      cells: [[0,5],[1,5],[2,5],[3,5],[0,6],[3,6],[0,7],[3,7],[0,8],[1,8],[2,8],[3,8]] },
+    { id: 'r7', name: 'Postern', description: 'A solid square of paved passage from the postern gate.',
+      color: '#7bc48f', tilePattern: 'cobble',
+      cells: [[4,5],[5,5],[6,5],[4,6],[5,6],[6,6],[4,7],[5,7],[6,7],[4,8],[5,8],[6,8]] },
+    { id: 'r5', name: 'Iron Armoury', description: 'A square smithy of standing weapons and a long workbench, anvil dead centre.',
+      color: '#c4a87b', tilePattern: 'cobble',
+      cells: [[7,5],[8,5],[9,5],[10,5],[7,6],[10,6],[7,7],[10,7],[7,8],[8,8],[9,8],[10,8]] },
   ],
   doorways: [],
   victim: 'char-12',
   killerSolution: 'char-18',
   solution: {
-    '6,4': 'char-12',  // Hask, victim, on a rug diagonally adjacent to the war table
-    '4,6': 'char-18',  // Knox (killer), seated in a chair across the chamber from him
-    '8,0': 'char-19',  // Imogen, in the only armchair in the banner row
-    '9,3': 'char-08',  // Ardent, between a bookshelf and a clock on the east wall
-    '1,2': 'char-06',  // Glover, above a bookshelf on the west wall
-    '7,7': 'char-20',  // Felix, on the lone sofa above a dresser
-    '3,10': 'char-07', // Beatrice, on a rug between an armchair and the only bed
-    '5,9': 'char-16',  // Silas, on a rug below a potted plant
+    '4,1': 'char-12', // Hask, victim, directly left of the war table
+    '6,3': 'char-18', // Knox, killer, in a chair across the chamber from him
+    '2,0': 'char-19', // Imogen in the only armchair on the banner ribbon
+    '0,2': 'char-06', // Glover on a rug on the west battlement
+    '7,4': 'char-08', // Ardent stood at a chair on the east battlement
+    '1,5': 'char-07', // Beatrice on a rug in the solar
+    '5,6': 'char-20', // Felix slung across the only sofa in the citadel
+    '9,8': 'char-16', // Silas on a rug in the armoury
   },
   decorations: {
-    // War Room, 3x3: war table dead centre, chairs to four sides,
-    // a rug, a standing lamp, a tall clock.
-    '5,5': 'table',
-    '5,4': 'chair',
-    '4,4': 'clock',
-    '6,4': 'rug',
-    '4,5': 'rug',
-    '6,5': 'lamp',
-    '4,6': 'chair',
-    '5,6': 'chair',
-    '6,6': 'chair',
-    // Banner Hall, T: a long line of chairs and three painted banners
-    // (walls), with the captains armchair at the far end.
+    // Banner Hall, ribbon along the top wall. Painted banners, a
+    // long line of chairs, the captains armchair near the start.
+    '0,0': 'banner',
     '1,0': 'chair',
-    '2,0': 'chair',
-    '3,0': 'painting',
-    '4,0': 'painting',
-    '5,0': 'painting',
-    '6,0': 'chair',
+    '2,0': 'armchair',
+    '3,0': 'chair',
+    '4,0': 'banner',
+    '5,0': 'chair',
+    '6,0': 'banner',
     '7,0': 'chair',
-    '8,0': 'armchair',
+    '8,0': 'banner',
     '9,0': 'chair',
-    '5,1': 'rug',
-    // East Battlement, L: a watch chair, a standing clock, a small bookshelf.
-    '9,2': 'bookshelf',
-    '9,3': 'chair',
-    '9,4': 'clock',
-    '9,5': 'chair',
-    '10,5': 'bookshelf',
-    // West Battlement, L: mirror to the east. Chair, clock, bookshelf.
-    '1,2': 'chair',
-    '1,3': 'bookshelf',
-    '1,4': 'clock',
-    '1,5': 'chair',
-    '0,5': 'bookshelf',
-    // Iron Armoury, 3x2: a workbench (table), a safe, two dressers.
-    '7,7': 'sofa',
-    '8,7': 'table',
-    '9,7': 'safe',
-    '7,8': 'dresser',
-    '8,8': 'table',
-    '9,8': 'dresser',
-    // Solar, plus: a fireplace at the top of the stem, the only bed
-    // on the floor, an armchair on the far end, a rug in the middle.
-    '3,8': 'fireplace',
-    '3,9': 'rug',
-    '2,10': 'bed',
-    '3,10': 'rug',
-    '4,10': 'armchair',
-    // Postern, S: rugs and plants in a winding passage.
+    '10,0': 'banner',
+    // West Battlement, donut: chairs, a bookshelf, a standing clock,
+    // a chest, and the only rug on this side. Glover on the rug.
+    '0,1': 'bookshelf',
+    '1,1': 'chair',
+    '2,1': 'chest',
+    '3,1': 'bookshelf',
+    '0,2': 'rug',
+    '3,2': 'clock',
+    '0,3': 'chair',
+    '3,3': 'chair',
+    '0,4': 'bookshelf',
+    '1,4': 'bed',
+    '2,4': 'dresser',
+    '3,4': 'bookshelf',
+    // War Room, 3x4 solid: war table at [5,2], chairs flanking, a
+    // rug below the table, a brazier in one corner. Hask stands
+    // directly left of the war table. Knox sits in a chair across.
+    '4,1': 'rug',
+    '5,1': 'table',
+    '6,1': 'chair',
+    '4,2': 'chair',
+    '5,2': 'rug',
+    '6,2': 'banner',
+    '4,3': 'rug',
+    '5,3': 'brazier',
+    '6,3': 'chair',
+    '4,4': 'chair',
+    '5,4': 'chair',
+    '6,4': 'cauldron',
+    // East Battlement, donut: mirror of the west. Bookshelves on the
+    // outer wall, a clock, a chest. Ardent stands at the chair on
+    // the bottom edge.
+    '7,1': 'bookshelf',
+    '8,1': 'chest',
+    '9,1': 'chair',
+    '10,1': 'bookshelf',
+    '7,2': 'chair',
+    '10,2': 'clock',
+    '7,3': 'bookshelf',
+    '10,3': 'chair',
+    '7,4': 'chair',
+    '8,4': 'dresser',
+    '9,4': 'bed',
+    '10,4': 'bookshelf',
+    // Solar, donut: hearth at the top of the open courtyard, the
+    // only bed in the citadel, an armchair, a rug for Beatrice.
+    '0,5': 'fireplace',
+    '1,5': 'rug',
+    '2,5': 'dresser',
+    '3,5': 'bookshelf',
+    '0,6': 'chair',
+    '3,6': 'bed',
+    '0,7': 'dresser',
+    '3,7': 'mirror',
+    '0,8': 'chest',
+    '1,8': 'chair',
+    '2,8': 'dresser',
+    '3,8': 'armchair',
+    // Postern, 3x4 solid: rugs and ferns, the only sofa, a couple
+    // of banners along the passage walls.
+    '4,5': 'plant',
+    '5,5': 'banner',
+    '6,5': 'plant',
+    '4,6': 'rug',
+    '5,6': 'sofa',
+    '6,6': 'rug',
+    '4,7': 'plant',
+    '5,7': 'rug',
+    '6,7': 'plant',
+    '4,8': 'banner',
     '5,8': 'plant',
-    '5,9': 'rug',
-    '6,9': 'rug',
-    '6,10': 'plant',
-    '7,10': 'plant',
+    '6,8': 'banner',
+    // Iron Armoury, donut: the only anvil in the citadel, dresser
+    // and chest, bookshelves of weapon-treatises, Silas at the rug.
+    '7,5': 'bookshelf',
+    '8,5': 'anvil',
+    '9,5': 'dresser',
+    '10,5': 'bookshelf',
+    '7,6': 'chair',
+    '10,6': 'chest',
+    '7,7': 'chair',
+    '10,7': 'chair',
+    '7,8': 'bookshelf',
+    '8,8': 'dresser',
+    '9,8': 'rug',
+    '10,8': 'bookshelf',
   },
   clues: {
     'char-12':
-      'Colonel Hask was slumped on a rug, diagonally adjacent to the ' +
+      'Colonel Hask was slumped on a rug directly to the left of the ' +
       'only war table in the citadel. He was alone in the room with ' +
       'the killer.',
     'char-18':
-      'Bartholomew Knox sat at a chair, directly below a rug, with ' +
-      'another chair directly to his right.',
+      'Bartholomew Knox sat at a chair, with a tall brazier directly ' +
+      'to his left and a heavy cauldron directly below him.',
     'char-19':
       'Imogen Sarsfield was curled in an armchair, flanked left and ' +
       'right by stiff-backed chairs.',
-    'char-08':
-      'Captain Ardent stood at a chair, with a tall bookshelf directly ' +
-      'above him and a standing clock directly below.',
     'char-06':
-      'The butler stood at a chair, directly above a tall bookshelf ' +
-      'that itself sat directly above a standing clock.',
-    'char-20':
-      'Felix Drummond had thrown himself across a sofa, directly above ' +
-      'a heavy dresser.',
+      'The butler stood on a rug, with a bookshelf directly above him ' +
+      'and a chair directly below.',
+    'char-08':
+      'Captain Ardent stood at a chair, directly below a bookshelf and ' +
+      'directly to the left of a heavy dresser.',
     'char-07':
-      'Beatrice Halloran stood on a rug, with an armchair directly to ' +
-      'her right and the only bed in the citadel directly to her left.',
+      'Beatrice Halloran stood on a rug, with a smouldering hearth ' +
+      'directly to her left and a dresser directly to her right.',
+    'char-20':
+      'Felix Drummond was thrown across the only sofa in the citadel, ' +
+      'with a rug directly to his left and a rug directly to his right.',
     'char-16':
-      'Silas Roe stood on a rug, directly below a potted plant, with ' +
-      'another rug directly to his right.',
+      'Silas Roe stood on a rug, directly above a heavy dresser and ' +
+      'directly to the right of a chair.',
   },
 };
 
