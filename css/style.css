@@ -1059,7 +1059,12 @@ body:has(> #start-modal.start-screen:not(.hidden)) > .layout {
 }
 .profile-icon {
   font-size: 18px;
+  color: var(--accent-2);
+  display: inline-flex;
+  align-items: center;
+  line-height: 1;
 }
+.profile-icon svg { vertical-align: middle; }
 .profile-name {
   font-weight: 600;
   color: var(--accent-2);

@@ -28,7 +28,7 @@ import { renderGrid } from './grid.js';
 import { loadCharacters, renderRoster } from './portraits.js';
 import { loadFurniture, normalizeLevel, rollAllRooms } from './decor.js';
 import { SAMPLES, buildSampleLevel } from './sample.js';
-import { victimIcon, killerIcon } from './icons.js';
+import { victimIcon, killerIcon, profileIcon } from './icons.js';
 import {
   selectTool,
   createRoom,
@@ -636,24 +636,40 @@ function renderStartProfile() {
 }
 
 function renderActiveProfileBar(profile) {
+  // Five chip states, in priority order so a permanent failure
+  // surfaces above the transient "claiming…" placeholder:
+  //   claimed            green badge, no action
+  //   name_taken         warn badge, no retry (the name is gone)
+  //   rate_limited       warn badge + Retry (user can try again later)
+  //   other claim error  warn badge + Retry
+  //   server unreachable dim badge "local only", no retry
+  //   pending            dim badge "claiming…", auto-resolves
   let chip = '';
-  if (!profile.claimed) {
-    if (state.serverReachable === true) {
-      chip = '<span class="profile-claim-pending claiming">claiming…</span>';
-    } else if (state.serverReachable === false) {
-      chip = '<span class="profile-claim-pending local-only">local only</span>';
-    } else {
-      chip = '<span class="profile-claim-pending unknown">checking…</span>';
-    }
-  } else {
+  let retry = '';
+  if (profile.claimed) {
     chip = '<span class="profile-claim-pending claimed">claimed</span>';
+  } else if (profile.claimError === 'name_taken') {
+    chip = '<span class="profile-claim-pending taken" title="Another player on the server already owns this name. Pick a different one via Switch.">name taken</span>';
+  } else if (profile.claimError === 'rate_limited') {
+    chip = '<span class="profile-claim-pending failed">rate limited</span>';
+    retry = '<button id="btn-claim-retry" class="profile-retry" title="Try claiming this name again">Retry</button>';
+  } else if (profile.claimError) {
+    chip = `<span class="profile-claim-pending failed" title="Claim failed: ${escapeHtml(profile.claimError)}">claim failed</span>`;
+    retry = '<button id="btn-claim-retry" class="profile-retry" title="Try claiming this name again">Retry</button>';
+  } else if (state.serverReachable === false) {
+    chip = '<span class="profile-claim-pending local-only">local only</span>';
+  } else if (state.serverReachable === true) {
+    chip = '<span class="profile-claim-pending claiming">claiming…</span>';
+  } else {
+    chip = '<span class="profile-claim-pending unknown">checking…</span>';
   }
   startProfile.innerHTML = `
     <div class="profile-active">
       <div class="profile-info">
-        <span class="profile-icon">🪪</span>
+        <span class="profile-icon">${profileIcon()}</span>
         <span class="profile-name">@${escapeHtml(profile.name)}</span>
         ${chip}
+        ${retry}
       </div>
       <div class="profile-actions">
         <button id="btn-switch-profile" class="profile-switch" title="Sign out and pick a different profile">Switch</button>
@@ -674,6 +690,15 @@ function renderActiveProfileBar(profile) {
     state.menuView = 'main';
     renderStartMenu();
   });
+  const retryBtn = startProfile.querySelector('#btn-claim-retry');
+  if (retryBtn) {
+    retryBtn.addEventListener('click', () => {
+      profile.claimError = null;
+      saveProfiles(state.profiles);
+      renderActiveProfileBar(profile);
+      runServerClaim(profile);
+    });
+  }
 }
 
 function renderProfilePicker() {
@@ -684,7 +709,7 @@ function renderProfilePicker() {
     const status = p.claimed ? 'claimed on server' : 'local only';
     return `
       <button class="start-card profile-pick-card" data-action="pick-profile" data-profile-name="${escapeHtml(p.name)}">
-        <h3>🪪 @${escapeHtml(p.name)}</h3>
+        <h3>${profileIcon()} @${escapeHtml(p.name)}</h3>
         <p>Last seen ${last} · ${status}</p>
       </button>
     `;
@@ -784,17 +809,20 @@ async function runServerClaim(profile) {
   state.serverReachable = true;
   if (result.ok) {
     profile.claimed = true;
+    profile.claimError = null;
     saveProfiles(state.profiles);
     // First-time claim from this device: pull any server-side
     // completions so cross-device wins flow back in.
     syncCompletionsFromServer(profile).catch(() => {});
   } else if (result.nameTaken) {
-    alert(
-      `The name @${profile.name} is already claimed on the server. ` +
-      `Your local progress stays under this name on this device, but ` +
-      `leaderboards will not show it. Pick a different name when you ` +
-      `next sign up.`
-    );
+    profile.claimError = 'name_taken';
+    saveProfiles(state.profiles);
+  } else if (result.status === 429) {
+    profile.claimError = 'rate_limited';
+    saveProfiles(state.profiles);
+  } else {
+    profile.claimError = `server_${result.status || 'unknown'}`;
+    saveProfiles(state.profiles);
   }
   renderServerBanner();
   if (activeProfile() && activeProfile().name === profile.name) {
