@@ -90,6 +90,23 @@ export async function whoami(token) {
   }
 }
 
+// Mint a new device code for the calling profile. The server adds it
+// to the tokens table and returns the plaintext once. The calling
+// device's own token stays valid; the user pastes the new code into
+// "Claim now" on a second device to sign in there too. Returns the
+// 8-char code on success, null on failure.
+export async function issueDeviceCode(token) {
+  if (!apiAvailable()) return null;
+  try {
+    const res = await call('POST', '/tokens', { token });
+    if (!res.ok) return null;
+    const data = await res.json();
+    return data.token || null;
+  } catch {
+    return null;
+  }
+}
+
 // ----- Shared puzzles -----
 //
 // Two URL namespaces: /levels/:code for shipped samples (mN), and

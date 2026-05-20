@@ -21,7 +21,7 @@ import {
   shareLevel, updateSharedLevel, getSharedLevel, bumpPlays,
   recordCompletion, getLeaderboard, shareUrlFor,
   getLevelCompletions, getPlayers, getPlayerProfile, getPuzzles,
-  getRankings,
+  getRankings, issueDeviceCode,
 } from './api.js';
 import { validateLevel } from './validator.js';
 import { renderGrid } from './grid.js';
@@ -633,11 +633,12 @@ function renderStartProfile() {
     startGated.classList.add('hidden');
     renderProfileCreateForm();
   }
-  // Footer "Get claim code" is only meaningful when the active
-  // profile is actually claimed on the server. Hide otherwise.
-  const showCodeBtn = $('#btn-show-claim-code');
-  if (showCodeBtn) {
-    showCodeBtn.classList.toggle('hidden', !(active && active.claimed));
+  // "Add new device" is only meaningful when the active profile is
+  // actually claimed on the server (and so the server knows about
+  // its token). Hide otherwise.
+  const addBtn = $('#btn-add-device');
+  if (addBtn) {
+    addBtn.classList.toggle('hidden', !(active && active.claimed));
   }
 }
 
@@ -728,8 +729,10 @@ function openClaimModal(profile) {
   setTimeout(() => input.focus(), 50);
   const onSubmit = async () => {
     const code = input.value.trim();
-    if (!/^[A-Za-z0-9_-]{43}$/.test(code)) {
-      status.textContent = 'That does not look like a claim code. Paste the 43-character secret from the other device.';
+    // Accept both legacy 43-char base64url tokens and the new 8-char
+    // Crockford short codes the server now issues.
+    if (!/^([A-Za-z0-9_-]{43}|[0-9a-hjkmnp-tv-z]{8})$/.test(code)) {
+      status.textContent = 'That does not look like a device code. Paste the 8-character code from the other device.';
       status.style.color = 'var(--bad)';
       return;
     }
@@ -766,17 +769,29 @@ function closeClaimModal() {
   $('#claim-modal').classList.add('hidden');
 }
 
-// Open the "Get claim code" modal: reveal the active profile's token
-// so the player can copy it onto another device.
-function openClaimCodeModal() {
+// Open the "Add new device" modal: mint a fresh 8-char code on the
+// server and surface it once. The user types this on the second
+// device's "Claim now" prompt to sign in there. The calling device's
+// own token is untouched.
+async function openClaimCodeModal() {
   const ap = activeProfile();
   if (!ap || !ap.token) return;
   const modal = $('#claim-code-modal');
   $('#claim-code-name').textContent = ap.name;
   const input = $('#claim-code-value');
-  input.value = ap.token;
-  $('#claim-code-copy-status').textContent = '';
+  const status = $('#claim-code-copy-status');
+  input.value = '';
+  status.textContent = 'Minting a new code...';
+  status.style.color = 'var(--ink-dim)';
   modal.classList.remove('hidden');
+  const code = await issueDeviceCode(ap.token);
+  if (!code) {
+    status.textContent = 'Could not reach the server. Try again when you are online.';
+    status.style.color = 'var(--bad)';
+    return;
+  }
+  input.value = code;
+  status.textContent = '';
   setTimeout(() => { input.focus(); input.select(); }, 50);
 }
 
@@ -2089,7 +2104,7 @@ async function boot() {
 
   // Get-claim-code modal: footer button + copy + close + backdrop.
   const claimCodeModalEl = $('#claim-code-modal');
-  $('#btn-show-claim-code').addEventListener('click', openClaimCodeModal);
+  $('#btn-add-device').addEventListener('click', openClaimCodeModal);
   for (const c of document.querySelectorAll('[data-close="claim-code"]')) c.addEventListener('click', closeClaimCodeModal);
   claimCodeModalEl.addEventListener('click', (e) => { if (e.target === claimCodeModalEl) closeClaimCodeModal(); });
   $('#btn-copy-claim-code').addEventListener('click', async () => {

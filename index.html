@@ -167,7 +167,7 @@
 
           <div class="start-footer">
             <button id="btn-help" class="start-footer-btn">❓ How to play</button>
-            <button id="btn-show-claim-code" class="start-footer-btn hidden">Get claim code</button>
+            <button id="btn-add-device" class="start-footer-btn hidden">+ Add new device</button>
             <button id="btn-reset-all" class="start-footer-btn danger">⚠ Reset all data</button>
           </div>
         </div>
@@ -283,9 +283,9 @@
           <button class="close" data-close="claim">×</button>
         </header>
         <div class="modal-body">
-          <p class="hint">If you've already claimed this name on another device, paste the claim code from that device here to sign in. The claim code is your 32-byte secret, never share it.</p>
+          <p class="hint">If you've already claimed this name, paste a device code from that other device here to sign in. Get a code via the "+ Add new device" button at the bottom of the menu on a signed-in device.</p>
           <div class="share-url-row">
-            <input id="claim-code-input" type="text" autocomplete="off" spellcheck="false" placeholder="Paste your claim code here" />
+            <input id="claim-code-input" type="text" autocomplete="off" spellcheck="false" placeholder="8-character device code" maxlength="43" />
             <button id="btn-claim-submit">Sign in</button>
           </div>
           <p id="claim-status" class="share-copy-status"></p>
@@ -293,16 +293,17 @@
       </div>
     </div>
 
-    <!-- Show-claim-code modal: reveals the active profile's token so
-         the player can paste it on another device to sign in there. -->
+    <!-- Add-new-device modal: mints a fresh 8-char code on the server
+         and surfaces it once. The user types this on the new device's
+         "Claim now" prompt; their current device stays signed in. -->
     <div id="claim-code-modal" class="modal hidden" role="dialog">
       <div class="modal-inner">
         <header>
-          <h2>Your claim code</h2>
+          <h2>Add a new device</h2>
           <button class="close" data-close="claim-code">×</button>
         </header>
         <div class="modal-body">
-          <p class="hint">This is the 32-byte secret that proves you own @<span id="claim-code-name"></span>. Paste it into "Claim this name" on another device to sign in there. Anyone with this code can play as you, so keep it private.</p>
+          <p class="hint">This 8-character code lets a second device sign in as @<span id="claim-code-name"></span>. Paste it into "Claim now" on that device. Your current device stays signed in. Anyone with this code can play as you, so don't share it publicly.</p>
           <div class="share-url-row">
             <input id="claim-code-value" type="text" readonly />
             <button id="btn-copy-claim-code">Copy</button>
@@ -374,6 +375,6 @@
       </div>
     </div>
 
-    <script type="module" src="./js/main.js?v=41"></script>
+    <script type="module" src="./js/main.js?v=42"></script>
   </body>
 </html>
