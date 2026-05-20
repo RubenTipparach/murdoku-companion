@@ -46,6 +46,8 @@ const armchairWith = (dx, dy, kind) => (x, y, l) =>
   isArmchair(l, x, y) && has(l, x + dx, y + dy, kind);
 const rugWith = (dx, dy, kind) => (x, y, l) =>
   isRug(l, x, y) && has(l, x + dx, y + dy, kind);
+const armchairFlankedChairs = (x, y, l) =>
+  isArmchair(l, x, y) && has(l, x - 1, y, 'chair') && has(l, x + 1, y, 'chair');
 
 // m10 clue predicates
 const m10Preds = {
@@ -63,6 +65,8 @@ const m10Preds = {
   'char-08': (x, y, l) => isArmchair(l, x, y) && has(l, x, y - 1, 'banner'),
   // Roe: rug + clock directly to right
   'char-16': (x, y, l) => isRug(l, x, y) && has(l, x + 1, y, 'clock'),
+  // Imogen: armchair flanked left + right by chairs
+  'char-19': armchairFlankedChairs,
 };
 
 function solveLevel(lvl, preds, extraConstraints = () => true) {
@@ -156,8 +160,12 @@ const m11Preds = {
   'char-03': flankedHorizontal('bookshelf'),
   // Marchand: armchair + chart table directly above
   'char-09': armchairWith(0, -1, 'table'),
+  // Bramwell: rug + bookshelf directly above
+  'char-13': rugWith(0, -1, 'bookshelf'),
   // Yew: rug + potted ferns above AND below
   'char-15': flankedVertical('plant'),
+  // Beatrice: rug flanked left + right by potted ferns
+  'char-07': flankedHorizontal('plant'),
 };
 
 // m12 clue predicates
@@ -206,6 +214,10 @@ const m13Preds = {
   // Finch: rug + chest above + dresser below
   'char-14': (x, y, l) =>
     isRug(l, x, y) && has(l, x, y - 1, 'chest') && has(l, x, y + 1, 'dresser'),
+  // Bramwell: rug flanked left + right by bookshelves
+  'char-13': flankedHorizontal('bookshelf'),
+  // Ardent: armchair + banner directly above
+  'char-08': armchairWith(0, -1, 'banner'),
 };
 
 // m14 clue predicates
@@ -223,6 +235,12 @@ const m14Preds = {
   'char-15': rugWith(-1, 0, 'anvil'),
   // Crowe: sofa (any)
   'char-10': (x, y, l) => decAt(l, x, y) === 'sofa',
+  // Imogen: armchair flanked left + right by chairs
+  'char-19': armchairFlankedChairs,
+  // Marchand: armchair + chart table directly above
+  'char-09': armchairWith(0, -1, 'table'),
+  // Beatrice: rug + bookshelf directly above
+  'char-07': rugWith(0, -1, 'bookshelf'),
 };
 
 // m15 clue predicates
@@ -232,12 +250,17 @@ const m15Preds = {
   // Knox: armchair + brazier directly above
   'char-18': armchairWith(0, -1, 'brazier'),
   // Marchand: armchair flanked left + right by chairs
-  'char-09': (x, y, l) =>
-    isArmchair(l, x, y) && has(l, x - 1, y, 'chair') && has(l, x + 1, y, 'chair'),
+  'char-09': armchairFlankedChairs,
   // Felix: sofa
   'char-20': (x, y, l) => decAt(l, x, y) === 'sofa',
   // Beatrice: rug + hearth directly to left
   'char-07': rugWith(-1, 0, 'fireplace'),
+  // Bramwell: rug flanked left + right by bookshelves
+  'char-13': flankedHorizontal('bookshelf'),
+  // Voss: armchair + banner directly to left
+  'char-11': armchairWith(-1, 0, 'banner'),
+  // Ardent: armchair + banner directly above
+  'char-08': armchairWith(0, -1, 'banner'),
 };
 
 // m16 clue predicates
@@ -254,6 +277,10 @@ const m16Preds = {
   'char-15': rugWith(1, 0, 'banner'),
   // Roe: rug + anvil directly to left
   'char-16': rugWith(-1, 0, 'anvil'),
+  // Voss: armchair + banner directly to left
+  'char-11': armchairWith(-1, 0, 'banner'),
+  // Pell: rug + heavy table directly above
+  'char-17': rugWith(0, -1, 'table'),
 };
 
 // Row / column rules are implicit in the puzzle (every suspect on a
@@ -266,13 +293,13 @@ const interPinches = {};
 // Order matters: pinches reference other suspects, so the referenced
 // suspect must be placed first. Per-level placement order.
 const placeOrder = {
-  m10: ['char-05', 'char-04', 'char-13', 'char-10', 'char-15', 'char-08', 'char-16'],
-  m11: ['char-09', 'char-03', 'char-11', 'char-17', 'char-14', 'char-15'],
+  m10: ['char-05', 'char-04', 'char-13', 'char-10', 'char-15', 'char-08', 'char-16', 'char-19'],
+  m11: ['char-09', 'char-13', 'char-03', 'char-11', 'char-17', 'char-14', 'char-15', 'char-07'],
   m12: ['char-06', 'char-20', 'char-16', 'char-18', 'char-12', 'char-19', 'char-08', 'char-07'],
-  m13: ['char-14', 'char-10', 'char-01', 'char-15', 'char-04', 'char-11'],
-  m14: ['char-17', 'char-12', 'char-13', 'char-15', 'char-10'],
-  m15: ['char-20', 'char-18', 'char-12', 'char-09', 'char-07'],
-  m16: ['char-08', 'char-06', 'char-19', 'char-13', 'char-15', 'char-16'],
+  m13: ['char-14', 'char-10', 'char-01', 'char-15', 'char-13', 'char-08', 'char-04', 'char-11'],
+  m14: ['char-17', 'char-12', 'char-13', 'char-15', 'char-10', 'char-19', 'char-09', 'char-07'],
+  m15: ['char-20', 'char-18', 'char-12', 'char-09', 'char-07', 'char-13', 'char-11', 'char-08'],
+  m16: ['char-08', 'char-06', 'char-19', 'char-13', 'char-15', 'char-16', 'char-11', 'char-17'],
 };
 
 const predsByCode = {
