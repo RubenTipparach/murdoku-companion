@@ -19,6 +19,14 @@ build plan. Authoring rules and project conventions live in
 
 ---
 
+## Live URLs
+
+- Frontend (GitHub Pages): https://rubentipparach.github.io/murdoku-companion/
+- API base: https://murdoku-companion.fly.dev
+- Health check: https://murdoku-companion.fly.dev/healthz
+- Murdoku admin dashboard: https://murdoku-companion.fly.dev/admin
+- Fly app dashboard (logs, metrics, machines, volumes, secrets):
+  https://fly.io/apps/murdoku-companion
 ## Run locally
 
 ### Frontend
@@ -149,14 +157,6 @@ fly volumes create murdoku_data --size 1 --region ams
 The deploy workflow's "Ensure volume + single machine" step is idempotent,
 so a fresh push to any branch will create the volume if it's missing.
 
-## Live URLs
-
-- Frontend (GitHub Pages): https://rubentipparach.github.io/murdoku-companion/
-- API base: https://murdoku-companion.fly.dev
-- Health check: https://murdoku-companion.fly.dev/healthz
-- Murdoku admin dashboard: https://murdoku-companion.fly.dev/admin
-- Fly app dashboard (logs, metrics, machines, volumes, secrets):
-  https://fly.io/apps/murdoku-companion
 
 ## Schema notes
 
