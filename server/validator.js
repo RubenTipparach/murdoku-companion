@@ -19,6 +19,8 @@
 const NON_BLOCKING_FURNITURE = new Set([
   'chair', 'armchair', 'sofa', 'bed', 'rug',
   'painting', 'mirror',
+  // Wall-mounted medieval banner: hangs in front of the cell.
+  'banner',
 ]);
 
 // Furniture cells the suspect must NOT occupy. Drawn from CLAUDE.md
@@ -27,6 +29,8 @@ const NON_BLOCKING_FURNITURE = new Set([
 const BLOCKING_FURNITURE = new Set([
   'table', 'dresser', 'bookshelf', 'piano', 'lamp', 'plant',
   'fireplace', 'clock', 'gramophone', 'typewriter', 'safe',
+  // Medieval blocking pieces.
+  'anvil', 'cauldron', 'brazier', 'chest',
 ]);
 
 // Minimum number of suspects required for a level to feel like a

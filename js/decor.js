@@ -14,6 +14,8 @@ import { state, activeLevel, key } from './state.js';
 export const TILE_PATTERNS = [
   'solid', 'check', 'stripe-v', 'stripe-h', 'wood', 'dots', 'diamond',
   'square', 'herringbone', 'parquet', 'brick', 'hex', 'weave', 'marble',
+  // Medieval / fantasy patterns. Used by medium-tier samples.
+  'flagstone', 'rushes', 'cobble',
 ];
 
 let furniture = [];

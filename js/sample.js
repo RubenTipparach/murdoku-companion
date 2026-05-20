@@ -658,23 +658,23 @@ const WITCHSTONE_SANCTUM = {
   // are T, L, hollow-O, square, donut and short-L; every interior
   // edge is the boundary of two rooms, no waste cells between them.
   rooms: [
-    { id: 'r1', name: 'Scrying Chamber', description: 'A T of black tile around the scrying table.',
-      color: '#7b5db5', tilePattern: 'diamond',
+    { id: 'r1', name: 'Scrying Chamber', description: 'A T of black flagstone around the scrying table.',
+      color: '#7b5db5', tilePattern: 'flagstone',
       cells: [[3,0],[4,0],[5,0],[3,1],[4,1],[5,1],[3,2],[4,2],[5,2],[4,3]] },
-    { id: 'r2', name: 'Hearthroom', description: 'An L of soot-dark stone, hung with charm bundles.',
-      color: '#c97b5d', tilePattern: 'wood',
+    { id: 'r2', name: 'Hearthroom', description: 'An L of soot-dark cobble, hung with charm bundles.',
+      color: '#c97b5d', tilePattern: 'cobble',
       cells: [[0,0],[1,0],[2,0],[0,1],[0,2],[0,3]] },
     { id: 'r3', name: 'Reliquary', description: 'A hollow square of niched stone, lined with reliquaries of antler and ash.',
-      color: '#5da8c4', tilePattern: 'square',
+      color: '#5da8c4', tilePattern: 'brick',
       cells: [[6,0],[7,0],[8,0],[6,1],[7,1],[8,1],[6,2],[7,2],[8,2],[6,3],[8,3]] },
     { id: 'r4', name: 'Mandrake Garden', description: 'A square of black soil, mandrakes in every cell of the ring.',
       color: '#7bc48f', tilePattern: 'check',
       cells: [[0,5],[1,5],[2,5],[0,6],[1,6],[2,6],[0,7],[1,7],[2,7]] },
-    { id: 'r5', name: 'Bone Sanctum', description: 'A donut-shaped chapel of antler and ash, open at its centre.',
-      color: '#d1c084', tilePattern: 'stripe-h',
+    { id: 'r5', name: 'Bone Sanctum', description: 'A donut-shaped chapel of antler and ash on a rush-strewn floor.',
+      color: '#d1c084', tilePattern: 'rushes',
       cells: [[4,4],[5,4],[6,4],[4,5],[6,5],[4,6],[5,6],[6,6]] },
-    { id: 'r6', name: 'Wellhouse', description: 'A short L sheltering the moonwater spring.',
-      color: '#7b9ed1', tilePattern: 'dots',
+    { id: 'r6', name: 'Wellhouse', description: 'A short L of flagstone sheltering the moonwater spring.',
+      color: '#7b9ed1', tilePattern: 'flagstone',
       cells: [[7,5],[8,5],[7,6],[8,6],[7,7]] },
   ],
   doorways: [],
@@ -708,17 +708,18 @@ const WITCHSTONE_SANCTUM = {
     '0,1': 'fireplace',
     '0,2': 'rug',
     '0,3': 'dresser',
-    // Reliquary, hollow square: bookshelves on every wall save one.
-    '6,0': 'safe',
-    '7,0': 'dresser',
-    '8,0': 'dresser',
+    // Reliquary, hollow square: bookshelves on every wall save one,
+    // with a banner and a chest among the relics.
+    '6,0': 'chest',
+    '7,0': 'banner',
+    '8,0': 'chest',
     '6,1': 'dresser',
     '7,1': 'bookshelf',
-    '8,1': 'lamp',
+    '8,1': 'brazier',
     '6,2': 'bookshelf',
     '7,2': 'bookshelf',
     '8,2': 'bookshelf',
-    '6,3': 'gramophone',
+    '6,3': 'cauldron',
     '8,3': 'armchair',
     // Mandrake Garden, 3x3: mandrakes in every cell save the central
     // rug. Yew stands flanked on all four orthogonal sides by plants.
@@ -732,15 +733,15 @@ const WITCHSTONE_SANCTUM = {
     '1,7': 'plant',
     '2,7': 'plant',
     // Bone Sanctum, donut-O: only sofa in the keep, flanked by a
-    // bookshelf and a dresser. The hole in the middle is the antler
+    // bookshelf and a chest. The hole in the middle is the antler
     // altar, not a room cell.
     '4,4': 'bookshelf',
     '5,4': 'sofa',
-    '6,4': 'dresser',
-    '4,5': 'dresser',
+    '6,4': 'chest',
+    '4,5': 'anvil',
     '6,5': 'bookshelf',
     '4,6': 'bookshelf',
-    '5,6': 'dresser',
+    '5,6': 'banner',
     '6,6': 'bookshelf',
     // Wellhouse, short L: rug under the moonwater stone, the keep's
     // only standing clock to its right, ferns on the other cells.
@@ -768,8 +769,8 @@ const WITCHSTONE_SANCTUM = {
       'potted mandrakes.',
     'char-08':
       'Captain Ardent had thrown himself across the only sofa in the ' +
-      'keep, with a tall bookshelf directly to his left and a heavy ' +
-      'dresser directly to his right.',
+      'keep, with a tall bookshelf directly to his left and an iron-' +
+      'bound chest directly to his right.',
     'char-16':
       'Silas Roe stood on a rug, with the only standing clock in the ' +
       'keep directly to his right and a potted fern directly below.',

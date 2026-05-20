@@ -88,5 +88,30 @@
     "id": "safe",
     "name": "Safe",
     "sprite": "assets/furniture/safe.png"
+  },
+  {
+    "id": "anvil",
+    "name": "Anvil",
+    "sprite": "assets/furniture/anvil.png"
+  },
+  {
+    "id": "cauldron",
+    "name": "Cauldron",
+    "sprite": "assets/furniture/cauldron.png"
+  },
+  {
+    "id": "brazier",
+    "name": "Brazier",
+    "sprite": "assets/furniture/brazier.png"
+  },
+  {
+    "id": "banner",
+    "name": "Hanging banner",
+    "sprite": "assets/furniture/banner.png"
+  },
+  {
+    "id": "chest",
+    "name": "Iron-bound chest",
+    "sprite": "assets/furniture/chest.png"
   }
 ]
