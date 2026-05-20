@@ -203,6 +203,10 @@ const SAMPLE_NAMES = {
   m10: 'The Witchstone Sanctum',
   m11: 'The Sunken Library',
   m12: 'The Iron Citadel',
+  m13: 'The Druids Grove',
+  m14: 'The Crypt of the Forsworn',
+  m15: "The Smithlord's Hall",
+  m16: 'The Skybridge Keep',
 };
 function isSampleCode(code) {
   return Object.prototype.hasOwnProperty.call(SAMPLE_NAMES, code);

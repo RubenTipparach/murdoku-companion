@@ -1082,6 +1082,458 @@ const IRON_CITADEL = {
   },
 };
 
+// m13: T-shape grove. Top bar (cols 0-10 rows 0-5) is the main
+// grove and ancestor halls; the southern stem (cols 3-7 rows 6-9)
+// is the moss crypt where the dead druid was found.
+const DRUIDS_GROVE = {
+  id: 'lvl_sample_druids_grove',
+  code: 'm13',
+  name: 'The Druids Grove',
+  difficulty: 'medium',
+  size: 11,
+  description:
+    'The high druid was found cold beside the altar of the grove. ' +
+    'Five others kept the long vigil tonight.',
+  rooms: [
+    { id: 'r1', name: 'Western Glade', description: 'A glade of potted ferns lining the western wall.',
+      color: '#7bc48f', tilePattern: 'rushes',
+      cells: [
+        [0,0],[1,0],[2,0],
+        [0,1],[1,1],[2,1],
+        [0,2],[1,2],[2,2],
+        [0,3],[1,3],[2,3],
+        [0,4],[1,4],[2,4],
+        [0,5],[1,5],[2,5],
+      ] },
+    { id: 'r2', name: 'Upper Grove', description: 'The novices hall, banners and stone benches.',
+      color: '#c4a87b', tilePattern: 'flagstone',
+      cells: [
+        [3,0],[4,0],[5,0],[6,0],[7,0],
+        [3,1],[4,1],[5,1],[6,1],[7,1],
+        [3,2],[4,2],[5,2],[6,2],[7,2],
+      ] },
+    { id: 'r3', name: 'Lower Grove', description: 'The altar chamber, where the high druid lay.',
+      color: '#7b5db5', tilePattern: 'cobble',
+      cells: [
+        [3,3],[4,3],[5,3],[6,3],[7,3],
+        [3,4],[4,4],[5,4],[6,4],[7,4],
+        [3,5],[4,5],[5,5],[6,5],[7,5],
+      ] },
+    { id: 'r4', name: 'Eastern Glade', description: 'A glade of potted ferns lining the eastern wall.',
+      color: '#7bc48f', tilePattern: 'rushes',
+      cells: [
+        [8,0],[9,0],[10,0],
+        [8,1],[9,1],[10,1],
+        [8,2],[9,2],[10,2],
+        [8,3],[9,3],[10,3],
+        [8,4],[9,4],[10,4],
+        [8,5],[9,5],[10,5],
+      ] },
+    { id: 'r5', name: 'Mossy Crypt', description: 'The southern stem of the grove, a moss-walled crypt.',
+      color: '#5da8c4', tilePattern: 'brick',
+      cells: [
+        [3,6],[4,6],[5,6],[6,6],[7,6],
+        [3,7],[4,7],[5,7],[6,7],[7,7],
+        [3,8],[4,8],[5,8],[6,8],[7,8],
+        [3,9],[4,9],[5,9],[6,9],[7,9],
+      ] },
+  ],
+  doorways: ['v:2,2','v:7,2','h:5,2','v:2,4','v:7,4','h:5,5'],
+  victim: 'char-01',
+  killerSolution: 'char-10',
+  solution: {
+    '5,4': 'char-01', // Wraithmoor, victim, rug below the altar
+    '4,5': 'char-10', // Crowe, killer, armchair flanked by cauldron and brazier
+    '1,1': 'char-15', // Yew on a rug, ferns on all four sides
+    '9,2': 'char-04', // Penn thrown across the only sofa in the grove
+    '6,0': 'char-11', // Voss in an armchair, banner directly to her left
+    '3,8': 'char-14', // Finch on a rug, chest above, dresser below
+  },
+  decorations: {
+    // Western Glade (3x6): ferns everywhere; Yew on a rug at [1,1].
+    '0,0': 'plant',    '1,0': 'plant',     '2,0': 'plant',
+    '0,1': 'plant',    '1,1': 'rug',       '2,1': 'plant',
+    '0,2': 'plant',    '1,2': 'plant',     '2,2': 'plant',
+    '0,3': 'plant',    '1,3': 'dresser',   '2,3': 'plant',
+    '0,4': 'bookshelf','1,4': 'plant',     '2,4': 'plant',
+    '0,5': 'plant',    '1,5': 'mirror',    '2,5': 'plant',
+    // Upper Grove (5x3): banner, chairs, only armchair at [6,0]
+    // (Voss), with banner directly to her left.
+    '3,0': 'chair',    '4,0': 'banner',    '5,0': 'banner',    '6,0': 'armchair', '7,0': 'chair',
+    '3,1': 'chest',    '4,1': 'chair',     '5,1': 'table',     '6,1': 'chair',    '7,1': 'chest',
+    '3,2': 'bookshelf','4,2': 'chair',     '5,2': 'rug',       '6,2': 'chair',    '7,2': 'bookshelf',
+    // Lower Grove (5x3): altar table at [5,3], Wraithmoor on a rug
+    // directly below it, Crowe in the armchair flanked by cauldron
+    // and brazier.
+    '3,3': 'bookshelf','4,3': 'chair',     '5,3': 'table',     '6,3': 'mirror',   '7,3': 'chair',
+    '3,4': 'chair',    '4,4': 'chest',     '5,4': 'rug',       '6,4': 'chair',    '7,4': 'bookshelf',
+    '3,5': 'cauldron', '4,5': 'armchair',  '5,5': 'brazier',   '6,5': 'dresser',  '7,5': 'chair',
+    // Eastern Glade (3x6): ferns, Penn on the only sofa at [9,2].
+    '8,0': 'plant',    '9,0': 'plant',     '10,0': 'plant',
+    '8,1': 'plant',    '9,1': 'plant',     '10,1': 'plant',
+    '8,2': 'plant',    '9,2': 'sofa',      '10,2': 'plant',
+    '8,3': 'plant',    '9,3': 'dresser',   '10,3': 'plant',
+    '8,4': 'bookshelf','9,4': 'plant',     '10,4': 'plant',
+    '8,5': 'plant',    '9,5': 'mirror',    '10,5': 'plant',
+    // Mossy Crypt (5x4): Finch on a rug, iron chest above, dresser
+    // below, the moss-walled grave dark behind.
+    '3,6': 'chest',    '4,6': 'dresser',   '5,6': 'bookshelf', '6,6': 'chest',    '7,6': 'bookshelf',
+    '3,7': 'chest',    '4,7': 'chair',     '5,7': 'cauldron',  '6,7': 'chair',    '7,7': 'dresser',
+    '3,8': 'rug',      '4,8': 'chair',     '5,8': 'chair',     '6,8': 'mirror',   '7,8': 'chair',
+    '3,9': 'dresser',  '4,9': 'bookshelf', '5,9': 'brazier',   '6,9': 'bookshelf','7,9': 'mirror',
+  },
+  clues: {
+    'char-01':
+      'Lady Wraithmoor was slumped on a rug, directly below the only ' +
+      'stone altar in the grove. She was alone in the room with the ' +
+      'killer.',
+    'char-10':
+      'Professor Crowe was curled in an armchair, with the only ' +
+      'cauldron in the grove directly to his left and the only ' +
+      'brazier directly to his right.',
+    'char-15':
+      'Constance Yew stood on a rug, flanked on all four sides by ' +
+      'potted ferns.',
+    'char-04':
+      'Reverend Penn was thrown across the only sofa in the grove.',
+    'char-11':
+      'Sister Voss was curled in an armchair, with a banner directly ' +
+      'to her left.',
+    'char-14':
+      'Mortimer Finch stood on a rug, with an iron-bound chest directly ' +
+      'above him and a heavy dresser directly below.',
+  },
+};
+
+// m14: inverted U / upside-down-U. Top bar is the Reliquary Hall
+// across cols 0-10 rows 0-3; the two descending arms are the
+// Western Stem (cols 0-3 rows 4-6) and the Eastern Gallery (cols
+// 7-10 rows 4-6). The middle (cols 4-6 rows 4-6) is the open
+// inner-courtyard, outside the crypt.
+const CRYPT_OF_THE_FORSWORN = {
+  id: 'lvl_sample_crypt_forsworn',
+  code: 'm14',
+  name: 'The Crypt of the Forsworn',
+  difficulty: 'medium',
+  size: 11,
+  description:
+    'In the crypt of the Forsworn the last keeper was found dead at ' +
+    'his reliquary. Four others kept the long vigil tonight.',
+  rooms: [
+    { id: 'r1', name: 'Reliquary Hall', description: 'The keepers altar hall, a long flagstone bar across the top of the crypt.',
+      color: '#7b5db5', tilePattern: 'flagstone',
+      cells: [
+        [0,0],[1,0],[2,0],[3,0],[4,0],[5,0],[6,0],[7,0],[8,0],[9,0],[10,0],
+        [0,1],[1,1],[2,1],[3,1],[4,1],[5,1],[6,1],[7,1],[8,1],[9,1],[10,1],
+        [0,2],[1,2],[2,2],[3,2],[4,2],[5,2],[6,2],[7,2],[8,2],[9,2],[10,2],
+        [0,3],[1,3],[2,3],[3,3],[4,3],[5,3],[6,3],[7,3],[8,3],[9,3],[10,3],
+      ] },
+    { id: 'r2', name: 'Western Stem', description: 'A descending side vault of forbidden bestiaries.',
+      color: '#5da8c4', tilePattern: 'brick',
+      cells: [
+        [0,4],[1,4],[2,4],[3,4],
+        [0,5],[1,5],[2,5],[3,5],
+        [0,6],[1,6],[2,6],[3,6],
+        [0,7],[1,7],[2,7],[3,7],
+        [0,8],[1,8],[2,8],[3,8],
+      ] },
+    { id: 'r3', name: 'Eastern Gallery', description: 'The upper eastern gallery of niches.',
+      color: '#c4937b', tilePattern: 'cobble',
+      cells: [
+        [7,4],[8,4],[9,4],[10,4],
+        [7,5],[8,5],[9,5],[10,5],
+        [7,6],[8,6],[9,6],[10,6],
+      ] },
+    { id: 'r4', name: 'Lower Gallery', description: 'The deeper eastern gallery, anvil and forge.',
+      color: '#a87bc4', tilePattern: 'brick',
+      cells: [
+        [7,7],[8,7],[9,7],[10,7],
+        [7,8],[8,8],[9,8],[10,8],
+      ] },
+  ],
+  doorways: ['h:1,3','h:9,3','h:8,6'],
+  victim: 'char-17',
+  killerSolution: 'char-12',
+  solution: {
+    '3,1': 'char-17', // Pell, victim, rug below the only reliquary table
+    '5,2': 'char-12', // Hask, killer, armchair, brazier left, cauldron right
+    '1,5': 'char-13', // Bramwell on a rug, flanked by bookshelves
+    '9,4': 'char-15', // Yew on a rug, anvil above
+    '8,8': 'char-10', // Crowe on the only sofa in the crypt
+  },
+  decorations: {
+    // Reliquary Hall (11x4): the only reliquary table at [3,0], Pell
+    // on the rug below it; Hask in the armchair between brazier and
+    // cauldron.
+    '0,0': 'chest',    '1,0': 'bookshelf', '2,0': 'banner',    '3,0': 'table',    '4,0': 'banner',   '5,0': 'mirror',   '6,0': 'chest',    '7,0': 'bookshelf','8,0': 'banner',   '9,0': 'chest',    '10,0': 'bookshelf',
+    '0,1': 'dresser',  '1,1': 'chair',     '2,1': 'chair',     '3,1': 'rug',      '4,1': 'chair',    '5,1': 'chair',    '6,1': 'dresser',  '7,1': 'chair',    '8,1': 'mirror',   '9,1': 'dresser',  '10,1': 'chair',
+    '0,2': 'bookshelf','1,2': 'chair',     '2,2': 'banner',    '3,2': 'chair',    '4,2': 'brazier',  '5,2': 'armchair', '6,2': 'cauldron', '7,2': 'bookshelf','8,2': 'chair',    '9,2': 'dresser',  '10,2': 'bookshelf',
+    '0,3': 'cauldron', '1,3': 'chair',     '2,3': 'dresser',   '3,3': 'chair',    '4,3': 'banner',   '5,3': 'chest',    '6,3': 'mirror',   '7,3': 'dresser',  '8,3': 'chair',    '9,3': 'banner',   '10,3': 'mirror',
+    // Western Stem (4x5): Bramwell on a rug flanked left + right by
+    // tall bookshelves; chests and dressers below.
+    '0,4': 'bookshelf','1,4': 'dresser',   '2,4': 'bookshelf', '3,4': 'chest',
+    '0,5': 'bookshelf','1,5': 'rug',       '2,5': 'bookshelf', '3,5': 'mirror',
+    '0,6': 'bookshelf','1,6': 'chest',     '2,6': 'bookshelf', '3,6': 'dresser',
+    '0,7': 'dresser',  '1,7': 'chair',     '2,7': 'dresser',   '3,7': 'mirror',
+    '0,8': 'bookshelf','1,8': 'banner',    '2,8': 'bookshelf', '3,8': 'chest',
+    // Upper Eastern Gallery (4x3): Yew on the rug directly below the
+    // only anvil in the crypt; ferns line the cells.
+    '7,4': 'mirror',   '8,4': 'anvil',     '9,4': 'rug',       '10,4': 'mirror',
+    '7,5': 'bookshelf','8,5': 'plant',     '9,5': 'plant',     '10,5': 'plant',
+    '7,6': 'chair',    '8,6': 'dresser',   '9,6': 'plant',     '10,6': 'plant',
+    // Lower Gallery (4x2): the only sofa in the crypt at [8,8],
+    // Crowe slung across it.
+    '7,7': 'chest',    '8,7': 'plant',     '9,7': 'banner',    '10,7': 'dresser',
+    '7,8': 'plant',    '8,8': 'sofa',      '9,8': 'plant',     '10,8': 'plant',
+  },
+  clues: {
+    'char-17':
+      'Dame Pell was slumped on a rug, directly below the only ' +
+      'reliquary table in the crypt. She was alone in the room with ' +
+      'the killer.',
+    'char-12':
+      'Colonel Hask was curled in an armchair, with the only brazier ' +
+      'in the crypt directly to his left and the only cauldron in the ' +
+      'crypt directly to his right.',
+    'char-13':
+      'Ottilie Bramwell stood on a rug, flanked left and right by ' +
+      'tall bookshelves.',
+    'char-15':
+      'Constance Yew stood on a rug, with the only anvil in the crypt ' +
+      'directly to her left.',
+    'char-10':
+      'Professor Crowe was thrown across the only sofa in the crypt.',
+  },
+};
+
+// m15: L-shape. Top bar (cols 0-10 rows 0-5) holds the Smithy +
+// Apprentice Hall + Mead Cellar; the southern Forgehearth stem
+// (cols 0-3 rows 6-9) tucks under the western half.
+const SMITHLORDS_HALL = {
+  id: 'lvl_sample_smithlord_hall',
+  code: 'm15',
+  name: "The Smithlord's Hall",
+  difficulty: 'medium',
+  size: 11,
+  description:
+    "The Smithlord was found dead beside his anvil. Four of his " +
+    "apprentices remained in the hall tonight.",
+  rooms: [
+    { id: 'r1', name: 'Smithy', description: 'The Smithlords own forge, the anvil at its heart.',
+      color: '#c4a87b', tilePattern: 'cobble',
+      cells: [
+        [0,0],[1,0],[2,0],[3,0],
+        [0,1],[1,1],[2,1],[3,1],
+        [0,2],[1,2],[2,2],[3,2],
+        [0,3],[1,3],[2,3],[3,3],
+        [0,4],[1,4],[2,4],[3,4],
+        [0,5],[1,5],[2,5],[3,5],
+      ] },
+    { id: 'r2', name: 'Apprentice Hall', description: 'A long hall of workbenches and bedrolls.',
+      color: '#c4937b', tilePattern: 'rushes',
+      cells: [
+        [4,0],[5,0],[6,0],
+        [4,1],[5,1],[6,1],
+        [4,2],[5,2],[6,2],
+        [4,3],[5,3],[6,3],
+        [4,4],[5,4],[6,4],
+        [4,5],[5,5],[6,5],
+      ] },
+    { id: 'r3', name: 'Mead Cellar', description: 'A long cellar of barrels and sideboards.',
+      color: '#7b9ed1', tilePattern: 'flagstone',
+      cells: [
+        [7,0],[8,0],[9,0],[10,0],
+        [7,1],[8,1],[9,1],[10,1],
+        [7,2],[8,2],[9,2],[10,2],
+        [7,3],[8,3],[9,3],[10,3],
+        [7,4],[8,4],[9,4],[10,4],
+        [7,5],[8,5],[9,5],[10,5],
+      ] },
+    { id: 'r4', name: 'Forgehearth', description: 'A descending stem to the back-forge, hot and cramped.',
+      color: '#a87bc4', tilePattern: 'brick',
+      cells: [
+        [0,6],[1,6],[2,6],[3,6],
+        [0,7],[1,7],[2,7],[3,7],
+        [0,8],[1,8],[2,8],[3,8],
+        [0,9],[1,9],[2,9],[3,9],
+      ] },
+  ],
+  doorways: ['v:3,2','v:6,2','h:1,5'],
+  victim: 'char-12',
+  killerSolution: 'char-18',
+  solution: {
+    '1,2': 'char-12', // Hask (Smithlord), victim, rug below the only anvil
+    '2,4': 'char-18', // Knox, killer, armchair, brazier directly above
+    '5,1': 'char-09', // Marchand in the only armchair in the apprentice hall
+    '9,3': 'char-20', // Felix on the only sofa in the mead cellar
+    '3,7': 'char-07', // Beatrice on a rug, only hearth directly to her left
+  },
+  decorations: {
+    // Smithy (4x6): only anvil at [1,1], Hask on the rug below it.
+    // Knox in the armchair with a brazier directly above.
+    '0,0': 'chest',    '1,0': 'banner',    '2,0': 'banner',    '3,0': 'chest',
+    '0,1': 'dresser',  '1,1': 'anvil',     '2,1': 'chest',     '3,1': 'bookshelf',
+    '0,2': 'chair',    '1,2': 'rug',       '2,2': 'chair',     '3,2': 'cauldron',
+    '0,3': 'banner',   '1,3': 'chair',     '2,3': 'brazier',   '3,3': 'chest',
+    '0,4': 'bookshelf','1,4': 'chair',     '2,4': 'armchair',  '3,4': 'mirror',
+    '0,5': 'chair',    '1,5': 'dresser',   '2,5': 'chair',     '3,5': 'banner',
+    // Apprentice Hall (3x6): bedrolls, the only armchair at [5,1]
+    // for Marchand.
+    '4,0': 'banner',   '5,0': 'chair',     '6,0': 'banner',
+    '4,1': 'chair',    '5,1': 'armchair',  '6,1': 'chair',
+    '4,2': 'bed',      '5,2': 'chair',     '6,2': 'bed',
+    '4,3': 'chair',    '5,3': 'bed',       '6,3': 'chair',
+    '4,4': 'bed',      '5,4': 'chair',     '6,4': 'bed',
+    '4,5': 'chair',    '5,5': 'bed',       '6,5': 'chair',
+    // Mead Cellar (4x6): barrels, a sofa for Felix.
+    '7,0': 'banner',   '8,0': 'banner',    '9,0': 'banner',    '10,0': 'chest',
+    '7,1': 'dresser',  '8,1': 'dresser',   '9,1': 'dresser',   '10,1': 'mirror',
+    '7,2': 'chair',    '8,2': 'table',     '9,2': 'chair',     '10,2': 'chair',
+    '7,3': 'plant',    '8,3': 'plant',     '9,3': 'sofa',      '10,3': 'plant',
+    '7,4': 'dresser',  '8,4': 'chest',     '9,4': 'dresser',   '10,4': 'chest',
+    '7,5': 'bookshelf','8,5': 'banner',    '9,5': 'bookshelf', '10,5': 'mirror',
+    // Forgehearth (4x4): the only hearth in the hall at [0,7],
+    // Beatrice on the rug directly to its right.
+    '0,6': 'banner',   '1,6': 'dresser',   '2,6': 'chest',     '3,6': 'banner',
+    '0,7': 'dresser',  '1,7': 'chair',     '2,7': 'fireplace', '3,7': 'rug',
+    '0,8': 'chest',    '1,8': 'chair',     '2,8': 'chest',     '3,8': 'bookshelf',
+    '0,9': 'bookshelf','1,9': 'mirror',    '2,9': 'banner',    '3,9': 'dresser',
+  },
+  clues: {
+    'char-12':
+      'Hask the Smithlord was slumped on a rug, directly below the ' +
+      'only anvil in the hall. He was alone in the room with the killer.',
+    'char-18':
+      'Bartholomew Knox was curled in an armchair, with a tall brazier ' +
+      'directly above him.',
+    'char-09':
+      'Vivienne Marchand was curled in an armchair, flanked left and ' +
+      'right by stiff-backed chairs.',
+    'char-20':
+      'Felix Drummond was thrown across the only sofa in the hall.',
+    'char-07':
+      'Beatrice Halloran stood on a rug, with the only hearth in the ' +
+      'hall directly to her left.',
+  },
+};
+
+// m16: U-shape. Wide top bar (rows 0-3 cols 0-10), two long
+// descending towers (cols 0-2 and cols 8-10 rows 4-10). The middle
+// of the lower half (cols 3-7 rows 4-10) is the open courtyard.
+const SKYBRIDGE_KEEP = {
+  id: 'lvl_sample_skybridge_keep',
+  code: 'm16',
+  name: 'The Skybridge Keep',
+  difficulty: 'medium',
+  size: 11,
+  description:
+    'High above the cloud, the Watch-Captain was found dead in the ' +
+    'great hall. Five of his archers remained on the keep tonight.',
+  rooms: [
+    { id: 'r1', name: 'Great Hall', description: 'A long bar of banners and benches across the top of the keep.',
+      color: '#7b9ed1', tilePattern: 'flagstone',
+      cells: [
+        [0,0],[1,0],[2,0],[3,0],[4,0],[5,0],[6,0],[7,0],[8,0],[9,0],[10,0],
+        [0,1],[1,1],[2,1],[3,1],[4,1],[5,1],[6,1],[7,1],[8,1],[9,1],[10,1],
+        [0,2],[1,2],[2,2],[3,2],[4,2],[5,2],[6,2],[7,2],[8,2],[9,2],[10,2],
+        [0,3],[1,3],[2,3],[3,3],[4,3],[5,3],[6,3],[7,3],[8,3],[9,3],[10,3],
+      ] },
+    { id: 'r2', name: 'Upper West Tower', description: 'The upper western descending arm, weapon-rack and watch.',
+      color: '#a87bc4', tilePattern: 'brick',
+      cells: [
+        [0,4],[1,4],[2,4],
+        [0,5],[1,5],[2,5],
+        [0,6],[1,6],[2,6],
+      ] },
+    { id: 'r3', name: 'Lower West Tower', description: 'The lower western tower, anvil and forge.',
+      color: '#c4a87b', tilePattern: 'cobble',
+      cells: [
+        [0,7],[1,7],[2,7],
+        [0,8],[1,8],[2,8],
+        [0,9],[1,9],[2,9],
+        [0,10],[1,10],[2,10],
+      ] },
+    { id: 'r4', name: 'Upper East Tower', description: 'The upper eastern descending arm.',
+      color: '#a87bc4', tilePattern: 'brick',
+      cells: [
+        [8,4],[9,4],[10,4],
+        [8,5],[9,5],[10,5],
+        [8,6],[9,6],[10,6],
+      ] },
+    { id: 'r5', name: 'Lower East Tower', description: 'The lower eastern tower, mirror to the lower west.',
+      color: '#c4a87b', tilePattern: 'cobble',
+      cells: [
+        [8,7],[9,7],[10,7],
+        [8,8],[9,8],[10,8],
+        [8,9],[9,9],[10,9],
+        [8,10],[9,10],[10,10],
+      ] },
+  ],
+  doorways: ['h:1,3','h:9,3','h:1,6','h:9,6'],
+  victim: 'char-08',
+  killerSolution: 'char-06',
+  solution: {
+    '5,1': 'char-08', // Ardent, victim, rug below the war banner
+    '4,2': 'char-06', // Glover, killer, armchair, banner directly above
+    '1,5': 'char-19', // Imogen on a rug, flanked by bookshelves
+    '9,6': 'char-13', // Bramwell in the only armchair on the east, brazier right
+    '0,8': 'char-15', // Yew on the only rug at the bottom of the west tower
+    '10,9': 'char-16', // Roe on a rug, only anvil directly to his left
+  },
+  decorations: {
+    // Great Hall (11x4): banners line the front wall; the captains
+    // war-banner dominates at [5,0]. Ardent on the rug below it.
+    // Glover in the armchair at [4,2] with banner directly above.
+    '0,0': 'banner',   '1,0': 'chair',     '2,0': 'banner',    '3,0': 'chair',    '4,0': 'banner',   '5,0': 'banner',   '6,0': 'banner',   '7,0': 'chair',    '8,0': 'banner',   '9,0': 'chair',    '10,0': 'banner',
+    '0,1': 'chest',    '1,1': 'chair',     '2,1': 'table',     '3,1': 'chair',    '4,1': 'chair',    '5,1': 'rug',      '6,1': 'chair',    '7,1': 'chair',    '8,1': 'table',    '9,1': 'chair',    '10,1': 'chest',
+    '0,2': 'dresser',  '1,2': 'chair',     '2,2': 'bookshelf', '3,2': 'chair',    '4,2': 'armchair', '5,2': 'banner',   '6,2': 'chair',    '7,2': 'bookshelf','8,2': 'chair',    '9,2': 'chair',    '10,2': 'dresser',
+    '0,3': 'bookshelf','1,3': 'chair',     '2,3': 'dresser',   '3,3': 'mirror',   '4,3': 'chair',    '5,3': 'cauldron', '6,3': 'chair',    '7,3': 'mirror',   '8,3': 'dresser',  '9,3': 'chair',    '10,3': 'bookshelf',
+    // Upper West Tower (3x3): Imogen on a rug, flanked left + right
+    // by tall bookshelves.
+    '0,4': 'bookshelf','1,4': 'chest',     '2,4': 'bookshelf',
+    '0,5': 'bookshelf','1,5': 'rug',       '2,5': 'bookshelf',
+    '0,6': 'chair',    '1,6': 'dresser',   '2,6': 'chair',
+    // Lower West Tower (3x4): Yew on a rug, banner directly to her
+    // right.
+    '0,7': 'dresser',  '1,7': 'chair',     '2,7': 'mirror',
+    '0,8': 'rug',      '1,8': 'banner',    '2,8': 'bookshelf',
+    '0,9': 'bookshelf','1,9': 'chest',     '2,9': 'dresser',
+    '0,10': 'chair',   '1,10': 'chest',    '2,10': 'mirror',
+    // Upper East Tower (3x3): Bramwell in the only armchair on the
+    // east with a brazier directly to her right.
+    '8,4': 'chest',    '9,4': 'banner',    '10,4': 'chest',
+    '8,5': 'dresser',  '9,5': 'chair',     '10,5': 'bookshelf',
+    '8,6': 'chair',    '9,6': 'armchair',  '10,6': 'brazier',
+    // Lower East Tower (3x4): only anvil in the keep at [9,9], Roe
+    // on the rug directly to its right.
+    '8,7': 'bookshelf','9,7': 'chair',     '10,7': 'cauldron',
+    '8,8': 'mirror',   '9,8': 'banner',    '10,8': 'bookshelf',
+    '8,9': 'dresser',  '9,9': 'anvil',     '10,9': 'rug',
+    '8,10': 'chest',   '9,10': 'banner',   '10,10': 'mirror',
+  },
+  clues: {
+    'char-08':
+      'Captain Ardent was slumped on a rug, directly below the only ' +
+      'war-banner stitched with the keeps sigil. He was alone in the ' +
+      'room with the killer.',
+    'char-06':
+      'The butler was curled in an armchair, with a banner directly ' +
+      'above him.',
+    'char-19':
+      'Imogen Sarsfield stood on a rug, flanked left and right by ' +
+      'tall bookshelves.',
+    'char-13':
+      'Ottilie Bramwell was curled in an armchair, with a brazier ' +
+      'directly to her right.',
+    'char-15':
+      'Constance Yew stood on a rug, with a banner directly to her ' +
+      'right.',
+    'char-16':
+      'Silas Roe stood on a rug, with the only anvil in the keep ' +
+      'directly to his left.',
+  },
+};
+
 const RAW = [
   CONSERVATORY,
   LIGHTHOUSE,
@@ -1095,6 +1547,10 @@ const RAW = [
   WITCHSTONE_SANCTUM,
   SUNKEN_LIBRARY,
   IRON_CITADEL,
+  DRUIDS_GROVE,
+  CRYPT_OF_THE_FORSWORN,
+  SMITHLORDS_HALL,
+  SKYBRIDGE_KEEP,
 ];
 
 export const SAMPLES = RAW.map((s) => ({
