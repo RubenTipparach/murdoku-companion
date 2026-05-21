@@ -2527,6 +2527,14 @@ async function boot() {
   // render the game yet, the user must pick a level first.
   openStartMenu();
 
+  // First-run help: on the very first visit (no flag in localStorage),
+  // pop the How to play modal automatically so a new player sees the
+  // rules before placing anyone. Subsequent visits skip it.
+  if (!localStorage.getItem('murdoku.helpSeen')) {
+    helpModal.classList.remove('hidden');
+    localStorage.setItem('murdoku.helpSeen', '1');
+  }
+
   // Mobile browsers aggressively restore the page from the back-forward
   // cache (bfcache) when the user returns to the tab. boot() does NOT run
   // again in that case, script state is restored as-is, so the start
