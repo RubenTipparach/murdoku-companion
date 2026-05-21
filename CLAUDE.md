@@ -218,9 +218,12 @@ Tiering rough rubric:
   anchors are unique furniture, generous clues. The killer's clue may
   name a unique anchor in their room. The on-ramp set.
 - **medium** (the m10-m16 samples): non-rectangular rooms (L, T, plus,
-  U, S shapes), 5-8 suspects, duplicate furniture forcing row / column
-  deduction, medieval-fantasy flavour. Every clue (including the
-  killer's) must have two or more candidate cells on its own. The
+  U, S shapes), **at least 8 suspects per level**, duplicate furniture
+  forcing row / column deduction, medieval-fantasy flavour. More
+  suspects = more row / column constraints firing across the cast,
+  which is what makes the implicit unique-row/col + killer-alone rules
+  capable of resolving every clue's ambiguity. Every clue (including
+  the killer's) must have two or more candidate cells on its own. The
   killer's duplicates should sit in different rooms so the killer's
   room is itself a deduction. See "Every clue matches at least two
   cells".

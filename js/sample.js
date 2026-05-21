@@ -733,11 +733,12 @@ const WITCHSTONE_SANCTUM = {
   solution: {
     '5,1': 'char-05', // Sable, victim, rug directly above the scrying table
     '4,2': 'char-04', // Penn, killer, armchair, scrying table to his right
-    '0,4': 'char-13', // Bramwell, armchair, only hearth to her right
+    '0,4': 'char-13', // Bramwell, armchair, hearth to her right
     '10,5': 'char-10', // Crowe, armchair, directly below a tall bookshelf
-    '1,8': 'char-15', // Yew, rug, flanked on all four sides by mandrakes
+    '2,6': 'char-19', // Imogen, armchair flanked left + right by chairs
+    '1,8': 'char-15', // Yew, rug, mandrake directly above
     '6,7': 'char-08', // Ardent, armchair, banner directly above him
-    '9,9': 'char-16', // Roe, rug, only standing clock directly to his right
+    '9,9': 'char-16', // Roe, rug, standing clock directly to his right
   },
   decorations: {
     // Every clue anchor in this level repeats at least once. Each
@@ -750,8 +751,13 @@ const WITCHSTONE_SANCTUM = {
     '5,1': 'rug',
     '4,2': 'armchair', '5,2': 'table',
     '3,3': 'bookshelf',
-    // Hearthroom: armchair+hearth-right candidate for Bramwell.
+    // Hearthroom: armchair+hearth-right candidate for Bramwell. Imogen
+    // canonical armchair + chairs-LR at [2,6] / [1,6] / [3,6]. A
+    // duplicate armchair-between-chairs at [4,6] (Bone Sanctum) is
+    // killed by col conflict with Penn on col 4.
     '0,4': 'armchair', '1,4': 'fireplace', '2,4': 'bookshelf',
+    '1,6': 'chair',    '2,6': 'armchair',  '3,6': 'chair',
+    '4,6': 'armchair', '5,6': 'chair',
     // Reliquary: banner+armchair-below decoy for Ardent, clock decoy
     // for Roe, and the Crowe-canonical armchair+bookshelf-above pair.
     '9,4': 'banner',   '10,4': 'bookshelf',
@@ -796,6 +802,9 @@ const WITCHSTONE_SANCTUM = {
     'char-08':
       'Captain Ardent was curled in an armchair, with a banner directly ' +
       'above him.',
+    'char-19':
+      'Imogen Sarsfield was curled in an armchair, flanked left and ' +
+      'right by stiff-backed chairs.',
     'char-16':
       'Silas Roe stood on a rug, with a standing clock directly to his ' +
       'right.',
@@ -869,8 +878,10 @@ const SUNKEN_LIBRARY = {
     '4,3': 'char-14', // Finch, killer, armchair, brazier directly to his right
     '0,0': 'char-11', // Voss curled on a rug in the loft
     '1,5': 'char-03', // Quint on a rug, flanked left + right by bookshelves
-    '9,2': 'char-09', // Marchand in an armchair, writing desk above
+    '10,2': 'char-09', // Marchand, armchair with a chart table directly above
+    '9,4': 'char-13', // Bramwell on a rug, bookshelf directly above
     '3,7': 'char-15', // Yew on a rug, potted ferns above + below
+    '2,8': 'char-07', // Beatrice on a rug, potted ferns flanking left + right
   },
   decorations: {
     // Every clue anchor here repeats at least once. Each suspect's
@@ -895,22 +906,32 @@ const SUNKEN_LIBRARY = {
     // [5,1].
     '0,4': 'bookshelf','2,4': 'bookshelf',
     '0,5': 'bookshelf','1,5': 'rug',       '2,5': 'bookshelf',
-    // Cartographers Round: duplicate Quint rug between bookshelves at
-    // [9,4]. Marchand canonical [9,2]/[9,1]; the duplicate armchair-
-    // table-above at [7,2]/[7,1] is in Reading and killed by
-    // killer-alone.
+    // Cartographers Round: Marchand canonical armchair + chart-table-
+    // above at [10,2] / [10,1]. Duplicate armchair-table-above pair
+    // at [7,2] / [7,1] (Reading, killer-alone-invalid) and at [9,2]
+    // / [9,1] (col 9 conflict with Bramwell). Bramwell canonical rug
+    // + bookshelf-above at [9,4] / [9,3]; the bookshelves at [8,4]
+    // and [10,4] also let Quint match here, but Quint's col 9 also
+    // collides with Bramwell so the [9,4] cell resolves to Bramwell.
     '7,1': 'table',    '7,2': 'armchair',  '9,1': 'table',
-    '9,2': 'armchair',
-    '8,4': 'bookshelf','9,4': 'rug',       '10,4': 'bookshelf',
+    '9,2': 'armchair', '10,1': 'table',    '10,2': 'armchair',
+    '8,4': 'bookshelf','9,3': 'bookshelf','9,4': 'rug',       '10,4': 'bookshelf',
     '10,5': 'bookshelf',
-    // Saltwater Garden: duplicate Yew rug+ferns config at [1,7]; the
-    // [5,8] brazier + [4,8] armchair are the Finch decoy (killed by
-    // killer-alone since Pell is in Reading).
+    // Saltwater Garden: duplicate Yew rug+ferns config at [1,7]. The
+    // [5,8] brazier + [4,8] armchair pair is the Finch decoy (killer-
+    // alone-invalid). Beatrice canonical rug + ferns-LR at [2,8] /
+    // [1,8] / [3,8]. A duplicate ferns-LR around [3,7] (Yew's rug)
+    // creates a competing Beatrice candidate at [3,7]; resolved by
+    // the chain that forces Yew off [1,7] via Quint col 1.
     '0,6': 'plant',    '1,6': 'plant',
     '3,6': 'plant',    '5,6': 'plant',
-    '1,7': 'rug',      '3,7': 'rug',       '5,7': 'sofa',
-    '1,8': 'plant',    '3,8': 'plant',     '4,8': 'armchair',  '5,8': 'brazier',
+    '1,7': 'rug',      '2,7': 'plant',    '3,7': 'rug',    '4,7': 'plant', '5,7': 'sofa',
+    '1,8': 'plant',    '2,8': 'rug',      '3,8': 'plant',  '4,8': 'armchair',  '5,8': 'brazier',
     '0,9': 'plant',    '5,9': 'plant',
+    // Reading Hall additions: Bramwell decoy bookshelf at [3,4] above
+    // the rug at [3,5] - killed by killer-alone (Bramwell can't share
+    // the killer's room).
+    '3,4': 'bookshelf','3,5': 'rug',
   },
   clues: {
     'char-17':
@@ -928,9 +949,15 @@ const SUNKEN_LIBRARY = {
     'char-09':
       'Vivienne Marchand was curled in an armchair, with a chart table ' +
       'directly above her.',
+    'char-13':
+      'Ottilie Bramwell stood on a rug, with a tall bookshelf directly ' +
+      'above her.',
     'char-15':
       'Constance Yew stood on a rug, with potted ferns directly above ' +
       'and below her.',
+    'char-07':
+      'Beatrice Halloran stood on a rug, flanked left and right by ' +
+      'potted ferns.',
   },
 };
 
@@ -1161,8 +1188,10 @@ const DRUIDS_GROVE = {
   solution: {
     '5,4': 'char-01', // Wraithmoor, victim, rug below the altar
     '4,5': 'char-10', // Crowe, killer, armchair flanked by cauldron and brazier
-    '1,1': 'char-15', // Yew on a rug, ferns on all four sides
-    '9,2': 'char-04', // Penn thrown across the only sofa in the grove
+    '1,1': 'char-15', // Yew on a rug, fern directly above
+    '2,3': 'char-13', // Bramwell on a rug, flanked left + right by bookshelves
+    '7,6': 'char-08', // Ardent in an armchair, banner directly above
+    '9,2': 'char-04', // Penn thrown across a sofa
     '6,0': 'char-11', // Voss in an armchair, banner directly to her left
     '3,8': 'char-14', // Finch on a rug, chest above, dresser below
   },
@@ -1171,8 +1200,11 @@ const DRUIDS_GROVE = {
     // clue text matches two cells on its own; only unique-row /
     // unique-column + killer-alone-with-victim narrows them to one.
     // Western Glade: Yew canonical rug + plant-above at [1,1] / [1,0].
+    // Bramwell canonical rug + bookshelves-LR at [2,3] / [1,3] / [3,3]
+    // (with [3,3] sitting in Lower Grove as decoration only).
     '1,0': 'plant',
     '1,1': 'rug',
+    '1,3': 'bookshelf','2,3': 'rug',
     '0,4': 'bookshelf',
     // Upper Grove: Voss canonical armchair + banner-left at [6,0].
     // Duplicate cauldron + armchair + brazier (Crowe decoy) at
@@ -1185,25 +1217,31 @@ const DRUIDS_GROVE = {
     // Lower Grove: Wraithmoor canonical rug + stone-altar above at
     // [5,4] / [5,3]. Crowe canonical armchair + cauldron-left +
     // brazier-right at [4,5]. Voss decoy armchair + banner-left at
-    // [7,4] / [6,4], killed by killer-alone (Voss can't share the
-    // killer's room).
-    '5,3': 'table',
+    // [7,4] / [6,4], killed by killer-alone. Bramwell decoy bookshelf
+    // at [3,3] sits in this room (decoration only). Ardent decoy
+    // armchair + banner-above at [4,4] / [4,3], killed by both row
+    // and col conflict with Wraithmoor + Crowe.
+    '3,3': 'bookshelf','4,3': 'banner',
+    '5,3': 'table',    '4,4': 'armchair',
     '5,4': 'rug',      '6,4': 'banner',    '7,4': 'armchair',
     '3,5': 'cauldron', '4,5': 'armchair',  '5,5': 'brazier',
     // Eastern Glade: Penn canonical sofa at [9,2]. Yew decoy rug +
-    // plant-above at [9,4] / [9,3], killed by the row conflict with
-    // Wraithmoor on row 4.
+    // plant-above at [9,4] / [9,3], killed by row conflict with
+    // Wraithmoor. Bramwell decoy rug + bookshelves-LR at [9,4] /
+    // [8,4] / [10,4], killed by col conflict with Penn.
     '8,1': 'plant',    '9,3': 'plant',
     '9,2': 'sofa',     '9,4': 'rug',
     '10,3': 'plant',
-    '8,4': 'bookshelf',
+    '8,4': 'bookshelf','10,4': 'bookshelf',
     // Mossy Crypt: Finch canonical rug + chest-above + dresser-below
     // at [3,8]. Wraithmoor decoy rug + table-above at [4,9] / [4,8],
     // killed by killer-alone since Wraithmoor must share Crowe's
-    // room (Lower Grove). Finch decoy rug + chest + dresser at
-    // [6,7] / [6,6] / [6,8], killed by col conflict with Voss on
-    // col 6.
-    '4,8': 'table',    '6,6': 'chest',
+    // room. Finch decoy rug + chest + dresser at [6,7] / [6,6] /
+    // [6,8], killed by col conflict with Voss. Ardent canonical
+    // armchair + banner-above at [7,6] / [7,5] (the banner lives in
+    // Lower Grove).
+    '7,5': 'banner',
+    '4,8': 'table',    '6,6': 'chest',     '7,6': 'armchair',
     '3,7': 'chest',    '6,7': 'rug',
     '3,8': 'rug',      '4,9': 'rug',       '6,8': 'dresser',
     '3,9': 'dresser',  '7,9': 'mirror',
@@ -1218,6 +1256,12 @@ const DRUIDS_GROVE = {
     'char-15':
       'Constance Yew stood on a rug, with a potted fern directly above ' +
       'her.',
+    'char-13':
+      'Ottilie Bramwell stood on a rug, flanked left and right by tall ' +
+      'bookshelves.',
+    'char-08':
+      'Captain Ardent was curled in an armchair, with a banner directly ' +
+      'above him.',
     'char-04':
       'Reverend Penn was thrown across a sofa.',
     'char-11':
@@ -1260,6 +1304,8 @@ const CRYPT_OF_THE_FORSWORN = {
         [0,6],[1,6],[2,6],[3,6],
         [0,7],[1,7],[2,7],[3,7],
         [0,8],[1,8],[2,8],[3,8],
+        [0,9],[1,9],[2,9],[3,9],
+        [0,10],[1,10],[2,10],[3,10],
       ] },
     { id: 'r3', name: 'Eastern Gallery', description: 'The upper eastern gallery of niches.',
       color: '#c4937b', tilePattern: 'cobble',
@@ -1273,17 +1319,22 @@ const CRYPT_OF_THE_FORSWORN = {
       cells: [
         [7,7],[8,7],[9,7],[10,7],
         [7,8],[8,8],[9,8],[10,8],
+        [7,9],[8,9],[9,9],[10,9],
+        [7,10],[8,10],[9,10],[10,10],
       ] },
   ],
   doorways: ['h:1,3','h:9,3','h:8,6'],
   victim: 'char-17',
   killerSolution: 'char-12',
   solution: {
-    '3,1': 'char-17', // Pell, victim, rug below the only reliquary table
+    '3,1': 'char-17', // Pell, victim, rug below a reliquary table
     '5,2': 'char-12', // Hask, killer, armchair, brazier left, cauldron right
     '1,5': 'char-13', // Bramwell on a rug, flanked by bookshelves
     '9,4': 'char-15', // Yew on a rug, anvil above
-    '8,8': 'char-10', // Crowe on the only sofa in the crypt
+    '2,6': 'char-19', // Imogen, armchair flanked left + right by chairs
+    '7,9': 'char-09', // Marchand, armchair with a chart table directly above
+    '8,8': 'char-10', // Crowe on a sofa
+    '10,7': 'char-07', // Beatrice on a rug, bookshelf directly above
   },
   decorations: {
     // Every clue anchor here repeats at least once. Each suspect's
@@ -1292,30 +1343,40 @@ const CRYPT_OF_THE_FORSWORN = {
     // Reliquary Hall: Pell canonical rug + table-above at [3,1] /
     // [3,0]. Duplicate at [9,1] / [9,0] - killed by col conflict
     // with Yew on col 9.
-    '0,0': 'banner',   '3,0': 'table',     '7,0': 'banner',   '9,0': 'table',
-    '3,1': 'rug',      '9,1': 'rug',
+    '0,0': 'banner',   '3,0': 'table',     '4,0': 'bookshelf','7,0': 'banner',   '9,0': 'table',
+    '3,1': 'rug',      '4,1': 'rug',       '9,1': 'rug',
     '4,2': 'brazier',  '5,2': 'armchair',  '6,2': 'cauldron',
+    '8,2': 'chair',    '9,2': 'armchair',  '10,2': 'chair',
     '10,0': 'mirror',
     '5,3': 'chest',
     // Western Stem: Bramwell canonical rug + bookshelves-LR at [1,5].
     // Yew decoy rug + anvil-left at [3,8] / [2,8] - killed by chain
-    // conflict via Crowe (row 8) and Pell (col 3).
+    // conflict via Crowe (row 8) and Pell (col 3). Imogen canonical
+    // armchair + chairs-LR at [2,6] / [1,6] / [3,6]. Marchand decoy
+    // armchair + table-above at [1,10] / [1,9] - killed by col
+    // conflict with Bramwell.
     '0,5': 'bookshelf','1,5': 'rug',       '2,5': 'bookshelf',
     '3,4': 'chest',
+    '1,6': 'chair',    '2,6': 'armchair',  '3,6': 'chair',
     '1,8': 'banner',   '2,8': 'anvil',     '3,8': 'rug',
+    '1,9': 'table',
+    '1,10': 'armchair',
     // Upper Eastern Gallery: Yew canonical rug + anvil-left at [9,4].
     // Hask decoy armchair + brazier-left + cauldron-right at [8,5],
     // killed by killer-alone since the victim is in Reliquary.
     '8,4': 'anvil',    '9,4': 'rug',
     '7,5': 'brazier',  '8,5': 'armchair',  '9,5': 'cauldron',
     '10,5': 'plant',
+    '10,6': 'bookshelf',
     // Lower Gallery: Crowe canonical sofa at [8,8]. Bramwell decoy
     // rug + bookshelves-LR at [8,7] / [7,7] / [9,7] - killed by col
     // conflict with Crowe on col 8. Crowe decoy sofa at [9,8] -
-    // killed by col conflict with Yew on col 9.
-    '7,7': 'bookshelf','8,7': 'rug',       '9,7': 'bookshelf',
-    '8,8': 'sofa',     '9,8': 'sofa',
-    '10,8': 'plant',
+    // killed by col conflict with Yew on col 9. Beatrice canonical
+    // rug + bookshelf-above at [10,7] / [10,6]. Marchand canonical
+    // armchair + table-above at [7,9] / [7,8].
+    '7,7': 'bookshelf','8,7': 'rug',       '9,7': 'bookshelf','10,7': 'rug',
+    '7,8': 'table',    '8,8': 'sofa',      '9,8': 'sofa',     '10,8': 'plant',
+    '7,9': 'armchair',
   },
   clues: {
     'char-17':
@@ -1330,8 +1391,17 @@ const CRYPT_OF_THE_FORSWORN = {
     'char-15':
       'Constance Yew stood on a rug, with an anvil directly to her ' +
       'left.',
+    'char-19':
+      'Imogen Sarsfield was curled in an armchair, flanked left and ' +
+      'right by stiff-backed chairs.',
+    'char-09':
+      'Vivienne Marchand was curled in an armchair, with a chart table ' +
+      'directly above her.',
     'char-10':
       'Professor Crowe was thrown across a sofa.',
+    'char-07':
+      'Beatrice Halloran stood on a rug, with a tall bookshelf directly ' +
+      'above her.',
   },
 };
 
@@ -1391,11 +1461,14 @@ const SMITHLORDS_HALL = {
   victim: 'char-12',
   killerSolution: 'char-18',
   solution: {
-    '1,2': 'char-12', // Hask (Smithlord), victim, rug below the only anvil
+    '1,2': 'char-12', // Hask (Smithlord), victim, rug below an anvil
     '2,4': 'char-18', // Knox, killer, armchair, brazier directly above
-    '5,1': 'char-09', // Marchand in the only armchair in the apprentice hall
-    '9,3': 'char-20', // Felix on the only sofa in the mead cellar
-    '3,7': 'char-07', // Beatrice on a rug, only hearth directly to her left
+    '5,1': 'char-09', // Marchand in an armchair, flanked by chairs
+    '4,0': 'char-13', // Bramwell on a rug, flanked left + right by bookshelves
+    '7,5': 'char-11', // Voss in an armchair, banner directly to her left
+    '0,6': 'char-08', // Ardent in an armchair, banner directly above
+    '9,3': 'char-20', // Felix thrown across a sofa
+    '3,7': 'char-07', // Beatrice on a rug, hearth directly to her left
   },
   decorations: {
     // Every clue anchor here repeats at least once (Hask aside - the
@@ -1410,25 +1483,33 @@ const SMITHLORDS_HALL = {
     '1,0': 'banner',
     '1,1': 'anvil',    '3,1': 'bookshelf',
     '1,2': 'rug',
-    '2,3': 'brazier',  '3,4': 'chair',
+    '2,3': 'brazier',  '3,4': 'chair',     '4,3': 'banner',
     '2,4': 'armchair',
-    '0,5': 'chest',
     // Apprentice Hall: Marchand canonical armchair + chairs-LR at
     // [5,1] / [4,1] / [6,1]. Duplicate armchair + chairs-LR at
     // [4,4] / [3,4] / [5,4] - killed by row conflict with Knox on
-    // row 4.
+    // row 4. Bramwell canonical rug + bookshelves-LR at [4,0] /
+    // [3,0] / [5,0]. Ardent decoy armchair + banner-above at [4,4]
+    // / [4,3] - killed by row + col conflicts.
+    '3,0': 'bookshelf','4,0': 'rug',       '5,0': 'bookshelf',
     '4,1': 'chair',    '5,1': 'armchair',  '6,1': 'chair',
     '4,4': 'armchair', '5,4': 'chair',     '6,4': 'bed',
     // Mead Cellar: Felix canonical sofa at [9,3]. Knox decoy
     // armchair + brazier-above at [9,5] / [9,4] - killed by
-    // killer-alone (the victim Hask is in the Smithy).
+    // killer-alone. Voss canonical armchair + banner-left at [7,5]
+    // / [6,5]. Voss decoy at [9,5] / [8,5] - killed by col conflict
+    // with Felix. Bramwell decoy rug + bookshelves-LR at [9,2] /
+    // [8,2] / [10,2] - killed by row conflict with Hask.
     '7,1': 'dresser',  '10,1': 'mirror',
-    '9,3': 'sofa',     '9,4': 'brazier',   '9,5': 'armchair',
-    '8,5': 'banner',
+    '8,2': 'bookshelf','9,2': 'rug',       '10,2': 'bookshelf',
+    '9,3': 'sofa',     '9,4': 'brazier',
+    '6,5': 'banner',   '7,5': 'armchair',  '8,5': 'banner',    '9,5': 'armchair',
     // Forgehearth: Beatrice canonical rug + hearth-left at [3,7] /
     // [2,7]. Duplicate at [1,8] / [0,8] - killed by col conflict
-    // with Hask on col 1. Felix decoy sofa at [3,9] - killed by
-    // col conflict with Beatrice on col 3.
+    // with Hask. Felix decoy sofa at [3,9] - killed by col conflict
+    // with Beatrice. Ardent canonical armchair + banner-above at
+    // [0,6] / [0,5] (banner replaces the old chest).
+    '0,5': 'banner',   '0,6': 'armchair',
     '0,8': 'fireplace','1,8': 'rug',
     '2,7': 'fireplace','3,7': 'rug',
     '3,8': 'chest',    '3,9': 'sofa',
@@ -1446,6 +1527,15 @@ const SMITHLORDS_HALL = {
       'right by stiff-backed chairs.',
     'char-20':
       'Felix Drummond was thrown across a sofa.',
+    'char-13':
+      'Ottilie Bramwell stood on a rug, flanked left and right by tall ' +
+      'bookshelves.',
+    'char-11':
+      'Sister Voss was curled in an armchair, with a banner directly ' +
+      'to her left.',
+    'char-08':
+      'Captain Ardent was curled in an armchair, with a banner directly ' +
+      'above him.',
     'char-07':
       'Beatrice Halloran stood on a rug, with a hearth directly to her ' +
       'left.',
@@ -1511,9 +1601,11 @@ const SKYBRIDGE_KEEP = {
     '5,1': 'char-08', // Ardent, victim, rug below the war banner
     '4,2': 'char-06', // Glover, killer, armchair, banner directly above
     '1,5': 'char-19', // Imogen on a rug, flanked by bookshelves
-    '9,6': 'char-13', // Bramwell in the only armchair on the east, brazier right
-    '0,8': 'char-15', // Yew on the only rug at the bottom of the west tower
-    '10,9': 'char-16', // Roe on a rug, only anvil directly to his left
+    '2,4': 'char-11', // Voss in an armchair, banner directly to her left
+    '9,6': 'char-13', // Bramwell in an armchair, brazier directly to her right
+    '8,7': 'char-17', // Pell on a rug, table directly above
+    '0,8': 'char-15', // Yew on a rug, banner directly to her right
+    '10,9': 'char-16', // Roe on a rug, anvil directly to his left
   },
   decorations: {
     // Every clue anchor here repeats at least once. Each suspect's
@@ -1529,11 +1621,14 @@ const SKYBRIDGE_KEEP = {
     '1,0': 'banner',   '3,0': 'banner',    '5,0': 'banner',
     '1,1': 'rug',      '3,1': 'armchair',
     '4,1': 'banner',   '5,1': 'rug',
+    '2,2': 'table',    '2,3': 'rug',
     '4,2': 'armchair', '9,2': 'rug',       '10,2': 'banner',
     // Upper West Tower: Imogen canonical rug + bookshelves-LR at
-    // [1,5] / [0,5] / [2,5].
+    // [1,5] / [0,5] / [2,5]. Voss canonical armchair + banner-left
+    // at [2,4] / [1,4]. Pell decoy rug + table-above at [2,3] / [2,2]
+    // sits in Great Hall and is killed by killer-alone.
     '0,5': 'bookshelf','1,5': 'rug',       '2,5': 'bookshelf',
-    '1,4': 'chest',
+    '1,4': 'banner',   '2,4': 'armchair',
     // Lower West Tower: Yew canonical rug + banner-right at [0,8] /
     // [1,8]. Roe decoy rug + anvil-left at [1,9] / [0,9] - killed by
     // col conflict with Imogen on col 1.
@@ -1542,15 +1637,18 @@ const SKYBRIDGE_KEEP = {
     '0,9': 'anvil',    '1,9': 'rug',
     // Upper East Tower: Bramwell canonical armchair + brazier-right
     // at [9,6] / [10,6]. Imogen decoy rug + bookshelves-LR at [9,5]
-    // / [8,5] / [10,5] - killed via the chain that forces Bramwell
-    // off col 9 into [8,8], which then collides on row 8 with Yew.
+    // / [8,5] / [10,5] - killed via the chain.
     '8,5': 'bookshelf','9,5': 'rug',       '10,5': 'bookshelf',
     '9,4': 'chest',
-    '9,6': 'armchair', '10,6': 'brazier',
+    '8,6': 'table',    '9,6': 'armchair', '10,6': 'brazier',
     // Lower East Tower: Roe canonical rug + anvil-left at [10,9] /
     // [9,9]. Bramwell decoy armchair + brazier-right at [8,8] / [9,8]
-    // - killed by row conflict with Yew on row 8.
-    '8,7': 'bookshelf','8,8': 'armchair',  '9,8': 'brazier',
+    // - killed by row conflict with Yew on row 8. Pell canonical
+    // rug + table-above at [8,7] / [8,6]. A banner at [7,8] turns the
+    // Bramwell decoy armchair into a Voss decoy too (banner left +
+    // armchair), killed by the same row conflict.
+    '7,8': 'banner',
+    '8,7': 'rug',      '8,8': 'armchair',  '9,8': 'brazier',
     '9,9': 'anvil',    '10,9': 'rug',
     '9,10': 'mirror',
   },
@@ -1573,6 +1671,11 @@ const SKYBRIDGE_KEEP = {
       'right.',
     'char-16':
       'Silas Roe stood on a rug, with an anvil directly to his left.',
+    'char-11':
+      'Sister Voss was curled in an armchair, with a banner directly ' +
+      'to her left.',
+    'char-17':
+      'Dame Pell stood on a rug, with a heavy table directly above her.',
   },
 };
 
