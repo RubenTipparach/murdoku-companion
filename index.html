@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Murdoku</title>
-    <link rel="stylesheet" href="./css/style.css?v=39" />
+    <link rel="stylesheet" href="./css/style.css?v=40" />
     <!-- API base URL for the Murdoku companion server. Empty = local-
          only mode (no claims, no leaderboards). The deploy.yml workflow
          can substitute this from a build-time env var if needed. -->
@@ -32,6 +32,7 @@
         <div class="topbar-actions">
           <button id="btn-menu" title="Open the start menu">Menu</button>
           <button id="btn-help-topbar" title="How to play Murdoku">❓</button>
+          <button id="btn-assets" title="Upload custom portraits, furniture, and carpet patterns">🎨 Assets</button>
           <button id="btn-clone" title="Clone the current level into an editable copy">Clone</button>
           <button id="btn-save" title="Force save to localStorage">Save</button>
           <button id="btn-export" title="Download this level as JSON">Export</button>
@@ -228,6 +229,17 @@
       </div>
     </div>
 
+    <!-- Custom assets modal: upload user portraits, furniture, carpets. -->
+    <div id="assets-modal" class="modal hidden" role="dialog">
+      <div class="modal-inner">
+        <header>
+          <h2>Custom assets</h2>
+          <button class="close" data-close="assets">×</button>
+        </header>
+        <div id="assets-body" class="modal-body"></div>
+      </div>
+    </div>
+
     <!-- Floating clue bubble, positioned at the selected suspect tile via JS. -->
     <div id="selected-clue" class="selected-clue hidden" role="tooltip"></div>
 
@@ -375,6 +387,6 @@
       </div>
     </div>
 
-    <script type="module" src="./js/main.js?v=49"></script>
+    <script type="module" src="./js/main.js?v=50"></script>
   </body>
 </html>

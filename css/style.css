@@ -341,6 +341,15 @@ input:focus, textarea:focus { outline: 2px solid var(--accent); outline-offset: 
   opacity: 0.95;
   filter: drop-shadow(0 1px 1px rgba(0,0,0,0.3));
 }
+/* Carpet-style custom decoration, lays flat across the whole cell behind
+   any other furniture and the portrait. */
+.cell .furniture.carpet {
+  inset: 0;
+  background-size: cover;
+  opacity: 1;
+  filter: none;
+  z-index: -1;
+}
 
 /* ---- Floor tile patterns. Each layers a translucent dark pattern over
    the room's base color, so any room color reads sensibly. ---- */
@@ -935,6 +944,73 @@ body.guests-transparent .cell.suspect-selected .portrait { opacity: 0.9; }
 .levels-list li.active { outline: 2px solid var(--accent); }
 .levels-list .title { flex: 1; }
 .levels-list .meta  { color: var(--ink-dim); font-size: 11px; }
+
+/* ------ Custom assets modal ------ */
+.asset-section {
+  margin: 14px 0 18px;
+  padding-top: 10px;
+  border-top: 1px solid #4a416c;
+}
+.asset-section:first-of-type { border-top: none; padding-top: 0; }
+.asset-section h3 { margin: 0 0 8px; font-size: 14px; color: var(--accent-2); }
+.asset-list {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.asset-row {
+  background: var(--panel-2);
+  border-radius: 6px;
+  padding: 6px 8px;
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+.asset-thumb {
+  width: 40px;
+  height: 40px;
+  image-rendering: pixelated;
+  background: var(--bg-2);
+  border-radius: 4px;
+  object-fit: contain;
+  flex-shrink: 0;
+}
+.asset-thumb.carpet { object-fit: cover; }
+.asset-meta {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.asset-meta strong { font-size: 13px; }
+.asset-meta .hint { font-size: 10px; color: var(--ink-dim); }
+.asset-form {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  background: var(--bg-2);
+  padding: 10px;
+  border-radius: 6px;
+  border: 1px dashed #4a416c;
+}
+.asset-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 12px;
+  color: var(--ink-dim);
+}
+.asset-form input[type="text"],
+.asset-form textarea { width: 100%; }
+.asset-form button { align-self: flex-start; }
+.asset-error {
+  margin: 0;
+  color: var(--bad);
+  font-size: 12px;
+}
 
 /* ------ Win toast ------ */
 .toast {

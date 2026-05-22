@@ -10,6 +10,7 @@
 // in and out of rooms.
 
 import { state, activeLevel, key } from './state.js';
+import { getCustomDecor } from './customAssets.js';
 
 export const TILE_PATTERNS = [
   'solid', 'check', 'stripe-v', 'stripe-h', 'wood', 'dots', 'diamond',
@@ -18,17 +19,26 @@ export const TILE_PATTERNS = [
   'flagstone', 'rushes', 'cobble',
 ];
 
+let builtInFurniture = [];
 let furniture = [];
+
+// Concatenate the shipped furniture with the user's custom items. Carpets
+// arrive flagged with `cover: true` so the grid renderer can lay them
+// flat across the cell instead of as a small centred sprite.
+export function refreshFurniture() {
+  furniture = [...builtInFurniture, ...getCustomDecor()];
+}
 
 export async function loadFurniture() {
   try {
     const res = await fetch('./assets/furniture/manifest.json', { cache: 'no-cache' });
     if (!res.ok) throw new Error('furniture manifest http ' + res.status);
-    furniture = await res.json();
+    builtInFurniture = await res.json();
   } catch (err) {
     console.warn('Failed to load furniture manifest:', err);
-    furniture = [];
+    builtInFurniture = [];
   }
+  refreshFurniture();
 }
 
 export function getFurniture() { return furniture; }

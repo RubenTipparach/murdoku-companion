@@ -2,17 +2,28 @@
 
 import { state } from './state.js';
 import { badge as iconBadge } from './icons.js';
+import { getCustomPortraits } from './customAssets.js';
+
+let builtIn = [];
+
+// Rebuild state.characters by concatenating the shipped roster with any
+// user-uploaded portraits. Called once after the manifest loads and again
+// after the user adds or removes a custom portrait.
+export function refreshCharacters() {
+  state.characters = [...builtIn, ...getCustomPortraits()];
+}
 
 export async function loadCharacters() {
   try {
     const res = await fetch('./assets/portraits/manifest.json', { cache: 'no-cache' });
     if (!res.ok) throw new Error('manifest http ' + res.status);
     const data = await res.json();
-    state.characters = Array.isArray(data) ? data : [];
+    builtIn = Array.isArray(data) ? data : [];
   } catch (err) {
     console.warn('Failed to load character manifest:', err);
-    state.characters = [];
+    builtIn = [];
   }
+  refreshCharacters();
 }
 
 // Render the suspect roster. Pass `filterIds` to scope the roster down to

@@ -99,12 +99,15 @@ export function renderGrid(container, handlers) {
       }
 
       // Furniture decoration (rendered behind the portrait layer).
+      // Carpet-kind custom assets carry `cover: true` and render full-cell
+      // underneath any furniture; regular furniture renders as a small
+      // centred sprite.
       const decoId = lvl.decorations && lvl.decorations[key(x, y)];
       if (room && decoId) {
         const f = findFurniture(decoId);
         if (f) {
           const dec = document.createElement('div');
-          dec.className = 'furniture';
+          dec.className = f.cover ? 'furniture carpet' : 'furniture';
           dec.style.backgroundImage = `url('${f.sprite}')`;
           dec.title = f.name;
           cell.appendChild(dec);
