@@ -25,8 +25,9 @@ import {
 } from './api.js';
 import { validateLevel } from './validator.js';
 import { renderGrid } from './grid.js';
-import { loadCharacters, renderRoster } from './portraits.js';
-import { loadFurniture, normalizeLevel, rollAllRooms } from './decor.js';
+import { loadCharacters, renderRoster, refreshCharacters } from './portraits.js';
+import { loadFurniture, normalizeLevel, rollAllRooms, refreshFurniture } from './decor.js';
+import { loadCustomAssets, renderCustomAssetsModal } from './customAssets.js';
 import { SAMPLES, buildSampleLevel } from './sample.js';
 import { victimIcon, killerIcon, profileIcon } from './icons.js';
 import {
@@ -2012,6 +2013,9 @@ async function boot() {
   // whole UI until the user picks something.
   if (!hasLevels) state.activeId = null;
 
+  // Hydrate user-uploaded assets before the manifests load so that the
+  // initial merge in loadCharacters / loadFurniture sees them too.
+  loadCustomAssets();
   await Promise.all([loadCharacters(), loadFurniture()]);
 
   // Tool button delegation.
@@ -2100,6 +2104,27 @@ async function boot() {
   levelsModal.addEventListener('click', (e) => {
     if (e.target === levelsModal) closeLevels();
   });
+
+  // Custom assets modal: upload portraits / furniture / carpets. The
+  // modal body re-renders itself after every add or remove, and we
+  // rebuild the live roster + furniture list so the new asset is
+  // immediately available to the editor and the grid.
+  const assetsModal = $('#assets-modal');
+  const assetsBody = $('#assets-body');
+  const openAssets = () => {
+    renderCustomAssetsModal(assetsBody, {
+      onChange: () => {
+        refreshCharacters();
+        refreshFurniture();
+        rerender();
+      },
+    });
+    assetsModal.classList.remove('hidden');
+  };
+  const closeAssets = () => assetsModal.classList.add('hidden');
+  $('#btn-assets').addEventListener('click', openAssets);
+  for (const c of document.querySelectorAll('[data-close="assets"]')) c.addEventListener('click', closeAssets);
+  assetsModal.addEventListener('click', (e) => { if (e.target === assetsModal) closeAssets(); });
 
   // Share modal close + copy-link handlers.
   for (const c of document.querySelectorAll('[data-close="share"]')) c.addEventListener('click', closeShareModal);
